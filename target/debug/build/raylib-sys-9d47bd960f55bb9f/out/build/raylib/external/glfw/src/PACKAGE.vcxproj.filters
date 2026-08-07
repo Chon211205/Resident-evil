@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\leejo\Desktop\laberint\target\debug\build\raylib-sys-9d47bd960f55bb9f\out\build\CMakeFiles\23ca2e7117376fec20ae50d0fadd3e85\PACKAGE_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{143CEEE9-574A-3DCE-8F7A-4179A0E22C7D}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

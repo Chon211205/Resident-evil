@@ -1,0 +1,7 @@
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-c03a2555a43924aa/out/lib/raylib.lib
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-c03a2555a43924aa/out/include/raylib.h
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-c03a2555a43924aa/out/include/rlgl.h
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-c03a2555a43924aa/out/include/raymath.h
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-c03a2555a43924aa/out/lib/pkgconfig/raylib.pc
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-c03a2555a43924aa/out/lib/cmake/raylib/raylib-config-version.cmake
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-c03a2555a43924aa/out/lib/cmake/raylib/raylib-config.cmake

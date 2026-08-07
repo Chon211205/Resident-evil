@@ -1,0 +1,1 @@
+C:\Users\leejo\Desktop\laberint\target\debug\pacman_polygon.exe: C:\Users\leejo\Desktop\laberint\src\framebuffer.rs C:\Users\leejo\Desktop\laberint\src\main.rs

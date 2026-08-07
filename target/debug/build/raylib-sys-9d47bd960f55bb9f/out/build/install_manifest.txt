@@ -1,0 +1,11 @@
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/lib/raylib.lib
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/include/raylib.h
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/include/rcamera.h
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/include/rlgl.h
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/include/raymath.h
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/lib/pkgconfig/raylib.pc
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/lib/cmake/raylib/raylib-config-version.cmake
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/lib/cmake/raylib/raylib-config-version.cmake
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/lib/cmake/raylib/raylib-config.cmake
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/lib/cmake/raylib/raylib-targets.cmake
+C:/Users/leejo/Desktop/laberint/target/debug/build/raylib-sys-9d47bd960f55bb9f/out/lib/cmake/raylib/raylib-targets-debug.cmake

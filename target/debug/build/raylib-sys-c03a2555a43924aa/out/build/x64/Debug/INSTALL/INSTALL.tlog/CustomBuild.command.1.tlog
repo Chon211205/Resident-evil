@@ -1,0 +1,10 @@
+^C:\USERS\LEEJO\DESKTOP\LABERINT\TARGET\DEBUG\BUILD\RAYLIB-SYS-C03A2555A43924AA\OUT\BUILD\CMAKEFILES\7635DA86DD985AA882462F791D8E6DDE\INSTALL_FORCE.RULE
+setlocal
+cd .
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

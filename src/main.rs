@@ -4,12 +4,14 @@ mod map;
 mod map_renderer;
 mod player;
 mod raycaster;
+mod texture_data;
 
 use camera::Camera;
 use framebuffer::Framebuffer;
 use map::Map;
 use map_renderer::render_minimap;
 use player::Player;
+use texture_data::TextureData;
 
 use raycaster::{
     render_3d,
@@ -78,20 +80,30 @@ fn main() {
                 "No se pudo cargar assets/pistol2.png",
             );
 
-    let mut textura_pared =
+    let mut wall_image =
         Image::load_image(
             "assets/textures/wall.jpg",
         )
         .expect(
-            "No se pudo cargar assets/textures/wall.jpgg",
+            "No se pudo cargar assets/textures/wall.jpg",
         );
 
-    let mut textura_suelo =
+    let mut floor_image =
         Image::load_image(
             "assets/textures/floor.jpg",
         )
         .expect(
             "No se pudo cargar assets/textures/floor.jpg",
+        );
+
+    let textura_pared =
+        TextureData::from_image(
+            &mut wall_image,
+        );
+
+    let textura_suelo =
+        TextureData::from_image(
+            &mut floor_image,
         );
 
     let mut textura_framebuffer =
@@ -162,8 +174,8 @@ fn main() {
             &mapa,
             &player,
             &camera,
-            &mut textura_pared,
-            &mut textura_suelo,
+            &textura_pared,
+            &textura_suelo,
         );
 
         render_minimap(
@@ -314,8 +326,7 @@ fn main() {
             dibujo.draw_circle(
                 mira_x as i32,
                 mira_y as i32,
-                3.0
-                    * escala.max(1.0),
+                3.0 * escala.max(1.0),
                 Color::RED,
             );
         }

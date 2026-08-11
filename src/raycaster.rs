@@ -24,10 +24,18 @@ pub fn render_3d(
     player: &Player,
     camera: &Camera,
     textura_pared: &mut Image,
+    textura_suelo: &mut Image,
 ) {
-    dibujar_fondo(
+    dibujar_cielo(
         framebuffer,
         camera.vertical_offset,
+    );
+
+    dibujar_suelo_texturizado(
+        framebuffer,
+        player,
+        camera,
+        textura_suelo,
     );
 
     dibujar_paredes(
@@ -164,6 +172,150 @@ fn dibujar_paredes(
             textura_x,
             distancia_segura,
         );
+    }
+}
+
+fn dibujar_suelo_texturizado(
+    framebuffer: &mut Framebuffer,
+    player: &Player,
+    camera: &Camera,
+    textura_suelo: &mut Image,
+) {
+    let horizonte =
+        ALTO_VENTANA / 2
+            + camera.vertical_offset;
+
+    let direccion_x =
+        camera.angle.cos();
+
+    let direccion_y =
+        camera.angle.sin();
+
+    let plano_x =
+        -(camera.angle.sin())
+            * (FOV / 2.0).tan();
+
+    let plano_y =
+        camera.angle.cos()
+            * (FOV / 2.0).tan();
+
+    let rayo_izquierda_x =
+        direccion_x - plano_x;
+
+    let rayo_izquierda_y =
+        direccion_y - plano_y;
+
+    let rayo_derecha_x =
+        direccion_x + plano_x;
+
+    let rayo_derecha_y =
+        direccion_y + plano_y;
+
+    let altura_camara =
+        TAMANO_CELDA * 0.5;
+
+    for y in horizonte.max(0)..ALTO_VENTANA {
+        let distancia_vertical =
+            y as f32
+                - horizonte as f32;
+
+        if distancia_vertical <= 0.0 {
+            continue;
+        }
+
+        let distancia_fila =
+            altura_camara
+                * ALTO_VENTANA as f32
+                / distancia_vertical;
+
+        let paso_x =
+            distancia_fila
+                * (
+                    rayo_derecha_x
+                        - rayo_izquierda_x
+                )
+                / ANCHO_VENTANA as f32;
+
+        let paso_y =
+            distancia_fila
+                * (
+                    rayo_derecha_y
+                        - rayo_izquierda_y
+                )
+                / ANCHO_VENTANA as f32;
+
+        let mut mundo_x =
+            player.x
+                + distancia_fila
+                    * rayo_izquierda_x;
+
+        let mut mundo_y =
+            player.y
+                + distancia_fila
+                    * rayo_izquierda_y;
+
+        for x in 0..ANCHO_VENTANA {
+            let textura_x =
+                (
+                    mundo_x
+                        .rem_euclid(
+                            TAMANO_CELDA,
+                        )
+                        / TAMANO_CELDA
+                        * textura_suelo.width()
+                            as f32
+                )
+                    .floor()
+                    .clamp(
+                        0.0,
+                        (textura_suelo.width() - 1)
+                            as f32,
+                    )
+                    as i32;
+
+            let textura_y =
+                (
+                    mundo_y
+                        .rem_euclid(
+                            TAMANO_CELDA,
+                        )
+                        / TAMANO_CELDA
+                        * textura_suelo.height()
+                            as f32
+                )
+                    .floor()
+                    .clamp(
+                        0.0,
+                        (textura_suelo.height() - 1)
+                            as f32,
+                    )
+                    as i32;
+
+            let mut color =
+                textura_suelo.get_color(
+                    textura_x,
+                    textura_y,
+                );
+
+            color =
+                aplicar_oscuridad(
+                    color,
+                    distancia_fila,
+                );
+
+            framebuffer
+                .set_current_color(
+                    color,
+                );
+
+            framebuffer.point(
+                x,
+                y,
+            );
+
+            mundo_x += paso_x;
+            mundo_y += paso_y;
+        }
     }
 }
 
@@ -314,7 +466,7 @@ fn aplicar_oscuridad(
     )
 }
 
-fn dibujar_fondo(
+fn dibujar_cielo(
     framebuffer: &mut Framebuffer,
     altura_camara: i32,
 ) {
@@ -341,23 +493,6 @@ fn dibujar_fondo(
         0,
         ANCHO_VENTANA,
         horizonte,
-    );
-
-    framebuffer.set_current_color(
-        Color::new(
-            35,
-            35,
-            35,
-            255,
-        ),
-    );
-
-    dibujar_rectangulo(
-        framebuffer,
-        0,
-        horizonte,
-        ANCHO_VENTANA,
-        ALTO_VENTANA - horizonte,
     );
 }
 

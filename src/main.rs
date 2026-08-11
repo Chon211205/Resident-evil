@@ -86,6 +86,14 @@ fn main() {
             "No se pudo cargar assets/textures/wall.png",
         );
 
+    let mut textura_suelo =
+        Image::load_image(
+            "assets/textures/floor.jpg",
+        )
+        .expect(
+            "No se pudo cargar assets/textures/floor.png",
+        );
+
     while !ventana.window_should_close() {
         let delta_time =
             ventana.get_frame_time();
@@ -145,6 +153,7 @@ fn main() {
             &player,
             &camera,
             &mut textura_pared,
+            &mut textura_suelo,
         );
 
         render_minimap(

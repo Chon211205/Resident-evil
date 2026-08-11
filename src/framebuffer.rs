@@ -30,6 +30,15 @@ impl Framebuffer {
         }
     }
 
+    pub fn pixels(&self) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(
+                self.image.data as *const u8,
+                (self.width * self.height * 4) as usize,
+            )
+        }
+    }
+
     pub fn width(&self) -> i32 {
         self.width
     }
@@ -51,15 +60,10 @@ impl Framebuffer {
     }
 
     pub fn clear(&mut self) {
-        let nueva_imagen = unsafe {
-            Image::from_raw(ffi::GenImageColor(
-                self.width,
-                self.height,
-                self.background_color.into(),
-            ))
-        };
-
-        self.image = nueva_imagen;
+        self.image
+            .clear_background(
+                self.background_color,
+            );
     }
 
     pub fn point(&mut self, x: i32, y: i32) {

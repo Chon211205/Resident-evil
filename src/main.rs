@@ -75,7 +75,7 @@ fn main() {
                 "assets/pistol2.png",
             )
             .expect(
-                "No se pudo cargar assets/pistol2.jpg",
+                "No se pudo cargar assets/pistol2.png",
             );
 
     let mut textura_pared =
@@ -83,7 +83,7 @@ fn main() {
             "assets/textures/wall.jpg",
         )
         .expect(
-            "No se pudo cargar assets/textures/wall.jpg",
+            "No se pudo cargar assets/textures/wall.jpgg",
         );
 
     let mut textura_suelo =
@@ -93,6 +93,16 @@ fn main() {
         .expect(
             "No se pudo cargar assets/textures/floor.jpg",
         );
+
+    let mut textura_framebuffer =
+        ventana
+            .load_texture_from_image(
+                &thread,
+                framebuffer.image(),
+            )
+            .expect(
+                "No se pudo crear la textura del framebuffer",
+            );
 
     while !ventana.window_should_close() {
         let delta_time =
@@ -163,15 +173,13 @@ fn main() {
             &camera,
         );
 
-        let textura =
-            ventana
-                .load_texture_from_image(
-                    &thread,
-                    framebuffer.image(),
-                )
-                .expect(
-                    "No se pudo crear la textura",
-                );
+        textura_framebuffer
+            .update_texture(
+                framebuffer.pixels(),
+            )
+            .expect(
+                "No se pudo actualizar la textura del framebuffer",
+            );
 
         let pantalla_ancho =
             ventana.get_screen_width()
@@ -183,13 +191,11 @@ fn main() {
 
         let escala_x =
             pantalla_ancho
-                / ANCHO_VENTANA
-                    as f32;
+                / ANCHO_VENTANA as f32;
 
         let escala_y =
             pantalla_alto
-                / ALTO_VENTANA
-                    as f32;
+                / ALTO_VENTANA as f32;
 
         let escala =
             escala_x.min(
@@ -197,13 +203,11 @@ fn main() {
             );
 
         let ancho_render =
-            ANCHO_VENTANA
-                as f32
+            ANCHO_VENTANA as f32
                 * escala;
 
         let alto_render =
-            ALTO_VENTANA
-                as f32
+            ALTO_VENTANA as f32
                 * escala;
 
         let offset_x =
@@ -266,14 +270,12 @@ fn main() {
         );
 
         dibujo.draw_texture_pro(
-            &textura,
+            &textura_framebuffer,
             Rectangle::new(
                 0.0,
                 0.0,
-                ANCHO_VENTANA
-                    as f32,
-                ALTO_VENTANA
-                    as f32,
+                ANCHO_VENTANA as f32,
+                ALTO_VENTANA as f32,
             ),
             Rectangle::new(
                 offset_x,
@@ -303,13 +305,11 @@ fn main() {
         if apuntando {
             let mira_x =
                 offset_x
-                    + ancho_render
-                        / 2.0;
+                    + ancho_render / 2.0;
 
             let mira_y =
                 offset_y
-                    + alto_render
-                        / 2.0;
+                    + alto_render / 2.0;
 
             dibujo.draw_circle(
                 mira_x as i32,
@@ -320,18 +320,16 @@ fn main() {
             );
         }
 
-        let fps =
-            dibujo.get_fps();
-
         let texto_fps =
             format!(
                 "FPS: {}",
-                fps,
+                dibujo.get_fps(),
             );
 
         dibujo.draw_text(
             &texto_fps,
-            dibujo.get_screen_width() - 100,
+            dibujo.get_screen_width()
+                - 100,
             10,
             20,
             Color::GREEN,

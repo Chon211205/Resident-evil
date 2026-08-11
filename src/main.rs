@@ -46,14 +46,16 @@ fn main() {
         raylib::init()
             .size(
                 ANCHO_VENTANA,
-                ALTO_VENTANA + 55,
+                ALTO_VENTANA,
             )
+            .resizable()
             .title(
                 "Survival Horror Raycasting",
             )
             .build();
 
     ventana.set_target_fps(60);
+
     ventana.disable_cursor();
 
     let pistol1 =
@@ -105,6 +107,28 @@ fn main() {
             camera.reset();
         }
 
+        if ventana.is_key_pressed(
+            KeyboardKey::KEY_F11,
+        ) {
+            if ventana.is_window_maximized() {
+                ventana.restore_window();
+            } else {
+                ventana.maximize_window();
+            }
+        }
+
+        if ventana.is_key_pressed(
+            KeyboardKey::KEY_TAB,
+        ) {
+            ventana.enable_cursor();
+        }
+
+        if ventana.is_mouse_button_pressed(
+            MouseButton::MOUSE_BUTTON_LEFT,
+        ) {
+            ventana.disable_cursor();
+        }
+
         framebuffer.clear();
 
         render_3d(
@@ -131,6 +155,79 @@ fn main() {
                     "No se pudo crear la textura",
                 );
 
+        let pantalla_ancho =
+            ventana.get_screen_width() as f32;
+
+        let pantalla_alto =
+            ventana.get_screen_height() as f32;
+
+        let escala_x =
+            pantalla_ancho
+                / ANCHO_VENTANA as f32;
+
+        let escala_y =
+            pantalla_alto
+                / ALTO_VENTANA as f32;
+
+        let escala =
+            escala_x.min(escala_y);
+
+        let ancho_render =
+            ANCHO_VENTANA as f32
+                * escala;
+
+        let alto_render =
+            ALTO_VENTANA as f32
+                * escala;
+
+        let offset_x =
+            (
+                pantalla_ancho
+                    - ancho_render
+            ) / 2.0;
+
+        let offset_y =
+            (
+                pantalla_alto
+                    - alto_render
+            ) / 2.0;
+
+        let arma_actual =
+            if apuntando {
+                &pistol2
+            } else {
+                &pistol1
+            };
+
+        let escala_base_arma =
+            if apuntando {
+                0.70
+            } else {
+                0.65
+            };
+
+        let escala_arma =
+            escala_base_arma
+                * escala;
+
+        let arma_ancho =
+            arma_actual.width() as f32
+                * escala_arma;
+
+        let arma_alto =
+            arma_actual.height() as f32
+                * escala_arma;
+
+        let arma_x =
+            offset_x
+                + ancho_render / 2.0
+                - arma_ancho / 2.0;
+
+        let arma_y =
+            offset_y
+                + alto_render
+                - arma_alto;
+
         let mut dibujo =
             ventana.begin_drawing(
                 &thread,
@@ -140,38 +237,27 @@ fn main() {
             Color::BLACK,
         );
 
-        dibujo.draw_texture(
+        dibujo.draw_texture_pro(
             &textura,
-            0,
-            0,
+            Rectangle::new(
+                0.0,
+                0.0,
+                ANCHO_VENTANA as f32,
+                ALTO_VENTANA as f32,
+            ),
+            Rectangle::new(
+                offset_x,
+                offset_y,
+                ancho_render,
+                alto_render,
+            ),
+            Vector2::new(
+                0.0,
+                0.0,
+            ),
+            0.0,
             Color::WHITE,
         );
-
-        let arma_actual =
-            if apuntando {
-                &pistol2
-            } else {
-                &pistol1
-            };
-
-        let escala_arma =
-            if apuntando {
-                0.70
-            } else {
-                0.65
-            };
-
-        let arma_x =
-            (
-                ANCHO_VENTANA as f32
-                    - arma_actual.width() as f32
-                        * escala_arma
-            ) / 2.0;
-
-        let arma_y =
-            ALTO_VENTANA as f32
-                - arma_actual.height() as f32
-                    * escala_arma;
 
         dibujo.draw_texture_ex(
             arma_actual,
@@ -185,44 +271,20 @@ fn main() {
         );
 
         if apuntando {
+            let mira_x =
+                offset_x
+                    + ancho_render / 2.0;
+
+            let mira_y =
+                offset_y
+                    + alto_render / 2.0;
+
             dibujo.draw_circle(
-                ANCHO_VENTANA / 2,
-                ALTO_VENTANA / 2,
-                3.0,
+                mira_x as i32,
+                mira_y as i32,
+                3.0 * escala.max(1.0),
                 Color::RED,
             );
         }
-
-        dibujo.draw_rectangle(
-            0,
-            ALTO_VENTANA,
-            ANCHO_VENTANA,
-            55,
-            Color::new(
-                15,
-                15,
-                15,
-                255,
-            ),
-        );
-
-        dibujo.draw_text(
-            &format!(
-                "Angulo: {:.1}",
-                camera.angle.to_degrees(),
-            ),
-            10,
-            ALTO_VENTANA + 5,
-            18,
-            Color::WHITE,
-        );
-
-        dibujo.draw_text(
-            "WASD: mover | J/L: girar | I/K: camara | Click derecho: apuntar | R: reset",
-            10,
-            ALTO_VENTANA + 30,
-            14,
-            Color::LIGHTGRAY,
-        );
     }
 }

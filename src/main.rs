@@ -1,8 +1,11 @@
 mod framebuffer;
 mod map;
+mod camera;
 
+use camera::Camera;
 use framebuffer::Framebuffer;
 use map::{Map, TAMANO_CELDA};
+
 use raylib::prelude::*;
 use std::f32::consts::PI;
 
@@ -22,10 +25,6 @@ enum Vista {
 }
 
 fn main() {
-    // =========================
-    // MAPA
-    // =========================
-
     let mapa = Map::new();
 
     mapa.guardar_txt("mapa_resident.txt");
@@ -42,23 +41,12 @@ fn main() {
         fila_inicial as f32 * TAMANO_CELDA
             + TAMANO_CELDA / 2.0;
 
-    // =========================
-    // JUGADOR
-    // =========================
-
     let mut jugador_x = posicion_inicial_x;
     let mut jugador_y = posicion_inicial_y;
 
-    let mut angulo_jugador = 0.0_f32;
-
-    // Después lo usaremos con I y K.
-    let mut altura_camara = 0_i32;
+    let mut camera = Camera::new();
 
     let mut vista_actual = Vista::Vista3D;
-
-    // =========================
-    // FRAMEBUFFER
-    // =========================
 
     let mut framebuffer =
         Framebuffer::new(
@@ -66,13 +54,7 @@ fn main() {
             ALTO_VENTANA,
         );
 
-    framebuffer.set_background_color(
-        Color::BLACK,
-    );
-
-    // =========================
-    // VENTANA
-    // =========================
+    framebuffer.set_background_color(Color::BLACK);
 
     let (mut ventana, thread) =
         raylib::init()
@@ -85,26 +67,49 @@ fn main() {
 
     ventana.set_target_fps(60);
 
-    // =========================
-    // GAME LOOP
-    // =========================
-
     while !ventana.window_should_close() {
         let delta_time =
             ventana.get_frame_time();
 
-        procesar_eventos(
+        // CÁMARA
+
+        camera.update(
+            &ventana,
+            delta_time,
+            VELOCIDAD_ROTACION,
+        );
+
+        // MOVIMIENTO
+
+        procesar_movimiento(
             &ventana,
             &mapa,
             &mut jugador_x,
             &mut jugador_y,
-            &mut angulo_jugador,
-            &mut altura_camara,
-            &mut vista_actual,
-            posicion_inicial_x,
-            posicion_inicial_y,
+            camera.angle,
             delta_time,
         );
+
+        // CAMBIAR VISTA
+
+        if ventana.is_key_pressed(KeyboardKey::KEY_M) {
+            vista_actual = match vista_actual {
+                Vista::Vista3D => Vista::Mapa2D,
+                Vista::Mapa2D => Vista::Vista3D,
+            };
+        }
+
+        // REINICIAR
+
+        if ventana.is_key_pressed(KeyboardKey::KEY_R) {
+            jugador_x = posicion_inicial_x;
+            jugador_y = posicion_inicial_y;
+
+            camera.reset();
+        }
+
+        // RENDER
+
 
         framebuffer.clear();
 
@@ -112,7 +117,7 @@ fn main() {
             Vista::Vista3D => {
                 dibujar_fondo_3d(
                     &mut framebuffer,
-                    altura_camara,
+                    camera.vertical_offset,
                 );
 
                 dibujar_vista_3d(
@@ -120,8 +125,8 @@ fn main() {
                     &mapa,
                     jugador_x,
                     jugador_y,
-                    angulo_jugador,
-                    altura_camara,
+                    camera.angle,
+                    camera.vertical_offset,
                 );
             }
 
@@ -131,7 +136,7 @@ fn main() {
                     &mapa,
                     jugador_x,
                     jugador_y,
-                    angulo_jugador,
+                    camera.angle,
                 );
             }
         }
@@ -141,16 +146,12 @@ fn main() {
                 &thread,
                 framebuffer.image(),
             )
-            .expect(
-                "No se pudo crear la textura",
-            );
+            .expect("No se pudo crear la textura");
 
         let mut dibujo =
             ventana.begin_drawing(&thread);
 
-        dibujo.clear_background(
-            Color::BLACK,
-        );
+        dibujo.clear_background(Color::BLACK);
 
         dibujo.draw_texture(
             &textura,
@@ -182,7 +183,7 @@ fn main() {
             &format!(
                 "Vista: {} | Angulo: {:.1}",
                 nombre_vista,
-                angulo_jugador.to_degrees(),
+                camera.angle.to_degrees(),
             ),
             10,
             ALTO_VENTANA + 5,
@@ -191,7 +192,7 @@ fn main() {
         );
 
         dibujo.draw_text(
-            "WASD: mover | J/L: girar camara | I/K: arriba/abajo | M: mapa",
+            "WASD: mover | J/L: girar | I/K: arriba/abajo | M: mapa | R: reset",
             10,
             ALTO_VENTANA + 30,
             14,
@@ -200,154 +201,63 @@ fn main() {
     }
 }
 
-// ============================================================
-// EVENTOS
-// ============================================================
+// MOVIMIENTO DEL JUGADOR
 
-fn procesar_eventos(
+fn procesar_movimiento(
     ventana: &RaylibHandle,
     mapa: &Map,
     jugador_x: &mut f32,
     jugador_y: &mut f32,
-    angulo: &mut f32,
-    altura_camara: &mut i32,
-    vista: &mut Vista,
-    inicio_x: f32,
-    inicio_y: f32,
+    angulo: f32,
     delta_time: f32,
 ) {
-    // =========================
-    // CÁMARA - J I K L
-    // =========================
-
-    if ventana.is_key_down(
-        KeyboardKey::KEY_J,
-    ) {
-        *angulo -=
-            VELOCIDAD_ROTACION
-                * delta_time;
-    }
-
-    if ventana.is_key_down(
-        KeyboardKey::KEY_L,
-    ) {
-        *angulo +=
-            VELOCIDAD_ROTACION
-                * delta_time;
-    }
-
-    // Mirar hacia arriba
-    if ventana.is_key_down(
-        KeyboardKey::KEY_I,
-    ) {
-        *altura_camara -= 3;
-    }
-
-    // Mirar hacia abajo
-    if ventana.is_key_down(
-        KeyboardKey::KEY_K,
-    ) {
-        *altura_camara += 3;
-    }
-
-    *altura_camara =
-        (*altura_camara).clamp(
-            -150,
-            150,
-        );
-
-    *angulo =
-        normalizar_angulo(*angulo);
-
-    // =========================
-    // MOVIMIENTO - WASD
-    // =========================
-
     let velocidad =
-        VELOCIDAD_MOVIMIENTO
-            * delta_time;
+        VELOCIDAD_MOVIMIENTO * delta_time;
 
     // W = adelante
-    if ventana.is_key_down(
-        KeyboardKey::KEY_W,
-    ) {
+    if ventana.is_key_down(KeyboardKey::KEY_W) {
         mover_jugador(
             mapa,
             jugador_x,
             jugador_y,
-            *angulo,
+            angulo,
             velocidad,
         );
     }
 
     // S = atrás
-    if ventana.is_key_down(
-        KeyboardKey::KEY_S,
-    ) {
+    if ventana.is_key_down(KeyboardKey::KEY_S) {
         mover_jugador(
             mapa,
             jugador_x,
             jugador_y,
-            *angulo,
+            angulo,
             -velocidad,
         );
     }
 
     // A = izquierda
-    if ventana.is_key_down(
-        KeyboardKey::KEY_A,
-    ) {
+    if ventana.is_key_down(KeyboardKey::KEY_A) {
         mover_jugador(
             mapa,
             jugador_x,
             jugador_y,
-            *angulo - PI / 2.0,
+            angulo - PI / 2.0,
             velocidad,
         );
     }
 
     // D = derecha
-    if ventana.is_key_down(
-        KeyboardKey::KEY_D,
-    ) {
+    if ventana.is_key_down(KeyboardKey::KEY_D) {
         mover_jugador(
             mapa,
             jugador_x,
             jugador_y,
-            *angulo + PI / 2.0,
+            angulo + PI / 2.0,
             velocidad,
         );
     }
-
-    // M = cambiar vista
-    if ventana.is_key_pressed(
-        KeyboardKey::KEY_M,
-    ) {
-        *vista =
-            match *vista {
-                Vista::Vista3D =>
-                    Vista::Mapa2D,
-
-                Vista::Mapa2D =>
-                    Vista::Vista3D,
-            };
-    }
-
-    // R = reiniciar
-    if ventana.is_key_pressed(
-        KeyboardKey::KEY_R,
-    ) {
-        *jugador_x = inicio_x;
-        *jugador_y = inicio_y;
-
-        *angulo = 0.0;
-        *altura_camara = 0;
-    }
 }
-
-// ============================================================
-// MOVIMIENTO
-// ============================================================
 
 fn mover_jugador(
     mapa: &Map,
@@ -358,16 +268,12 @@ fn mover_jugador(
 ) {
     let nuevo_x =
         *jugador_x
-            + angulo.cos()
-                * movimiento;
+            + angulo.cos() * movimiento;
 
     let nuevo_y =
         *jugador_y
-            + angulo.sin()
-                * movimiento;
+            + angulo.sin() * movimiento;
 
-    // X y Y separados para deslizarse
-    // por las paredes.
     if !mapa.es_pared(
         nuevo_x,
         *jugador_y,
@@ -383,9 +289,7 @@ fn mover_jugador(
     }
 }
 
-// ============================================================
 // RAYCASTING
-// ============================================================
 
 fn dibujar_vista_3d(
     framebuffer: &mut Framebuffer,
@@ -396,22 +300,16 @@ fn dibujar_vista_3d(
     altura_camara: i32,
 ) {
     let angulo_inicial =
-        angulo_jugador
-            - FOV / 2.0;
+        angulo_jugador - FOV / 2.0;
 
     let incremento_angulo =
-        FOV
-            / CANTIDAD_RAYOS
-                as f32;
+        FOV / CANTIDAD_RAYOS as f32;
 
     let distancia_plano =
-        (ANCHO_VENTANA as f32
-            / 2.0)
+        (ANCHO_VENTANA as f32 / 2.0)
             / (FOV / 2.0).tan();
 
-    for numero_rayo
-        in 0..CANTIDAD_RAYOS
-    {
+    for numero_rayo in 0..CANTIDAD_RAYOS {
         let angulo_rayo =
             angulo_inicial
                 + numero_rayo as f32
@@ -425,7 +323,6 @@ fn dibujar_vista_3d(
                 angulo_rayo,
             );
 
-        // Corrección del ojo de pez.
         let diferencia =
             angulo_rayo
                 - angulo_jugador;
@@ -435,10 +332,8 @@ fn dibujar_vista_3d(
                 * diferencia.cos();
 
         let distancia_segura =
-            distancia_corregida
-                .max(1.0);
+            distancia_corregida.max(1.0);
 
-        // Altura de pared.
         let altura_columna =
             TAMANO_CELDA
                 * distancia_plano
@@ -447,19 +342,14 @@ fn dibujar_vista_3d(
         let altura_columna =
             altura_columna
                 .min(
-                    ALTO_VENTANA
-                        as f32
-                        * 2.0,
+                    ALTO_VENTANA as f32 * 2.0,
                 )
                 as i32;
 
-        // Centro de la cámara.
         let mitad_pantalla =
             ALTO_VENTANA / 2
                 + altura_camara;
 
-        // Mitad para arriba y mitad
-        // para abajo.
         let inicio_y =
             mitad_pantalla
                 - altura_columna / 2;
@@ -473,15 +363,14 @@ fn dibujar_vista_3d(
                 distancia_segura,
             );
 
-        framebuffer
-            .set_current_color(
-                Color::new(
-                    intensidad,
-                    intensidad,
-                    intensidad,
-                    255,
-                ),
-            );
+        framebuffer.set_current_color(
+            Color::new(
+                intensidad,
+                intensidad,
+                intensidad,
+                255,
+            ),
+        );
 
         dibujar_columna(
             framebuffer,
@@ -511,13 +400,11 @@ fn lanzar_rayo(
 
         let rayo_x =
             jugador_x
-                + direccion_x
-                    * distancia;
+                + direccion_x * distancia;
 
         let rayo_y =
             jugador_y
-                + direccion_y
-                    * distancia;
+                + direccion_y * distancia;
 
         if mapa.es_pared(
             rayo_x,
@@ -528,16 +415,14 @@ fn lanzar_rayo(
     }
 }
 
-// ============================================================
 // MAPA 2D
-// ============================================================
 
 fn dibujar_mapa_2d(
     framebuffer: &mut Framebuffer,
     mapa: &Map,
     jugador_x: f32,
     jugador_y: f32,
-    angulo_jugador: f32,
+    angulo: f32,
 ) {
     let escala =
         calcular_escala_mapa(mapa);
@@ -560,7 +445,6 @@ fn dibujar_mapa_2d(
             - alto_mapa)
             / 2.0;
 
-    // Dibujar celdas.
     for fila in 0..mapa.alto() {
         for columna in 0..mapa.ancho() {
             let celda =
@@ -581,10 +465,9 @@ fn dibujar_mapa_2d(
 
             match celda {
                 '#' => {
-                    framebuffer
-                        .set_current_color(
-                            Color::DARKGRAY,
-                        );
+                    framebuffer.set_current_color(
+                        Color::DARKGRAY,
+                    );
 
                     dibujar_rectangulo(
                         framebuffer,
@@ -596,29 +479,21 @@ fn dibujar_mapa_2d(
                 }
 
                 'E' => {
-                    framebuffer
-                        .set_current_color(
-                            Color::RED,
-                        );
+                    framebuffer.set_current_color(
+                        Color::RED,
+                    );
 
-                    framebuffer
-                        .point_with_size(
-                            x + escala as i32
-                                / 2,
-                            y + escala as i32
-                                / 2,
-                            4,
-                        );
+                    framebuffer.point_with_size(
+                        x + escala as i32 / 2,
+                        y + escala as i32 / 2,
+                        4,
+                    );
                 }
 
                 _ => {}
             }
         }
     }
-
-    // =========================
-    // POSICIÓN DEL JUGADOR
-    // =========================
 
     let jugador_mapa_x =
         offset_x
@@ -632,23 +507,18 @@ fn dibujar_mapa_2d(
                 / TAMANO_CELDA
                 * escala;
 
-    // =========================
-    // RAYOS DEL FOV
-    // =========================
-
+    // Rayitos del FOV
     let cantidad_rayitos = 40;
 
     let angulo_inicial =
-        angulo_jugador
-            - FOV / 2.0;
+        angulo - FOV / 2.0;
 
     for rayo in 0..cantidad_rayitos {
         let angulo_rayo =
             angulo_inicial
                 + FOV
                     * rayo as f32
-                    / cantidad_rayitos
-                        as f32;
+                    / cantidad_rayitos as f32;
 
         let distancia =
             lanzar_rayo(
@@ -680,10 +550,9 @@ fn dibujar_mapa_2d(
                     / TAMANO_CELDA
                     * escala;
 
-        framebuffer
-            .set_current_color(
-                Color::RED,
-            );
+        framebuffer.set_current_color(
+            Color::RED,
+        );
 
         framebuffer.dotted_line(
             jugador_mapa_x as i32,
@@ -694,14 +563,10 @@ fn dibujar_mapa_2d(
         );
     }
 
-    // =========================
-    // JUGADOR
-    // =========================
-
-    framebuffer
-        .set_current_color(
-            Color::YELLOW,
-        );
+    // Jugador
+    framebuffer.set_current_color(
+        Color::YELLOW,
+    );
 
     framebuffer.point_with_size(
         jugador_mapa_x as i32,
@@ -709,21 +574,18 @@ fn dibujar_mapa_2d(
         6,
     );
 
-    // Dirección de la cámara.
+    // Dirección de la cámara
     let direccion_x =
         jugador_mapa_x
-            + angulo_jugador.cos()
-                * 20.0;
+            + angulo.cos() * 20.0;
 
     let direccion_y =
         jugador_mapa_y
-            + angulo_jugador.sin()
-                * 20.0;
+            + angulo.sin() * 20.0;
 
-    framebuffer
-        .set_current_color(
-            Color::GREEN,
-        );
+    framebuffer.set_current_color(
+        Color::GREEN,
+    );
 
     framebuffer.dotted_line(
         jugador_mapa_x as i32,
@@ -739,21 +601,16 @@ fn calcular_escala_mapa(
 ) -> f32 {
     let escala_x =
         ANCHO_VENTANA as f32
-            / mapa.ancho()
-                as f32;
+            / mapa.ancho() as f32;
 
     let escala_y =
         ALTO_VENTANA as f32
-            / mapa.alto()
-                as f32;
+            / mapa.alto() as f32;
 
-    escala_x.min(escala_y)
-        * 0.9
+    escala_x.min(escala_y) * 0.9
 }
 
-// ============================================================
-// FONDO 3D
-// ============================================================
+// FONDO
 
 fn dibujar_fondo_3d(
     framebuffer: &mut Framebuffer,
@@ -767,16 +624,14 @@ fn dibujar_fondo_3d(
                 ALTO_VENTANA,
             );
 
-    // Techo
-    framebuffer
-        .set_current_color(
-            Color::new(
-                10,
-                10,
-                15,
-                255,
-            ),
-        );
+    framebuffer.set_current_color(
+        Color::new(
+            10,
+            10,
+            15,
+            255,
+        ),
+    );
 
     dibujar_rectangulo(
         framebuffer,
@@ -786,16 +641,14 @@ fn dibujar_fondo_3d(
         horizonte,
     );
 
-    // Suelo
-    framebuffer
-        .set_current_color(
-            Color::new(
-                35,
-                35,
-                35,
-                255,
-            ),
-        );
+    framebuffer.set_current_color(
+        Color::new(
+            35,
+            35,
+            35,
+            255,
+        ),
+    );
 
     dibujar_rectangulo(
         framebuffer,
@@ -806,9 +659,8 @@ fn dibujar_fondo_3d(
     );
 }
 
-// ============================================================
+
 // DIBUJADO
-// ============================================================
 
 fn dibujar_columna(
     framebuffer: &mut Framebuffer,
@@ -870,21 +722,4 @@ fn calcular_intensidad(
             210.0,
         )
         as u8
-}
-
-fn normalizar_angulo(
-    mut angulo: f32,
-) -> f32 {
-    let vuelta =
-        2.0 * PI;
-
-    while angulo < 0.0 {
-        angulo += vuelta;
-    }
-
-    while angulo >= vuelta {
-        angulo -= vuelta;
-    }
-
-    angulo
 }

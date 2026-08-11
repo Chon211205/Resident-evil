@@ -78,6 +78,14 @@ fn main() {
                 "No se pudo cargar assets/pistol2.png",
             );
 
+    let mut textura_pared =
+        Image::load_image(
+            "assets/textures/wall.jpg",
+        )
+        .expect(
+            "No se pudo cargar assets/textures/wall.png",
+        );
+
     while !ventana.window_should_close() {
         let delta_time =
             ventana.get_frame_time();
@@ -136,6 +144,7 @@ fn main() {
             &mapa,
             &player,
             &camera,
+            &mut textura_pared,
         );
 
         render_minimap(
@@ -156,28 +165,36 @@ fn main() {
                 );
 
         let pantalla_ancho =
-            ventana.get_screen_width() as f32;
+            ventana.get_screen_width()
+                as f32;
 
         let pantalla_alto =
-            ventana.get_screen_height() as f32;
+            ventana.get_screen_height()
+                as f32;
 
         let escala_x =
             pantalla_ancho
-                / ANCHO_VENTANA as f32;
+                / ANCHO_VENTANA
+                    as f32;
 
         let escala_y =
             pantalla_alto
-                / ALTO_VENTANA as f32;
+                / ALTO_VENTANA
+                    as f32;
 
         let escala =
-            escala_x.min(escala_y);
+            escala_x.min(
+                escala_y,
+            );
 
         let ancho_render =
-            ANCHO_VENTANA as f32
+            ANCHO_VENTANA
+                as f32
                 * escala;
 
         let alto_render =
-            ALTO_VENTANA as f32
+            ALTO_VENTANA
+                as f32
                 * escala;
 
         let offset_x =
@@ -211,11 +228,13 @@ fn main() {
                 * escala;
 
         let arma_ancho =
-            arma_actual.width() as f32
+            arma_actual.width()
+                as f32
                 * escala_arma;
 
         let arma_alto =
-            arma_actual.height() as f32
+            arma_actual.height()
+                as f32
                 * escala_arma;
 
         let arma_x =
@@ -242,8 +261,10 @@ fn main() {
             Rectangle::new(
                 0.0,
                 0.0,
-                ANCHO_VENTANA as f32,
-                ALTO_VENTANA as f32,
+                ANCHO_VENTANA
+                    as f32,
+                ALTO_VENTANA
+                    as f32,
             ),
             Rectangle::new(
                 offset_x,
@@ -273,16 +294,21 @@ fn main() {
         if apuntando {
             let mira_x =
                 offset_x
-                    + ancho_render / 2.0;
+                    + ancho_render
+                        / 2.0;
 
             let mira_y =
                 offset_y
-                    + alto_render / 2.0;
+                    + alto_render
+                        / 2.0;
 
             dibujo.draw_circle(
                 mira_x as i32,
                 mira_y as i32,
-                3.0 * escala.max(1.0),
+                3.0
+                    * escala.max(
+                        1.0,
+                    ),
                 Color::RED,
             );
         }

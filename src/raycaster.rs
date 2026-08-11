@@ -2,6 +2,7 @@ use crate::camera::Camera;
 use crate::framebuffer::Framebuffer;
 use crate::map::{Map, TAMANO_CELDA};
 use crate::player::Player;
+
 use raylib::prelude::*;
 use std::f32::consts::PI;
 
@@ -11,11 +12,18 @@ pub const ALTO_VENTANA: i32 = 600;
 pub const CANTIDAD_RAYOS: i32 = ANCHO_VENTANA;
 pub const FOV: f32 = PI / 3.0;
 
+pub struct RayHit {
+    pub distancia: f32,
+    pub impacto_x: f32,
+    pub impacto_y: f32,
+}
+
 pub fn render_3d(
     framebuffer: &mut Framebuffer,
     mapa: &Map,
     player: &Player,
     camera: &Camera,
+    textura_pared: &mut Image,
 ) {
     dibujar_fondo(
         framebuffer,
@@ -27,6 +35,7 @@ pub fn render_3d(
         mapa,
         player,
         camera,
+        textura_pared,
     );
 }
 
@@ -35,9 +44,12 @@ pub fn lanzar_rayo(
     inicio_x: f32,
     inicio_y: f32,
     angulo: f32,
-) -> f32 {
-    let direccion_x = angulo.cos();
-    let direccion_y = angulo.sin();
+) -> RayHit {
+    let direccion_x =
+        angulo.cos();
+
+    let direccion_y =
+        angulo.sin();
 
     let mut distancia = 0.0;
 
@@ -45,16 +57,24 @@ pub fn lanzar_rayo(
         distancia += 0.5;
 
         let rayo_x =
-            inicio_x + direccion_x * distancia;
+            inicio_x
+                + direccion_x
+                    * distancia;
 
         let rayo_y =
-            inicio_y + direccion_y * distancia;
+            inicio_y
+                + direccion_y
+                    * distancia;
 
         if mapa.es_pared(
             rayo_x,
             rayo_y,
         ) {
-            return distancia;
+            return RayHit {
+                distancia,
+                impacto_x: rayo_x,
+                impacto_y: rayo_y,
+            };
         }
     }
 }
@@ -64,12 +84,15 @@ fn dibujar_paredes(
     mapa: &Map,
     player: &Player,
     camera: &Camera,
+    textura_pared: &mut Image,
 ) {
     let angulo_inicial =
-        camera.angle - FOV / 2.0;
+        camera.angle
+            - FOV / 2.0;
 
     let incremento_angulo =
-        FOV / CANTIDAD_RAYOS as f32;
+        FOV
+            / CANTIDAD_RAYOS as f32;
 
     let distancia_plano =
         (ANCHO_VENTANA as f32 / 2.0)
@@ -81,7 +104,7 @@ fn dibujar_paredes(
                 + numero_rayo as f32
                     * incremento_angulo;
 
-        let distancia =
+        let hit =
             lanzar_rayo(
                 mapa,
                 player.x,
@@ -90,10 +113,11 @@ fn dibujar_paredes(
             );
 
         let diferencia_angulo =
-            angulo_rayo - camera.angle;
+            angulo_rayo
+                - camera.angle;
 
         let distancia_corregida =
-            distancia
+            hit.distancia
                 * diferencia_angulo.cos();
 
         let distancia_segura =
@@ -124,27 +148,170 @@ fn dibujar_paredes(
             centro_pantalla
                 + altura_columna / 2;
 
-        let intensidad =
-            calcular_intensidad(
-                distancia_segura,
+        let textura_x =
+            calcular_textura_x(
+                hit.impacto_x,
+                hit.impacto_y,
+                textura_pared.width(),
             );
 
-        framebuffer.set_current_color(
-            Color::new(
-                intensidad,
-                intensidad,
-                intensidad,
-                255,
-            ),
-        );
-
-        dibujar_columna(
+        dibujar_columna_texturizada(
             framebuffer,
+            textura_pared,
             numero_rayo,
             inicio_y,
             final_y,
+            textura_x,
+            distancia_segura,
         );
     }
+}
+
+fn calcular_textura_x(
+    impacto_x: f32,
+    impacto_y: f32,
+    ancho_textura: i32,
+) -> i32 {
+    let local_x =
+        impacto_x
+            .rem_euclid(
+                TAMANO_CELDA,
+            );
+
+    let local_y =
+        impacto_y
+            .rem_euclid(
+                TAMANO_CELDA,
+            );
+
+    let distancia_borde_x =
+        local_x.min(
+            TAMANO_CELDA - local_x,
+        );
+
+    let distancia_borde_y =
+        local_y.min(
+            TAMANO_CELDA - local_y,
+        );
+
+    let porcentaje =
+        if distancia_borde_x
+            < distancia_borde_y
+        {
+            local_y / TAMANO_CELDA
+        } else {
+            local_x / TAMANO_CELDA
+        };
+
+    let textura_x =
+        porcentaje
+            * ancho_textura as f32;
+
+    textura_x
+        .floor()
+        .clamp(
+            0.0,
+            (ancho_textura - 1)
+                as f32,
+        )
+        as i32
+}
+
+fn dibujar_columna_texturizada(
+    framebuffer: &mut Framebuffer,
+    textura: &mut Image,
+    pantalla_x: i32,
+    inicio_y: i32,
+    final_y: i32,
+    textura_x: i32,
+    distancia: f32,
+) {
+    let inicio =
+        inicio_y.max(0);
+
+    let final_posicion =
+        final_y.min(
+            framebuffer.height() - 1,
+        );
+
+    if inicio > final_posicion {
+        return;
+    }
+
+    let altura_pared =
+        final_y - inicio_y;
+
+    if altura_pared <= 0 {
+        return;
+    }
+
+    for pantalla_y
+        in inicio..=final_posicion
+    {
+        let porcentaje_y =
+            (pantalla_y - inicio_y)
+                as f32
+                / altura_pared as f32;
+
+        let textura_y =
+            (
+                porcentaje_y
+                    * textura.height()
+                        as f32
+            )
+                .floor()
+                .clamp(
+                    0.0,
+                    (textura.height() - 1)
+                        as f32,
+                )
+                as i32;
+
+        let mut color =
+            textura.get_color(
+                textura_x,
+                textura_y,
+            );
+
+        color =
+            aplicar_oscuridad(
+                color,
+                distancia,
+            );
+
+        framebuffer
+            .set_current_color(
+                color,
+            );
+
+        framebuffer.point(
+            pantalla_x,
+            pantalla_y,
+        );
+    }
+}
+
+fn aplicar_oscuridad(
+    color: Color,
+    distancia: f32,
+) -> Color {
+    let factor =
+        (1.0
+            - distancia / 700.0)
+            .clamp(
+                0.25,
+                1.0,
+            );
+
+    Color::new(
+        (color.r as f32 * factor)
+            as u8,
+        (color.g as f32 * factor)
+            as u8,
+        (color.b as f32 * factor)
+            as u8,
+        color.a,
+    )
 }
 
 fn dibujar_fondo(
@@ -194,32 +361,6 @@ fn dibujar_fondo(
     );
 }
 
-fn dibujar_columna(
-    framebuffer: &mut Framebuffer,
-    x: i32,
-    inicio_y: i32,
-    final_y: i32,
-) {
-    let inicio =
-        inicio_y.max(0);
-
-    let final_posicion =
-        final_y.min(
-            framebuffer.height() - 1,
-        );
-
-    if inicio > final_posicion {
-        return;
-    }
-
-    for y in inicio..=final_posicion {
-        framebuffer.point(
-            x,
-            y,
-        );
-    }
-}
-
 fn dibujar_rectangulo(
     framebuffer: &mut Framebuffer,
     x: i32,
@@ -227,31 +368,22 @@ fn dibujar_rectangulo(
     ancho: i32,
     alto: i32,
 ) {
-    if ancho <= 0 || alto <= 0 {
+    if ancho <= 0
+        || alto <= 0
+    {
         return;
     }
 
-    for pixel_y in y..y + alto {
-        for pixel_x in x..x + ancho {
+    for pixel_y
+        in y..y + alto
+    {
+        for pixel_x
+            in x..x + ancho
+        {
             framebuffer.point(
                 pixel_x,
                 pixel_y,
             );
         }
     }
-}
-
-fn calcular_intensidad(
-    distancia: f32,
-) -> u8 {
-    let intensidad =
-        210.0
-            - distancia * 0.55;
-
-    intensidad
-        .clamp(
-            35.0,
-            210.0,
-        )
-        as u8
 }

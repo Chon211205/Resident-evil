@@ -2,35 +2,45 @@ use crate::camera::Camera;
 use crate::framebuffer::Framebuffer;
 use crate::map::{Map, TAMANO_CELDA};
 use crate::player::Player;
-use crate::raycaster::{
-    lanzar_rayo,
-    ALTO_VENTANA,
-    ANCHO_VENTANA,
-    FOV,
-};
 
 use raylib::prelude::*;
 
-pub fn render_map_2d(
+const MINIMAPA_X: i32 = 15;
+const MINIMAPA_Y: i32 = 15;
+const TAMANO_MINIMAPA: i32 = 180;
+
+pub fn render_minimap(
     framebuffer: &mut Framebuffer,
     mapa: &Map,
     player: &Player,
     camera: &Camera,
 ) {
+    let escala_x =
+        TAMANO_MINIMAPA as f32
+            / mapa.ancho() as f32;
+
+    let escala_y =
+        TAMANO_MINIMAPA as f32
+            / mapa.alto() as f32;
+
     let escala =
-        calcular_escala_mapa(mapa);
+        escala_x.min(escala_y);
 
     let ancho_mapa =
-        mapa.ancho() as f32 * escala;
+        mapa.ancho() as f32
+            * escala;
 
     let alto_mapa =
-        mapa.alto() as f32 * escala;
+        mapa.alto() as f32
+            * escala;
 
-    let offset_x =
-        (ANCHO_VENTANA as f32 - ancho_mapa) / 2.0;
-
-    let offset_y =
-        (ALTO_VENTANA as f32 - alto_mapa) / 2.0;
+    dibujar_fondo(
+        framebuffer,
+        MINIMAPA_X - 5,
+        MINIMAPA_Y - 5,
+        ancho_mapa as i32 + 10,
+        alto_mapa as i32 + 10,
+    );
 
     for fila in 0..mapa.alto() {
         for columna in 0..mapa.ancho() {
@@ -41,43 +51,40 @@ pub fn render_map_2d(
                 );
 
             let x =
-                offset_x as i32
-                    + columna as i32
-                        * escala as i32;
+                MINIMAPA_X
+                    + (columna as f32
+                        * escala) as i32;
 
             let y =
-                offset_y as i32
-                    + fila as i32
-                        * escala as i32;
+                MINIMAPA_Y
+                    + (fila as f32
+                        * escala) as i32;
 
             match celda {
                 '#' => {
-                    framebuffer
-                        .set_current_color(
-                            Color::DARKGRAY,
-                        );
+                    framebuffer.set_current_color(
+                        Color::LIGHTGRAY,
+                    );
 
                     dibujar_rectangulo(
                         framebuffer,
                         x,
                         y,
-                        escala as i32,
-                        escala as i32,
+                        escala.ceil() as i32,
+                        escala.ceil() as i32,
                     );
                 }
 
                 'E' => {
-                    framebuffer
-                        .set_current_color(
-                            Color::RED,
-                        );
+                    framebuffer.set_current_color(
+                        Color::RED,
+                    );
 
-                    framebuffer
-                        .point_with_size(
-                            x + escala as i32 / 2,
-                            y + escala as i32 / 2,
-                            4,
-                        );
+                    framebuffer.point_with_size(
+                        x,
+                        y,
+                        2,
+                    );
                 }
 
                 _ => {}
@@ -85,161 +92,74 @@ pub fn render_map_2d(
         }
     }
 
-    let player_mapa_x =
-        offset_x
+    let player_x =
+        MINIMAPA_X as f32
             + player.x
                 / TAMANO_CELDA
                 * escala;
 
-    let player_mapa_y =
-        offset_y
+    let player_y =
+        MINIMAPA_Y as f32
             + player.y
                 / TAMANO_CELDA
                 * escala;
 
-    dibujar_fov(
-        framebuffer,
-        mapa,
-        player,
-        camera,
-        player_mapa_x,
-        player_mapa_y,
-        offset_x,
-        offset_y,
-        escala,
+    framebuffer.set_current_color(
+        Color::YELLOW,
     );
 
-    framebuffer
-        .set_current_color(
-            Color::YELLOW,
-        );
-
-    framebuffer
-        .point_with_size(
-            player_mapa_x as i32,
-            player_mapa_y as i32,
-            6,
-        );
-
-    dibujar_direccion(
-        framebuffer,
-        camera,
-        player_mapa_x,
-        player_mapa_y,
+    framebuffer.point_with_size(
+        player_x as i32,
+        player_y as i32,
+        4,
     );
-}
 
-fn dibujar_fov(
-    framebuffer: &mut Framebuffer,
-    mapa: &Map,
-    player: &Player,
-    camera: &Camera,
-    player_mapa_x: f32,
-    player_mapa_y: f32,
-    offset_x: f32,
-    offset_y: f32,
-    escala: f32,
-) {
-    let cantidad_rayitos = 40;
-
-    let angulo_inicial =
-        camera.angle - FOV / 2.0;
-
-    for rayo in 0..cantidad_rayitos {
-        let angulo_rayo =
-            angulo_inicial
-                + FOV
-                    * rayo as f32
-                    / cantidad_rayitos as f32;
-
-        let distancia =
-            lanzar_rayo(
-                mapa,
-                player.x,
-                player.y,
-                angulo_rayo,
-            );
-
-        let choque_x =
-            player.x
-                + angulo_rayo.cos()
-                    * distancia;
-
-        let choque_y =
-            player.y
-                + angulo_rayo.sin()
-                    * distancia;
-
-        let choque_mapa_x =
-            offset_x
-                + choque_x
-                    / TAMANO_CELDA
-                    * escala;
-
-        let choque_mapa_y =
-            offset_y
-                + choque_y
-                    / TAMANO_CELDA
-                    * escala;
-
-        framebuffer
-            .set_current_color(
-                Color::RED,
-            );
-
-        framebuffer.dotted_line(
-            player_mapa_x as i32,
-            player_mapa_y as i32,
-            choque_mapa_x as i32,
-            choque_mapa_y as i32,
-            7.0,
-        );
-    }
-}
-
-fn dibujar_direccion(
-    framebuffer: &mut Framebuffer,
-    camera: &Camera,
-    player_x: f32,
-    player_y: f32,
-) {
     let direccion_x =
         player_x
             + camera.angle.cos()
-                * 20.0;
+                * 12.0;
 
     let direccion_y =
         player_y
             + camera.angle.sin()
-                * 20.0;
+                * 12.0;
 
-    framebuffer
-        .set_current_color(
-            Color::GREEN,
-        );
+    framebuffer.set_current_color(
+        Color::GREEN,
+    );
 
     framebuffer.dotted_line(
         player_x as i32,
         player_y as i32,
         direccion_x as i32,
         direccion_y as i32,
-        3.0,
+        2.0,
     );
 }
 
-fn calcular_escala_mapa(
-    mapa: &Map,
-) -> f32 {
-    let escala_x =
-        ANCHO_VENTANA as f32
-            / mapa.ancho() as f32;
+fn dibujar_fondo(
+    framebuffer: &mut Framebuffer,
+    x: i32,
+    y: i32,
+    ancho: i32,
+    alto: i32,
+) {
+    framebuffer.set_current_color(
+        Color::new(
+            10,
+            10,
+            10,
+            220,
+        ),
+    );
 
-    let escala_y =
-        ALTO_VENTANA as f32
-            / mapa.alto() as f32;
-
-    escala_x.min(escala_y)
-        * 0.9
+    dibujar_rectangulo(
+        framebuffer,
+        x,
+        y,
+        ancho,
+        alto,
+    );
 }
 
 fn dibujar_rectangulo(

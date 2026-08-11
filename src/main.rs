@@ -8,7 +8,7 @@ mod raycaster;
 use camera::Camera;
 use framebuffer::Framebuffer;
 use map::Map;
-use map_renderer::render_map_2d;
+use map_renderer::render_minimap;
 use player::Player;
 
 use raycaster::{
@@ -18,12 +18,6 @@ use raycaster::{
 };
 
 use raylib::prelude::*;
-
-#[derive(Clone, Copy, PartialEq)]
-enum Vista {
-    Mapa2D,
-    Vista3D,
-}
 
 fn main() {
     let mapa = Map::new();
@@ -37,9 +31,6 @@ fn main() {
 
     let mut camera =
         Camera::new();
-
-    let mut vista_actual =
-        Vista::Vista3D;
 
     let mut framebuffer =
         Framebuffer::new(
@@ -107,19 +98,6 @@ fn main() {
             );
 
         if ventana.is_key_pressed(
-            KeyboardKey::KEY_M,
-        ) {
-            vista_actual =
-                match vista_actual {
-                    Vista::Vista3D =>
-                        Vista::Mapa2D,
-
-                    Vista::Mapa2D =>
-                        Vista::Vista3D,
-                };
-        }
-
-        if ventana.is_key_pressed(
             KeyboardKey::KEY_R,
         ) {
             player.reset();
@@ -128,25 +106,19 @@ fn main() {
 
         framebuffer.clear();
 
-        match vista_actual {
-            Vista::Vista3D => {
-                render_3d(
-                    &mut framebuffer,
-                    &mapa,
-                    &player,
-                    &camera,
-                );
-            }
+        render_3d(
+            &mut framebuffer,
+            &mapa,
+            &player,
+            &camera,
+        );
 
-            Vista::Mapa2D => {
-                render_map_2d(
-                    &mut framebuffer,
-                    &mapa,
-                    &player,
-                    &camera,
-                );
-            }
-        }
+        render_minimap(
+            &mut framebuffer,
+            &mapa,
+            &player,
+            &camera,
+        );
 
         let textura =
             ventana
@@ -174,52 +146,50 @@ fn main() {
             Color::WHITE,
         );
 
-        if vista_actual == Vista::Vista3D {
-            let arma_actual =
-                if apuntando {
-                    &pistol2
-                } else {
-                    &pistol1
-                };
-
-            let escala_arma =
-                if apuntando {
-                    0.70
-                } else {
-                    0.65
-                };
-
-            let arma_x =
-                (
-                    ANCHO_VENTANA as f32
-                        - arma_actual.width() as f32
-                            * escala_arma
-                ) / 2.0;
-
-            let arma_y =
-                ALTO_VENTANA as f32
-                    - arma_actual.height() as f32
-                        * escala_arma;
-
-            dibujo.draw_texture_ex(
-                arma_actual,
-                Vector2::new(
-                    arma_x,
-                    arma_y,
-                ),
-                0.0,
-                escala_arma,
-                Color::WHITE,
-            );
-
+        let arma_actual =
             if apuntando {
-                dibujo.draw_circle(
-                    ANCHO_VENTANA / 2,
-                    ALTO_VENTANA / 2,
-                    3.0,
-                    Color::RED,
-                );
-            }
+                &pistol2
+            } else {
+                &pistol1
+            };
+
+        let escala_arma =
+            if apuntando {
+                0.70
+            } else {
+                0.65
+            };
+
+        let arma_x =
+            (
+                ANCHO_VENTANA as f32
+                    - arma_actual.width() as f32
+                        * escala_arma
+            ) / 2.0;
+
+        let arma_y =
+            ALTO_VENTANA as f32
+                - arma_actual.height() as f32
+                    * escala_arma;
+
+        dibujo.draw_texture_ex(
+            arma_actual,
+            Vector2::new(
+                arma_x,
+                arma_y,
+            ),
+            0.0,
+            escala_arma,
+            Color::WHITE,
+        );
+
+        if apuntando {
+            dibujo.draw_circle(
+                ANCHO_VENTANA / 2,
+                ALTO_VENTANA / 2,
+                3.0,
+                Color::RED,
+            );
         }
 
         dibujo.draw_rectangle(
@@ -235,19 +205,9 @@ fn main() {
             ),
         );
 
-        let nombre_vista =
-            match vista_actual {
-                Vista::Vista3D =>
-                    "3D",
-
-                Vista::Mapa2D =>
-                    "Mapa 2D",
-            };
-
         dibujo.draw_text(
             &format!(
-                "Vista: {} | Angulo: {:.1}",
-                nombre_vista,
+                "Angulo: {:.1}",
                 camera.angle.to_degrees(),
             ),
             10,
@@ -257,7 +217,7 @@ fn main() {
         );
 
         dibujo.draw_text(
-            "WASD: mover | J/L: girar | I/K: camara | Click derecho: apuntar | M: mapa | R: reset",
+            "WASD: mover | J/L: girar | I/K: camara | Click derecho: apuntar | R: reset",
             10,
             ALTO_VENTANA + 30,
             14,

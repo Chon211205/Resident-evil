@@ -54,6 +54,7 @@ fn main() {
             .build();
 
     ventana.set_target_fps(60);
+    ventana.disable_cursor();
 
     let pistol1 =
         ventana

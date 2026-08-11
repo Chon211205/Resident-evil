@@ -502,7 +502,7 @@ fn dibujar_suelo_texturizado(
                 + distancia_fila
                     * rayo_izquierda_y;
 
-        for x in 0..ANCHO_VENTANA {
+        for x in (0..ANCHO_VENTANA).step_by(2) {
             let textura_x =
                 (
                     mundo_x
@@ -511,8 +511,7 @@ fn dibujar_suelo_texturizado(
                         )
                         / TAMANO_CELDA
                         * textura_suelo
-                            .width()
-                            as f32
+                            .width() as f32
                 )
                     .floor()
                     .clamp(
@@ -533,8 +532,7 @@ fn dibujar_suelo_texturizado(
                         )
                         / TAMANO_CELDA
                         * textura_suelo
-                            .height()
-                            as f32
+                            .height() as f32
                 )
                     .floor()
                     .clamp(
@@ -570,11 +568,19 @@ fn dibujar_suelo_texturizado(
                 y,
             );
 
-            mundo_x += paso_x;
-            mundo_y += paso_y;
+            if x + 1 < ANCHO_VENTANA {
+                framebuffer.point(
+                    x + 1,
+                    y,
+                );
+            }
+
+            mundo_x += paso_x * 2.0;
+            mundo_y += paso_y * 2.0;
         }
     }
 }
+
 
 fn aplicar_oscuridad(
     color: Color,

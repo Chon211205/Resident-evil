@@ -75,7 +75,7 @@ fn main() {
                 "assets/pistol2.png",
             )
             .expect(
-                "No se pudo cargar assets/pistol2.png",
+                "No se pudo cargar assets/pistol2.jpg",
             );
 
     let mut textura_pared =
@@ -83,7 +83,7 @@ fn main() {
             "assets/textures/wall.jpg",
         )
         .expect(
-            "No se pudo cargar assets/textures/wall.png",
+            "No se pudo cargar assets/textures/wall.jpg",
         );
 
     let mut textura_suelo =
@@ -91,7 +91,7 @@ fn main() {
             "assets/textures/floor.jpg",
         )
         .expect(
-            "No se pudo cargar assets/textures/floor.png",
+            "No se pudo cargar assets/textures/floor.jpg",
         );
 
     while !ventana.window_should_close() {
@@ -315,11 +315,26 @@ fn main() {
                 mira_x as i32,
                 mira_y as i32,
                 3.0
-                    * escala.max(
-                        1.0,
-                    ),
+                    * escala.max(1.0),
                 Color::RED,
             );
         }
+
+        let fps =
+            dibujo.get_fps();
+
+        let texto_fps =
+            format!(
+                "FPS: {}",
+                fps,
+            );
+
+        dibujo.draw_text(
+            &texto_fps,
+            dibujo.get_screen_width() - 100,
+            10,
+            20,
+            Color::GREEN,
+        );
     }
 }

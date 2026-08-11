@@ -2,21 +2,22 @@ mod camera;
 mod framebuffer;
 mod map;
 mod player;
+mod raycaster;
 
 use camera::Camera;
 use framebuffer::Framebuffer;
 use map::{Map, TAMANO_CELDA};
 use player::Player;
 
+use raycaster::{
+    lanzar_rayo,
+    render_3d,
+    ALTO_VENTANA,
+    ANCHO_VENTANA,
+    FOV,
+};
+
 use raylib::prelude::*;
-use std::f32::consts::PI;
-
-const ANCHO_VENTANA: i32 = 800;
-const ALTO_VENTANA: i32 = 600;
-
-const CANTIDAD_RAYOS: i32 = ANCHO_VENTANA;
-const FOV: f32 = PI / 3.0;
-const VELOCIDAD_ROTACION: f32 = 2.0;
 
 #[derive(Clone, Copy, PartialEq)]
 enum Vista {
@@ -62,7 +63,7 @@ fn main() {
         camera.update(
             &ventana,
             delta_time,
-            VELOCIDAD_ROTACION,
+            2.0,
         );
 
         player.update(
@@ -96,18 +97,11 @@ fn main() {
 
         match vista_actual {
             Vista::Vista3D => {
-                dibujar_fondo_3d(
-                    &mut framebuffer,
-                    camera.vertical_offset,
-                );
-
-                dibujar_vista_3d(
+                render_3d(
                     &mut framebuffer,
                     &mapa,
-                    player.x,
-                    player.y,
-                    camera.angle,
-                    camera.vertical_offset,
+                    &player,
+                    &camera,
                 );
             }
 
@@ -115,9 +109,8 @@ fn main() {
                 dibujar_mapa_2d(
                     &mut framebuffer,
                     &mapa,
-                    player.x,
-                    player.y,
-                    camera.angle,
+                    &player,
+                    &camera,
                 );
             }
         }
@@ -189,137 +182,11 @@ fn main() {
     }
 }
 
-fn dibujar_vista_3d(
-    framebuffer: &mut Framebuffer,
-    mapa: &Map,
-    player_x: f32,
-    player_y: f32,
-    angulo_camara: f32,
-    altura_camara: i32,
-) {
-    let angulo_inicial =
-        angulo_camara - FOV / 2.0;
-
-    let incremento_angulo =
-        FOV / CANTIDAD_RAYOS as f32;
-
-    let distancia_plano =
-        (ANCHO_VENTANA as f32 / 2.0)
-            / (FOV / 2.0).tan();
-
-    for numero_rayo in 0..CANTIDAD_RAYOS {
-        let angulo_rayo =
-            angulo_inicial
-                + numero_rayo as f32
-                    * incremento_angulo;
-
-        let distancia =
-            lanzar_rayo(
-                mapa,
-                player_x,
-                player_y,
-                angulo_rayo,
-            );
-
-        let diferencia =
-            angulo_rayo - angulo_camara;
-
-        let distancia_corregida =
-            distancia * diferencia.cos();
-
-        let distancia_segura =
-            distancia_corregida.max(1.0);
-
-        let altura_columna =
-            TAMANO_CELDA
-                * distancia_plano
-                / distancia_segura;
-
-        let altura_columna =
-            altura_columna
-                .min(
-                    ALTO_VENTANA as f32
-                        * 2.0,
-                )
-                as i32;
-
-        let centro =
-            ALTO_VENTANA / 2
-                + altura_camara;
-
-        let inicio_y =
-            centro
-                - altura_columna / 2;
-
-        let final_y =
-            centro
-                + altura_columna / 2;
-
-        let intensidad =
-            calcular_intensidad(
-                distancia_segura,
-            );
-
-        framebuffer.set_current_color(
-            Color::new(
-                intensidad,
-                intensidad,
-                intensidad,
-                255,
-            ),
-        );
-
-        dibujar_columna(
-            framebuffer,
-            numero_rayo,
-            inicio_y,
-            final_y,
-        );
-    }
-}
-
-fn lanzar_rayo(
-    mapa: &Map,
-    player_x: f32,
-    player_y: f32,
-    angulo: f32,
-) -> f32 {
-    let direccion_x =
-        angulo.cos();
-
-    let direccion_y =
-        angulo.sin();
-
-    let mut distancia = 0.0;
-
-    loop {
-        distancia += 0.5;
-
-        let rayo_x =
-            player_x
-                + direccion_x
-                    * distancia;
-
-        let rayo_y =
-            player_y
-                + direccion_y
-                    * distancia;
-
-        if mapa.es_pared(
-            rayo_x,
-            rayo_y,
-        ) {
-            return distancia;
-        }
-    }
-}
-
 fn dibujar_mapa_2d(
     framebuffer: &mut Framebuffer,
     mapa: &Map,
-    player_x: f32,
-    player_y: f32,
-    angulo_camara: f32,
+    player: &Player,
+    camera: &Camera,
 ) {
     let escala =
         calcular_escala_mapa(mapa);
@@ -399,20 +266,20 @@ fn dibujar_mapa_2d(
 
     let player_mapa_x =
         offset_x
-            + player_x
+            + player.x
                 / TAMANO_CELDA
                 * escala;
 
     let player_mapa_y =
         offset_y
-            + player_y
+            + player.y
                 / TAMANO_CELDA
                 * escala;
 
     let cantidad_rayitos = 40;
 
     let angulo_inicial =
-        angulo_camara
+        camera.angle
             - FOV / 2.0;
 
     for rayo in 0..cantidad_rayitos {
@@ -426,18 +293,18 @@ fn dibujar_mapa_2d(
         let distancia =
             lanzar_rayo(
                 mapa,
-                player_x,
-                player_y,
+                player.x,
+                player.y,
                 angulo_rayo,
             );
 
         let choque_x =
-            player_x
+            player.x
                 + angulo_rayo.cos()
                     * distancia;
 
         let choque_y =
-            player_y
+            player.y
                 + angulo_rayo.sin()
                     * distancia;
 
@@ -479,12 +346,12 @@ fn dibujar_mapa_2d(
 
     let direccion_x =
         player_mapa_x
-            + angulo_camara.cos()
+            + camera.angle.cos()
                 * 20.0;
 
     let direccion_y =
         player_mapa_y
-            + angulo_camara.sin()
+            + camera.angle.sin()
                 * 20.0;
 
     framebuffer.set_current_color(
@@ -515,76 +382,6 @@ fn calcular_escala_mapa(
         * 0.9
 }
 
-fn dibujar_fondo_3d(
-    framebuffer: &mut Framebuffer,
-    altura_camara: i32,
-) {
-    let horizonte =
-        (ALTO_VENTANA / 2
-            + altura_camara)
-            .clamp(
-                0,
-                ALTO_VENTANA,
-            );
-
-    framebuffer.set_current_color(
-        Color::new(
-            10,
-            10,
-            15,
-            255,
-        ),
-    );
-
-    dibujar_rectangulo(
-        framebuffer,
-        0,
-        0,
-        ANCHO_VENTANA,
-        horizonte,
-    );
-
-    framebuffer.set_current_color(
-        Color::new(
-            35,
-            35,
-            35,
-            255,
-        ),
-    );
-
-    dibujar_rectangulo(
-        framebuffer,
-        0,
-        horizonte,
-        ANCHO_VENTANA,
-        ALTO_VENTANA - horizonte,
-    );
-}
-
-fn dibujar_columna(
-    framebuffer: &mut Framebuffer,
-    x: i32,
-    inicio_y: i32,
-    final_y: i32,
-) {
-    let inicio =
-        inicio_y.max(0);
-
-    let final_posicion =
-        final_y.min(
-            framebuffer.height() - 1,
-        );
-
-    if inicio > final_posicion {
-        return;
-    }
-
-    for y in inicio..=final_posicion {
-        framebuffer.point(x, y);
-    }
-}
-
 fn dibujar_rectangulo(
     framebuffer: &mut Framebuffer,
     x: i32,
@@ -604,19 +401,4 @@ fn dibujar_rectangulo(
             );
         }
     }
-}
-
-fn calcular_intensidad(
-    distancia: f32,
-) -> u8 {
-    let intensidad =
-        210.0
-            - distancia * 0.55;
-
-    intensidad
-        .clamp(
-            35.0,
-            210.0,
-        )
-        as u8
 }

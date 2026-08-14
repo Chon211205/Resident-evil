@@ -45,12 +45,33 @@ fn main() {
     let mut mapa =
         Map::new();
 
+    let posiciones_zombies =
+        mapa.extraer_zombies();
+
+    let mut zombies =
+        posiciones_zombies
+            .into_iter()
+            .map(|(x, y)| {
+                Zombie::new(
+                    x,
+                    y,
+                )
+            })
+            .collect::<Vec<Zombie>>();
+
+    println!(
+        "Zombies creados: {}",
+        zombies.len(),
+    );
+
     mapa.guardar_txt(
         "mapa_resident.txt",
     );
 
     let mut player =
-        Player::new(&mapa);
+        Player::new(
+            &mapa,
+        );
 
     let mut camera =
         Camera::new();
@@ -66,18 +87,6 @@ fn main() {
 
     let mut vida_jugador =
         100;
-
-    let mut zombies =
-        vec![
-            Zombie::new(
-                300.0,
-                200.0,
-            ),
-            Zombie::new(
-                500.0,
-                400.0,
-            ),
-        ];
 
     let mut framebuffer =
         Framebuffer::new(
@@ -101,7 +110,10 @@ fn main() {
             )
             .build();
 
-    ventana.set_target_fps(60);
+    ventana.set_target_fps(
+        60,
+    );
+
     ventana.disable_cursor();
 
     let pistol1 =
@@ -203,12 +215,14 @@ fn main() {
             2.0,
         );
 
-        player.update(
-            &ventana,
-            &mapa,
-            camera.angle,
-            delta_time,
-        );
+        if vida_jugador > 0 {
+            player.update(
+                &ventana,
+                &mapa,
+                camera.angle,
+                delta_time,
+            );
+        }
 
         if vida_jugador > 0 {
             for zombie in
@@ -225,7 +239,8 @@ fn main() {
                     dano;
 
                 if vida_jugador < 0 {
-                    vida_jugador = 0;
+                    vida_jugador =
+                        0;
                 }
 
                 if dano > 0 {
@@ -456,8 +471,10 @@ fn main() {
             Rectangle::new(
                 0.0,
                 0.0,
-                ANCHO_VENTANA as f32,
-                ALTO_VENTANA as f32,
+                ANCHO_VENTANA
+                    as f32,
+                ALTO_VENTANA
+                    as f32,
             ),
             Rectangle::new(
                 offset_x,
@@ -522,7 +539,9 @@ fn main() {
                 mira_x as i32,
                 mira_y as i32,
                 3.0
-                    * escala.max(1.0),
+                    * escala.max(
+                        1.0,
+                    ),
                 Color::RED,
             );
         }

@@ -10,51 +10,55 @@ impl Map {
     pub fn new() -> Self {
         let filas = vec![
             "#########################################",
-            "#P       #             #               #",
-            "#        #             #               #",
-            "#    K   #             #               #",
-            "#        #             #               #",
-            "####D##########################D########",
-            "#                              #       #",
-            "#                              #       #",
-            "#       K                      D       #",
-            "#                              #       #",
-            "#############################D##########",
-            "#     #           #          #         #",
-            "#     #           #          #         #",
-            "#     D           #          D         #",
-            "###D######## ###### ##########D#########",
-            "#           #                         ##",
-            "#           #                          #",
-            "#           D                          #",
-            "#           #                          #",
-            "######D##############D##################",
-            "#             #                        #",
-            "#             #                        #",
-            "#             D                        #",
-            "#             #                        #",
-            "######D###########D#####################",
-            "#               #                      #",
-            "#               #                      #",
-            "#               D                      #",
-            "#               #                      #",
-            "######D###########D#####################",
-            "#             #                        #",
-            "#             #                        #",
-            "#             D                        #",
-            "#             #                        #",
-            "######D#############D###################",
-            "#                   #                  #",
-            "#                   D                  #",
-            "#                   #                  #",
-            "#                   #                 E#",
+            "#P        #             #               #",
+            "#         #             #               #",
+            "#         #         Z   #               #",
+            "#         #             #               #",
+            "##### #########   #############   #######",
+            "#         #             #               #",
+            "#   K     #       Z     #               #",
+            "#         #             #               #",
+            "#         D              #              #",
+            "###########   ###################   #####",
+            "#         #             #               #",
+            "#         #             #               #",
+            "#         #                     Z       #",
+            "#         ###########D###################",
+            "#                                       #",
+            "#             #                         #",
+            "#             #                         #",
+            "#             #                         #",
+            "#####   #####################   #########",
+            "#             #                         #",
+            "#      Z      #                         #",
+            "#             #                         #",
+            "#                                       #",
+            "#########   #####################   #####",
+            "#             #                         #",
+            "#             #           Z             #",
+            "#             #                         #",
+            "#             #                         #",
+            "#####   #####################   #########",
+            "#             #                         #",
+            "#             #                         #",
+            "#             #                         #",
+            "#                                       #",
+            "#########################################",
+            "#                                       #",
+            "#                 Z                     #",
+            "#                                       #",
+            "#                                      E#",
             "#########################################",
         ];
 
-        let data = filas
-            .iter()
-            .map(|fila| fila.chars().collect::<Vec<char>>())
-            .collect();
+        let data =
+            filas
+                .iter()
+                .map(|fila| {
+                    fila.chars()
+                        .collect::<Vec<char>>()
+                })
+                .collect();
 
         Self { data }
     }
@@ -63,31 +67,99 @@ impl Map {
         &self,
         nombre: &str,
     ) {
-        let contenido = self
-            .data
-            .iter()
-            .map(|fila| fila.iter().collect::<String>())
-            .collect::<Vec<String>>()
-            .join("\n");
+        let contenido =
+            self.data
+                .iter()
+                .map(|fila| {
+                    fila.iter()
+                        .collect::<String>()
+                })
+                .collect::<Vec<String>>()
+                .join("\n");
 
-        fs::write(nombre, contenido)
-            .expect("No se pudo guardar el mapa");
+        fs::write(
+            nombre,
+            contenido,
+        )
+        .expect(
+            "No se pudo guardar el mapa",
+        );
 
-        println!("Mapa guardado en {}", nombre);
+        println!(
+            "Mapa guardado en {}",
+            nombre,
+        );
     }
 
     pub fn buscar_jugador(
         &self,
     ) -> Option<(usize, usize)> {
-        for (fila, linea) in self.data.iter().enumerate() {
-            for (columna, celda) in linea.iter().enumerate() {
+        for (fila, linea)
+            in self.data.iter().enumerate()
+        {
+            for (columna, celda)
+                in linea.iter().enumerate()
+            {
                 if *celda == 'P' {
-                    return Some((fila, columna));
+                    return Some(
+                        (
+                            fila,
+                            columna,
+                        ),
+                    );
                 }
             }
         }
 
         None
+    }
+
+    pub fn extraer_zombies(
+        &mut self,
+    ) -> Vec<(f32, f32)> {
+        let mut posiciones =
+            Vec::new();
+
+        for fila in 0..self.data.len() {
+            for columna in 0..self.data[fila].len() {
+                if self.data[fila][columna] == 'Z' {
+                    let x =
+                        columna as f32
+                            * TAMANO_CELDA
+                            + TAMANO_CELDA / 2.0;
+
+                    let y =
+                        fila as f32
+                            * TAMANO_CELDA
+                            + TAMANO_CELDA / 2.0;
+
+                    posiciones.push(
+                        (
+                            x,
+                            y,
+                        ),
+                    );
+
+                    println!(
+                        "Zombie encontrado: fila={}, columna={}, x={}, y={}",
+                        fila,
+                        columna,
+                        x,
+                        y,
+                    );
+
+                    self.data[fila][columna] =
+                        ' ';
+                }
+            }
+        }
+
+        println!(
+            "Total zombies encontrados: {}",
+            posiciones.len(),
+        );
+
+        posiciones
     }
 
     pub fn celda(
@@ -110,7 +182,9 @@ impl Map {
             return '#';
         }
 
-        fila_actual[columna as usize]
+        fila_actual[
+            columna as usize
+        ]
     }
 
     pub fn cambiar_celda(
@@ -142,12 +216,17 @@ impl Map {
         y: f32,
     ) -> char {
         let columna =
-            (x / TAMANO_CELDA).floor() as i32;
+            (x / TAMANO_CELDA)
+                .floor() as i32;
 
         let fila =
-            (y / TAMANO_CELDA).floor() as i32;
+            (y / TAMANO_CELDA)
+                .floor() as i32;
 
-        self.celda(fila, columna)
+        self.celda(
+            fila,
+            columna,
+        )
     }
 
     pub fn es_pared(
@@ -156,7 +235,10 @@ impl Map {
         y: f32,
     ) -> bool {
         let celda =
-            self.celda_desde_posicion(x, y);
+            self.celda_desde_posicion(
+                x,
+                y,
+            );
 
         matches!(
             celda,
@@ -170,7 +252,10 @@ impl Map {
         columna: i32,
     ) -> bool {
         matches!(
-            self.celda(fila, columna),
+            self.celda(
+                fila,
+                columna,
+            ),
             '#' | 'D'
         )
     }

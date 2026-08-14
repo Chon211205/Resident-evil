@@ -8,6 +8,7 @@ mod player;
 mod puzzle;
 mod raycaster;
 mod texture_data;
+mod sprite_renderer;
 
 use camera::Camera;
 use framebuffer::Framebuffer;
@@ -24,6 +25,7 @@ use map_renderer::render_minimap;
 use player::Player;
 use puzzle::Puzzle;
 use texture_data::TextureData;
+use sprite_renderer::render_key_sprite;
 
 use raycaster::{
     render_3d,
@@ -117,6 +119,16 @@ fn main() {
         .expect(
             "No se pudo cargar assets/textures/floor.jpg",
         );
+
+    let key_texture =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/key.png",
+            )
+            .expect(
+                "No se pudo cargar assets/key.png",
+            );
 
     let textura_pared =
         TextureData::from_image(
@@ -353,6 +365,17 @@ fn main() {
             ),
             0.0,
             Color::WHITE,
+        );
+
+        render_key_sprite(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &key_texture,
+            offset_x,
+            offset_y,
+            escala,
         );
 
         dibujo.draw_texture_ex(

@@ -9,6 +9,8 @@ mod puzzle;
 mod raycaster;
 mod sprite_renderer;
 mod texture_data;
+mod zombie;
+mod zombie_renderer;
 
 use camera::Camera;
 use framebuffer::Framebuffer;
@@ -33,6 +35,9 @@ use raycaster::{
 
 use sprite_renderer::render_key_sprite;
 use texture_data::TextureData;
+
+use zombie::Zombie;
+use zombie_renderer::render_zombies;
 
 use raylib::prelude::*;
 
@@ -59,6 +64,21 @@ fn main() {
     let mut mensaje =
         String::new();
 
+    let mut vida_jugador =
+        100;
+
+    let mut zombies =
+        vec![
+            Zombie::new(
+                300.0,
+                200.0,
+            ),
+            Zombie::new(
+                500.0,
+                400.0,
+            ),
+        ];
+
     let mut framebuffer =
         Framebuffer::new(
             ANCHO_VENTANA,
@@ -82,7 +102,6 @@ fn main() {
             .build();
 
     ventana.set_target_fps(60);
-
     ventana.disable_cursor();
 
     let pistol1 =
@@ -115,6 +134,16 @@ fn main() {
                 "No se pudo cargar assets/key.png",
             );
 
+    let zombie_texture =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/zombie.png",
+            )
+            .expect(
+                "No se pudo cargar assets/zombie.png",
+            );
+
     let mut wall_image =
         Image::load_image(
             "assets/textures/wall.jpg",
@@ -133,15 +162,10 @@ fn main() {
 
     let mut door_image =
         Image::load_image(
-            "assets/door.png",
+            "assets/textures/door.png",
         )
         .expect(
-            "No se pudo cargar assets/door.png",
-        );
-
-    let textura_puerta =
-        TextureData::from_image(
-            &mut door_image,
+            "No se pudo cargar assets/textures/door.png",
         );
 
     let textura_pared =
@@ -152,6 +176,11 @@ fn main() {
     let textura_suelo =
         TextureData::from_image(
             &mut floor_image,
+        );
+
+    let textura_puerta =
+        TextureData::from_image(
+            &mut door_image,
         );
 
     let mut textura_framebuffer =
@@ -180,6 +209,34 @@ fn main() {
             camera.angle,
             delta_time,
         );
+
+        if vida_jugador > 0 {
+            for zombie in
+                &mut zombies
+            {
+                let dano =
+                    zombie.update(
+                        &player,
+                        &mapa,
+                        delta_time,
+                    );
+
+                vida_jugador -=
+                    dano;
+
+                if vida_jugador < 0 {
+                    vida_jugador = 0;
+                }
+
+                if dano > 0 {
+                    mensaje =
+                        format!(
+                            "Un zombie te hizo {} de dano",
+                            dano,
+                        );
+                }
+            }
+        }
 
         let resultado_recoger =
             recoger_objetos_cercanos(
@@ -242,6 +299,13 @@ fn main() {
         ) {
             player.reset();
             camera.reset();
+
+            vida_jugador =
+                100;
+
+            mensaje =
+                "Jugador reiniciado"
+                    .to_string();
         }
 
         if ventana.is_key_pressed(
@@ -275,7 +339,7 @@ fn main() {
             &camera,
             &textura_pared,
             &textura_puerta,
-            &textura_suelo
+            &textura_suelo,
         );
 
         render_minimap(
@@ -303,11 +367,13 @@ fn main() {
 
         let escala_x =
             pantalla_ancho
-                / ANCHO_VENTANA as f32;
+                / ANCHO_VENTANA
+                    as f32;
 
         let escala_y =
             pantalla_alto
-                / ALTO_VENTANA as f32;
+                / ALTO_VENTANA
+                    as f32;
 
         let escala =
             escala_x.min(
@@ -315,11 +381,13 @@ fn main() {
             );
 
         let ancho_render =
-            ANCHO_VENTANA as f32
+            ANCHO_VENTANA
+                as f32
                 * escala;
 
         let alto_render =
-            ALTO_VENTANA as f32
+            ALTO_VENTANA
+                as f32
                 * escala;
 
         let offset_x =
@@ -364,8 +432,10 @@ fn main() {
 
         let arma_x =
             offset_x
-                + ancho_render / 2.0
-                - arma_ancho / 2.0;
+                + ancho_render
+                    / 2.0
+                - arma_ancho
+                    / 2.0;
 
         let arma_y =
             offset_y
@@ -414,6 +484,18 @@ fn main() {
             escala,
         );
 
+        render_zombies(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &zombies,
+            &zombie_texture,
+            offset_x,
+            offset_y,
+            escala,
+        );
+
         dibujo.draw_texture_ex(
             arma_actual,
             Vector2::new(
@@ -428,42 +510,40 @@ fn main() {
         if apuntando {
             let mira_x =
                 offset_x
-                    + ancho_render / 2.0;
+                    + ancho_render
+                        / 2.0;
 
             let mira_y =
                 offset_y
-                    + alto_render / 2.0;
+                    + alto_render
+                        / 2.0;
 
             dibujo.draw_circle(
                 mira_x as i32,
                 mira_y as i32,
-                3.0 * escala.max(1.0),
+                3.0
+                    * escala.max(1.0),
                 Color::RED,
             );
         }
 
-        if !mensaje.is_empty() {
-            dibujo.draw_rectangle(
-                20,
-                dibujo.get_screen_height() - 70,
-                340,
-                40,
-                Color::new(
-                    0,
-                    0,
-                    0,
-                    180,
-                ),
+        let texto_vida =
+            format!(
+                "Vida: {}",
+                vida_jugador,
             );
 
-            dibujo.draw_text(
-                &mensaje,
-                30,
-                dibujo.get_screen_height() - 60,
-                20,
-                Color::WHITE,
-            );
-        }
+        dibujo.draw_text(
+            &texto_vida,
+            10,
+            65,
+            20,
+            if vida_jugador > 30 {
+                Color::GREEN
+            } else {
+                Color::RED
+            },
+        );
 
         if inventory.tiene_llave() {
             dibujo.draw_text(
@@ -480,6 +560,80 @@ fn main() {
                 40,
                 18,
                 Color::GRAY,
+            );
+        }
+
+        if !mensaje.is_empty() {
+            dibujo.draw_rectangle(
+                20,
+                dibujo.get_screen_height()
+                    - 70,
+                370,
+                40,
+                Color::new(
+                    0,
+                    0,
+                    0,
+                    180,
+                ),
+            );
+
+            dibujo.draw_text(
+                &mensaje,
+                30,
+                dibujo.get_screen_height()
+                    - 60,
+                20,
+                Color::WHITE,
+            );
+        }
+
+        if vida_jugador <= 0 {
+            let texto =
+                "HAS MUERTO";
+
+            let ancho_texto =
+                dibujo.measure_text(
+                    texto,
+                    50,
+                );
+
+            dibujo.draw_rectangle(
+                0,
+                0,
+                dibujo.get_screen_width(),
+                dibujo.get_screen_height(),
+                Color::new(
+                    0,
+                    0,
+                    0,
+                    170,
+                ),
+            );
+
+            dibujo.draw_text(
+                texto,
+                dibujo.get_screen_width()
+                    / 2
+                    - ancho_texto
+                        / 2,
+                dibujo.get_screen_height()
+                    / 2
+                    - 25,
+                50,
+                Color::RED,
+            );
+
+            dibujo.draw_text(
+                "Presiona R para reiniciar",
+                dibujo.get_screen_width()
+                    / 2
+                    - 120,
+                dibujo.get_screen_height()
+                    / 2
+                    + 40,
+                20,
+                Color::WHITE,
             );
         }
 

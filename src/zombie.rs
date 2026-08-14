@@ -5,9 +5,13 @@ use crate::raycaster::lanzar_rayo;
 pub struct Zombie {
     pub x: f32,
     pub y: f32,
+
     pub vida: i32,
     pub velocidad: f32,
     pub vivo: bool,
+
+    pub persiguiendo: bool,
+    pub tiempo_animacion: f32,
 
     tiempo_ultimo_ataque: f32,
 }
@@ -20,9 +24,14 @@ impl Zombie {
         Self {
             x,
             y,
+
             vida: 100,
             velocidad: 22.0,
             vivo: true,
+
+            persiguiendo: false,
+            tiempo_animacion: 0.0,
+
             tiempo_ultimo_ataque: 0.0,
         }
     }
@@ -34,6 +43,7 @@ impl Zombie {
         delta_time: f32,
     ) -> i32 {
         if !self.vivo {
+            self.persiguiendo = false;
             return 0;
         }
 
@@ -56,20 +66,40 @@ impl Zombie {
         let distancia_ataque =
             22.0;
 
+        // Si está demasiado lejos,
+        // se queda quieto.
         if distancia
             > distancia_deteccion
         {
+            self.persiguiendo = false;
+            self.tiempo_animacion = 0.0;
+
             return 0;
         }
 
+        // Si hay una pared o puerta
+        // entre el zombie y el jugador,
+        // no puede verlo.
         if !self.puede_ver_jugador(
             player,
             mapa,
             distancia,
         ) {
+            self.persiguiendo = false;
+            self.tiempo_animacion = 0.0;
+
             return 0;
         }
 
+        // Si llegó aquí,
+        // el zombie puede ver al jugador.
+        self.persiguiendo = true;
+
+        self.tiempo_animacion +=
+            delta_time;
+
+        // Si está suficientemente cerca,
+        // ataca.
         if distancia
             <= distancia_ataque
         {
@@ -82,6 +112,10 @@ impl Zombie {
                 return 10;
             }
 
+            return 0;
+        }
+
+        if distancia <= 0.001 {
             return 0;
         }
 
@@ -103,6 +137,9 @@ impl Zombie {
                     * self.velocidad
                     * delta_time;
 
+        // Movimiento separado en X/Y
+        // para que pueda deslizarse
+        // por las paredes.
         if !mapa.es_pared(
             nuevo_x,
             self.y,
@@ -154,11 +191,13 @@ impl Zombie {
             return;
         }
 
-        self.vida -= dano;
+        self.vida -=
+            dano;
 
         if self.vida <= 0 {
             self.vida = 0;
             self.vivo = false;
+            self.persiguiendo = false;
         }
     }
 }

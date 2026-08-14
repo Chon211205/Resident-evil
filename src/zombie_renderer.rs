@@ -18,7 +18,9 @@ pub fn render_zombies(
     player: &Player,
     camera: &Camera,
     zombies: &[Zombie],
-    zombie_texture: &Texture2D,
+    zombie_idle: &Texture2D,
+    zombie_run1: &Texture2D,
+    zombie_run2: &Texture2D,
     offset_x: f32,
     offset_y: f32,
     escala_pantalla: f32,
@@ -28,17 +30,52 @@ pub fn render_zombies(
             continue;
         }
 
+        let textura_actual =
+            obtener_textura_zombie(
+                zombie,
+                zombie_idle,
+                zombie_run1,
+                zombie_run2,
+            );
+
         render_zombie(
             dibujo,
             mapa,
             player,
             camera,
             zombie,
-            zombie_texture,
+            textura_actual,
             offset_x,
             offset_y,
             escala_pantalla,
         );
+    }
+}
+
+fn obtener_textura_zombie<'a>(
+    zombie: &Zombie,
+    zombie_idle: &'a Texture2D,
+    zombie_run1: &'a Texture2D,
+    zombie_run2: &'a Texture2D,
+) -> &'a Texture2D {
+    if !zombie.persiguiendo {
+        return zombie_idle;
+    }
+
+    let velocidad_animacion =
+        6.0;
+
+    let frame =
+        (
+            zombie.tiempo_animacion
+                * velocidad_animacion
+        ) as i32
+            % 2;
+
+    if frame == 0 {
+        zombie_run1
+    } else {
+        zombie_run2
     }
 }
 
@@ -84,11 +121,15 @@ fn render_zombie(
             2.0 * PI;
     }
 
-    if diferencia.abs() > FOV / 2.0 {
+    // Fuera del campo visual.
+    if diferencia.abs()
+        > FOV / 2.0
+    {
         return;
     }
 
-    // Evita que el zombie se vea atravesando paredes.
+    // Evita ver zombies
+    // a través de paredes.
     let hit =
         lanzar_rayo(
             mapa,
@@ -107,14 +148,11 @@ fn render_zombie(
         (ANCHO_VENTANA as f32 / 2.0)
             / (FOV / 2.0).tan();
 
-    // Posición horizontal del zombie en pantalla.
     let pantalla_x =
         ANCHO_VENTANA as f32 / 2.0
             + diferencia.tan()
                 * distancia_plano;
 
-    // Corrección de distancia para que el sprite
-    // coincida mejor con la perspectiva de las paredes.
     let distancia_corregida =
         distancia
             * diferencia.cos();
@@ -123,18 +161,19 @@ fn render_zombie(
         distancia_corregida
             .max(0.001);
 
-    // Altura que tendría una celda del mundo
-    // a esta distancia.
+    // Altura de una celda
+    // proyectada a esta distancia.
     let altura_celda_proyectada =
         TAMANO_CELDA
             * distancia_plano
             / distancia_segura;
 
-    // El zombie mide aproximadamente
-    // 1.8 veces la altura de una celda.
+    // Tamaño del zombie.
+    // Si lo querés más grande o pequeño,
+    // cambiá este número.
     let alto_sprite =
         altura_celda_proyectada
-            * 0.7;
+            * 0.65;
 
     let escala_sprite =
         alto_sprite
@@ -146,10 +185,11 @@ fn render_zombie(
             as f32
             * escala_sprite;
 
-    // El suelo está en la parte inferior
-    // de la celda proyectada.
+    // Posición del piso
+    // según la distancia.
     let suelo_pantalla =
-        ALTO_VENTANA as f32 / 2.0
+        ALTO_VENTANA as f32
+            / 2.0
             + camera.vertical_offset
                 as f32
             + altura_celda_proyectada
@@ -162,7 +202,6 @@ fn render_zombie(
                     - ancho_sprite / 2.0
             ) * escala_pantalla;
 
-    // Los pies quedan exactamente en suelo_pantalla.
     let y =
         offset_y
             + (

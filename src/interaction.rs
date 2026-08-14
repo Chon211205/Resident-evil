@@ -11,6 +11,46 @@ pub enum InteractionResult {
     PuertaCerrada,
 }
 
+pub fn recoger_objetos_cercanos(
+    mapa: &mut Map,
+    player: &Player,
+    inventory: &mut Inventory,
+    puzzle: &mut Puzzle,
+) -> InteractionResult {
+    let columna =
+        (player.x / TAMANO_CELDA)
+            .floor() as i32;
+
+    let fila =
+        (player.y / TAMANO_CELDA)
+            .floor() as i32;
+
+    let objeto =
+        mapa.celda(
+            fila,
+            columna,
+        );
+
+    match objeto {
+        'K' => {
+            inventory.recoger_llave();
+            puzzle.recoger_llave();
+
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                ' ',
+            );
+
+            InteractionResult::LlaveRecogida
+        }
+
+        _ => {
+            InteractionResult::None
+        }
+    }
+}
+
 pub fn interactuar(
     mapa: &mut Map,
     player: &Player,

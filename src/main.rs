@@ -7,31 +7,32 @@ mod map_renderer;
 mod player;
 mod puzzle;
 mod raycaster;
-mod texture_data;
 mod sprite_renderer;
+mod texture_data;
 
 use camera::Camera;
 use framebuffer::Framebuffer;
 
 use interaction::{
     interactuar,
+    recoger_objetos_cercanos,
     InteractionResult,
 };
 
 use inventory::Inventory;
-
 use map::Map;
 use map_renderer::render_minimap;
 use player::Player;
 use puzzle::Puzzle;
-use texture_data::TextureData;
-use sprite_renderer::render_key_sprite;
 
 use raycaster::{
     render_3d,
     ALTO_VENTANA,
     ANCHO_VENTANA,
 };
+
+use sprite_renderer::render_key_sprite;
+use texture_data::TextureData;
 
 use raylib::prelude::*;
 
@@ -104,6 +105,16 @@ fn main() {
                 "No se pudo cargar assets/pistol2.png",
             );
 
+    let key_texture =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/key.png",
+            )
+            .expect(
+                "No se pudo cargar assets/key.png",
+            );
+
     let mut wall_image =
         Image::load_image(
             "assets/textures/wall.jpg",
@@ -119,16 +130,6 @@ fn main() {
         .expect(
             "No se pudo cargar assets/textures/floor.jpg",
         );
-
-    let key_texture =
-        ventana
-            .load_texture(
-                &thread,
-                "assets/key.png",
-            )
-            .expect(
-                "No se pudo cargar assets/key.png",
-            );
 
     let textura_pared =
         TextureData::from_image(
@@ -167,10 +168,21 @@ fn main() {
             delta_time,
         );
 
-        let apuntando =
-            ventana.is_mouse_button_down(
-                MouseButton::MOUSE_BUTTON_RIGHT,
+        let resultado_recoger =
+            recoger_objetos_cercanos(
+                &mut mapa,
+                &player,
+                &mut inventory,
+                &mut puzzle,
             );
+
+        if let InteractionResult::LlaveRecogida =
+            resultado_recoger
+        {
+            mensaje =
+                "Recogiste una llave"
+                    .to_string();
+        }
 
         if ventana.is_key_pressed(
             KeyboardKey::KEY_E,
@@ -184,25 +196,33 @@ fn main() {
                     &mut puzzle,
                 );
 
-            mensaje =
-                match resultado {
-                    InteractionResult::LlaveRecogida => {
-                        "Recogiste una llave".to_string()
-                    }
+            match resultado {
+                InteractionResult::LlaveRecogida => {
+                    mensaje =
+                        "Recogiste una llave"
+                            .to_string();
+                }
 
-                    InteractionResult::PuertaAbierta => {
-                        "Abriste la puerta".to_string()
-                    }
+                InteractionResult::PuertaAbierta => {
+                    mensaje =
+                        "Abriste la puerta"
+                            .to_string();
+                }
 
-                    InteractionResult::PuertaCerrada => {
-                        "La puerta esta cerrada".to_string()
-                    }
+                InteractionResult::PuertaCerrada => {
+                    mensaje =
+                        "La puerta esta cerrada"
+                            .to_string();
+                }
 
-                    InteractionResult::None => {
-                        String::new()
-                    }
-                };
+                InteractionResult::None => {}
+            }
         }
+
+        let apuntando =
+            ventana.is_mouse_button_down(
+                MouseButton::MOUSE_BUTTON_RIGHT,
+            );
 
         if ventana.is_key_pressed(
             KeyboardKey::KEY_R,
@@ -319,11 +339,13 @@ fn main() {
                 * escala;
 
         let arma_ancho =
-            arma_actual.width() as f32
+            arma_actual.width()
+                as f32
                 * escala_arma;
 
         let arma_alto =
-            arma_actual.height() as f32
+            arma_actual.height()
+                as f32
                 * escala_arma;
 
         let arma_x =
@@ -410,7 +432,7 @@ fn main() {
             dibujo.draw_rectangle(
                 20,
                 dibujo.get_screen_height() - 70,
-                320,
+                340,
                 40,
                 Color::new(
                     0,

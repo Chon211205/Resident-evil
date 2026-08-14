@@ -26,6 +26,7 @@ use map::Map;
 use map_renderer::render_minimap;
 use player::Player;
 use puzzle::Puzzle;
+use std::f32::consts::PI;
 
 use raycaster::{
     render_3d,
@@ -309,18 +310,20 @@ fn main() {
                 MouseButton::MOUSE_BUTTON_RIGHT,
             );
 
-        if ventana.is_key_pressed(
-            KeyboardKey::KEY_R,
+        if ventana.is_mouse_button_pressed(
+            MouseButton::MOUSE_BUTTON_LEFT,
         ) {
-            player.reset();
-            camera.reset();
+            ventana.disable_cursor();
 
-            vida_jugador =
-                100;
-
-            mensaje =
-                "Jugador reiniciado"
-                    .to_string();
+            if vida_jugador > 0 {
+                disparar(
+                    &mut zombies,
+                    &player,
+                    &camera,
+                    &mapa,
+                    &mut mensaje,
+                );
+            }
         }
 
         if ventana.is_key_pressed(
@@ -670,5 +673,146 @@ fn main() {
             20,
             Color::GREEN,
         );
+    }
+}
+
+fn disparar(
+    zombies: &mut [Zombie],
+    player: &Player,
+    camera: &Camera,
+    mapa: &Map,
+    mensaje: &mut String,
+) {
+    let angulo_disparo =
+        camera.angle;
+
+    let hit_pared =
+        raycaster::lanzar_rayo(
+            mapa,
+            player.x,
+            player.y,
+            angulo_disparo,
+        );
+
+    let distancia_pared =
+        hit_pared.distancia;
+
+    let mut objetivo:
+        Option<(usize, f32)> =
+        None;
+
+    for (
+        indice,
+        zombie,
+    ) in zombies.iter().enumerate()
+    {
+        if !zombie.vivo {
+            continue;
+        }
+
+        let dx =
+            zombie.x - player.x;
+
+        let dy =
+            zombie.y - player.y;
+
+        let distancia =
+            (dx * dx + dy * dy)
+                .sqrt();
+
+        // Si hay una pared antes del zombie,
+        // no podemos dispararle.
+        if distancia
+            >= distancia_pared
+        {
+            continue;
+        }
+
+        let angulo_zombie =
+            dy.atan2(dx);
+
+        let mut diferencia =
+            angulo_zombie
+                - angulo_disparo;
+
+        while diferencia > PI {
+            diferencia -=
+                2.0 * PI;
+        }
+
+        while diferencia < -PI {
+            diferencia +=
+                2.0 * PI;
+        }
+
+        // Zona de impacto.
+        // Mientras más pequeño,
+        // más preciso hay que apuntar.
+        let tolerancia =
+            0.08;
+
+        if diferencia.abs()
+            <= tolerancia
+        {
+            match objetivo {
+                None => {
+                    objetivo =
+                        Some(
+                            (
+                                indice,
+                                distancia,
+                            ),
+                        );
+                }
+
+                Some(
+                    (
+                        _,
+                        mejor_distancia,
+                    ),
+                ) => {
+                    if distancia
+                        < mejor_distancia
+                    {
+                        objetivo =
+                            Some(
+                                (
+                                    indice,
+                                    distancia,
+                                ),
+                            );
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(
+        (
+            indice,
+            _,
+        ),
+    ) = objetivo
+    {
+        zombies[indice]
+            .recibir_dano(
+                50,
+            );
+
+        if zombies[indice].vivo {
+            *mensaje =
+                format!(
+                    "Le diste al zombie. Vida: {}",
+                    zombies[indice].vida,
+                );
+        } else {
+            *mensaje =
+                "Zombie eliminado"
+                    .to_string();
+        }
+    } else {
+        *mensaje =
+            "Disparo fallido"
+                .to_string();
     }
 }

@@ -3,12 +3,24 @@ use crate::inventory::Inventory;
 use crate::map::{Map, TAMANO_CELDA};
 use crate::player::Player;
 use crate::puzzle::Puzzle;
+use crate::raycaster::lanzar_rayo;
+use crate::zombie::Zombie;
+
+use std::f32::consts::PI;
 
 pub enum InteractionResult {
     None,
     LlaveRecogida,
     PuertaAbierta,
     PuertaCerrada,
+}
+
+pub enum ShotResult {
+    Miss,
+    Hit {
+        vida_restante: i32,
+    },
+    Kill,
 }
 
 pub fn interactuar(
@@ -102,5 +114,127 @@ pub fn recoger_objetos_cercanos(
         }
 
         _ => InteractionResult::None,
+    }
+}
+
+pub fn disparar(
+    zombies: &mut [Zombie],
+    player: &Player,
+    camera: &Camera,
+    mapa: &Map,
+) -> ShotResult {
+    let angulo_disparo =
+        camera.angle;
+
+    let hit_pared =
+        lanzar_rayo(
+            mapa,
+            player.x,
+            player.y,
+            angulo_disparo,
+        );
+
+    let distancia_pared =
+        hit_pared.distancia;
+
+    let mut objetivo:
+        Option<(usize, f32)> =
+        None;
+
+    for (indice, zombie)
+        in zombies.iter().enumerate()
+    {
+        if !zombie.vivo {
+            continue;
+        }
+
+        let dx =
+            zombie.x - player.x;
+
+        let dy =
+            zombie.y - player.y;
+
+        let distancia =
+            (dx * dx + dy * dy)
+                .sqrt();
+
+        if distancia >= distancia_pared {
+            continue;
+        }
+
+        let angulo_zombie =
+            dy.atan2(dx);
+
+        let mut diferencia =
+            angulo_zombie
+                - angulo_disparo;
+
+        while diferencia > PI {
+            diferencia -=
+                2.0 * PI;
+        }
+
+        while diferencia < -PI {
+            diferencia +=
+                2.0 * PI;
+        }
+
+        let tolerancia =
+            0.08;
+
+        if diferencia.abs()
+            <= tolerancia
+        {
+            match objetivo {
+                None => {
+                    objetivo =
+                        Some(
+                            (
+                                indice,
+                                distancia,
+                            ),
+                        );
+                }
+
+                Some(
+                    (
+                        _,
+                        mejor_distancia,
+                    ),
+                ) => {
+                    if distancia
+                        < mejor_distancia
+                    {
+                        objetivo =
+                            Some(
+                                (
+                                    indice,
+                                    distancia,
+                                ),
+                            );
+                    }
+                }
+            }
+        }
+    }
+
+    let Some((indice, _)) =
+        objetivo
+    else {
+        return ShotResult::Miss;
+    };
+
+    zombies[indice]
+        .recibir_dano(
+            50,
+        );
+
+    if zombies[indice].vivo {
+        ShotResult::Hit {
+            vida_restante:
+                zombies[indice].vida,
+        }
+    } else {
+        ShotResult::Kill
     }
 }

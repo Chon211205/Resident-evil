@@ -16,9 +16,11 @@ use camera::Camera;
 use framebuffer::Framebuffer;
 
 use interaction::{
+    disparar,
     interactuar,
     recoger_objetos_cercanos,
     InteractionResult,
+    ShotResult,
 };
 
 use inventory::Inventory;
@@ -26,7 +28,6 @@ use map::Map;
 use map_renderer::render_minimap;
 use player::Player;
 use puzzle::Puzzle;
-use std::f32::consts::PI;
 
 use raycaster::{
     render_3d,
@@ -89,6 +90,9 @@ fn main() {
     let mut vida_jugador =
         100;
 
+    let mut tiempo_disparo: f32 =
+        0.0;
+
     let mut framebuffer =
         Framebuffer::new(
             ANCHO_VENTANA,
@@ -135,6 +139,16 @@ fn main() {
             )
             .expect(
                 "No se pudo cargar assets/pistol2.png",
+            );
+
+    let pistol3 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/pistol3.png",
+            )
+            .expect(
+                "No se pudo cargar assets/pistol3.png",
             );
 
     let key_texture =
@@ -209,6 +223,16 @@ fn main() {
     while !ventana.window_should_close() {
         let delta_time =
             ventana.get_frame_time();
+
+        if tiempo_disparo > 0.0 {
+            tiempo_disparo -=
+                delta_time;
+
+            if tiempo_disparo < 0.0 {
+                tiempo_disparo =
+                    0.0;
+            }
+        }
 
         camera.update(
             &ventana,
@@ -316,14 +340,53 @@ fn main() {
             ventana.disable_cursor();
 
             if vida_jugador > 0 {
-                disparar(
-                    &mut zombies,
-                    &player,
-                    &camera,
-                    &mapa,
-                    &mut mensaje,
-                );
+                tiempo_disparo =
+                    0.12;
+
+                let resultado =
+                    disparar(
+                        &mut zombies,
+                        &player,
+                        &camera,
+                        &mapa,
+                    );
+
+                mensaje =
+                    match resultado {
+                        ShotResult::Miss => {
+                            "Disparo fallido"
+                                .to_string()
+                        }
+
+                        ShotResult::Hit {
+                            vida_restante,
+                        } => {
+                            format!(
+                                "Le diste al zombie. Vida: {}",
+                                vida_restante,
+                            )
+                        }
+
+                        ShotResult::Kill => {
+                            "Zombie eliminado"
+                                .to_string()
+                        }
+                    };
             }
+        }
+
+        if ventana.is_key_pressed(
+            KeyboardKey::KEY_R,
+        ) {
+            player.reset();
+            camera.reset();
+
+            vida_jugador =
+                100;
+
+            mensaje =
+                "Jugador reiniciado"
+                    .to_string();
         }
 
         if ventana.is_key_pressed(
@@ -340,12 +403,6 @@ fn main() {
             KeyboardKey::KEY_TAB,
         ) {
             ventana.enable_cursor();
-        }
-
-        if ventana.is_mouse_button_pressed(
-            MouseButton::MOUSE_BUTTON_LEFT,
-        ) {
-            ventana.disable_cursor();
         }
 
         framebuffer.clear();
@@ -421,17 +478,21 @@ fn main() {
             ) / 2.0;
 
         let arma_actual =
-            if apuntando {
+            if tiempo_disparo > 0.0 {
+                &pistol3
+            } else if apuntando {
                 &pistol2
             } else {
                 &pistol1
             };
 
         let escala_base_arma =
-            if apuntando {
-                0.70
+            if tiempo_disparo > 0.0 {
+                0.40
+            } else if apuntando {
+                0.42
             } else {
-                0.65
+                0.40
             };
 
         let escala_arma =
@@ -448,6 +509,13 @@ fn main() {
                 as f32
                 * escala_arma;
 
+        let retroceso =
+            if tiempo_disparo > 0.0 {
+                12.0 * escala
+            } else {
+                0.0
+            };
+
         let arma_x =
             offset_x
                 + ancho_render
@@ -458,7 +526,8 @@ fn main() {
         let arma_y =
             offset_y
                 + alto_render
-                - arma_alto;
+                - arma_alto
+                - retroceso;
 
         let mut dibujo =
             ventana.begin_drawing(
@@ -527,7 +596,9 @@ fn main() {
             Color::WHITE,
         );
 
-        if apuntando {
+        if apuntando
+            && tiempo_disparo <= 0.0
+        {
             let mira_x =
                 offset_x
                     + ancho_render
@@ -590,7 +661,7 @@ fn main() {
                 20,
                 dibujo.get_screen_height()
                     - 70,
-                370,
+                400,
                 40,
                 Color::new(
                     0,
@@ -673,146 +744,5 @@ fn main() {
             20,
             Color::GREEN,
         );
-    }
-}
-
-fn disparar(
-    zombies: &mut [Zombie],
-    player: &Player,
-    camera: &Camera,
-    mapa: &Map,
-    mensaje: &mut String,
-) {
-    let angulo_disparo =
-        camera.angle;
-
-    let hit_pared =
-        raycaster::lanzar_rayo(
-            mapa,
-            player.x,
-            player.y,
-            angulo_disparo,
-        );
-
-    let distancia_pared =
-        hit_pared.distancia;
-
-    let mut objetivo:
-        Option<(usize, f32)> =
-        None;
-
-    for (
-        indice,
-        zombie,
-    ) in zombies.iter().enumerate()
-    {
-        if !zombie.vivo {
-            continue;
-        }
-
-        let dx =
-            zombie.x - player.x;
-
-        let dy =
-            zombie.y - player.y;
-
-        let distancia =
-            (dx * dx + dy * dy)
-                .sqrt();
-
-        // Si hay una pared antes del zombie,
-        // no podemos dispararle.
-        if distancia
-            >= distancia_pared
-        {
-            continue;
-        }
-
-        let angulo_zombie =
-            dy.atan2(dx);
-
-        let mut diferencia =
-            angulo_zombie
-                - angulo_disparo;
-
-        while diferencia > PI {
-            diferencia -=
-                2.0 * PI;
-        }
-
-        while diferencia < -PI {
-            diferencia +=
-                2.0 * PI;
-        }
-
-        // Zona de impacto.
-        // Mientras más pequeño,
-        // más preciso hay que apuntar.
-        let tolerancia =
-            0.08;
-
-        if diferencia.abs()
-            <= tolerancia
-        {
-            match objetivo {
-                None => {
-                    objetivo =
-                        Some(
-                            (
-                                indice,
-                                distancia,
-                            ),
-                        );
-                }
-
-                Some(
-                    (
-                        _,
-                        mejor_distancia,
-                    ),
-                ) => {
-                    if distancia
-                        < mejor_distancia
-                    {
-                        objetivo =
-                            Some(
-                                (
-                                    indice,
-                                    distancia,
-                                ),
-                            );
-                    }
-                }
-            }
-        }
-    }
-
-    if let Some(
-        (
-            indice,
-            _,
-        ),
-    ) = objetivo
-    {
-        zombies[indice]
-            .recibir_dano(
-                50,
-            );
-
-        if zombies[indice].vivo {
-            *mensaje =
-                format!(
-                    "Le diste al zombie. Vida: {}",
-                    zombies[indice].vida,
-                );
-        } else {
-            *mensaje =
-                "Zombie eliminado"
-                    .to_string();
-        }
-    } else {
-        *mensaje =
-            "Disparo fallido"
-                .to_string();
     }
 }

@@ -12,38 +12,38 @@ impl Map {
             "#########################################",
             "#P       #             #               #",
             "#        #             #               #",
+            "#    K   #             #               #",
             "#        #             #               #",
-            "#        #             #               #",
-            "#### ########## ############### ########",
-            "#              #               #       #",
-            "#              #               #       #",
-            "#       K      #               #       #",
-            "#              #               #       #",
-            "####### ########## ########## ##########",
+            "####D##########################D########",
+            "#                              #       #",
+            "#                              #       #",
+            "#       K                      D       #",
+            "#                              #       #",
+            "#############################D##########",
             "#     #           #          #         #",
             "#     #           #          #         #",
-            "#     #           #          #         #",
-            "### ######## ###### ########## #########",
+            "#     D           #          D         #",
+            "###D######## ###### ##########D#########",
             "#           #                         ##",
             "#           #                          #",
+            "#           D                          #",
             "#           #                          #",
-            "#           #                          #",
-            "###### ############## ##################",
+            "######D##############D##################",
             "#             #                        #",
             "#             #                        #",
+            "#             D                        #",
             "#             #                        #",
-            "#             #                        #",
-            "###### ########### #####################",
+            "######D###########D#####################",
             "#               #                      #",
             "#               #                      #",
+            "#               D                      #",
             "#               #                      #",
-            "#               #                      #",
-            "###### ########### #####################",
+            "######D###########D#####################",
             "#             #                        #",
             "#             #                        #",
+            "#             D                        #",
             "#             #                        #",
-            "#             #                        #",
-            "###### ############# ###################",
+            "######D#############D###################",
             "#                   #                  #",
             "#                   D                  #",
             "#                   #                  #",
@@ -51,64 +51,38 @@ impl Map {
             "#########################################",
         ];
 
-        let data =
-            filas
-                .iter()
-                .map(|fila| {
-                    fila.chars()
-                        .collect::<Vec<char>>()
-                })
-                .collect();
+        let data = filas
+            .iter()
+            .map(|fila| fila.chars().collect::<Vec<char>>())
+            .collect();
 
-        Self {
-            data,
-        }
+        Self { data }
     }
 
     pub fn guardar_txt(
         &self,
         nombre: &str,
     ) {
-        let contenido =
-            self.data
-                .iter()
-                .map(|fila| {
-                    fila.iter()
-                        .collect::<String>()
-                })
-                .collect::<Vec<String>>()
-                .join("\n");
+        let contenido = self
+            .data
+            .iter()
+            .map(|fila| fila.iter().collect::<String>())
+            .collect::<Vec<String>>()
+            .join("\n");
 
-        fs::write(
-            nombre,
-            contenido,
-        )
-        .expect(
-            "No se pudo guardar el mapa",
-        );
+        fs::write(nombre, contenido)
+            .expect("No se pudo guardar el mapa");
 
-        println!(
-            "Mapa guardado en {}",
-            nombre,
-        );
+        println!("Mapa guardado en {}", nombre);
     }
 
     pub fn buscar_jugador(
         &self,
     ) -> Option<(usize, usize)> {
-        for (fila, linea)
-            in self.data.iter().enumerate()
-        {
-            for (columna, celda)
-                in linea.iter().enumerate()
-            {
+        for (fila, linea) in self.data.iter().enumerate() {
+            for (columna, celda) in linea.iter().enumerate() {
                 if *celda == 'P' {
-                    return Some(
-                        (
-                            fila,
-                            columna,
-                        ),
-                    );
+                    return Some((fila, columna));
                 }
             }
         }
@@ -122,8 +96,7 @@ impl Map {
         columna: i32,
     ) -> char {
         if fila < 0
-            || fila
-                >= self.data.len() as i32
+            || fila >= self.data.len() as i32
         {
             return '#';
         }
@@ -132,15 +105,12 @@ impl Map {
             &self.data[fila as usize];
 
         if columna < 0
-            || columna
-                >= fila_actual.len() as i32
+            || columna >= fila_actual.len() as i32
         {
             return '#';
         }
 
-        fila_actual[
-            columna as usize
-        ]
+        fila_actual[columna as usize]
     }
 
     pub fn cambiar_celda(
@@ -150,27 +120,20 @@ impl Map {
         nueva_celda: char,
     ) {
         if fila < 0
-            || fila
-                >= self.data.len() as i32
+            || fila >= self.data.len() as i32
         {
             return;
         }
 
         if columna < 0
             || columna
-                >= self.data[
-                    fila as usize
-                ]
-                .len() as i32
+                >= self.data[fila as usize].len() as i32
         {
             return;
         }
 
-        self.data[
-            fila as usize
-        ][
-            columna as usize
-        ] = nueva_celda;
+        self.data[fila as usize][columna as usize] =
+            nueva_celda;
     }
 
     pub fn celda_desde_posicion(
@@ -179,17 +142,12 @@ impl Map {
         y: f32,
     ) -> char {
         let columna =
-            (x / TAMANO_CELDA)
-                .floor() as i32;
+            (x / TAMANO_CELDA).floor() as i32;
 
         let fila =
-            (y / TAMANO_CELDA)
-                .floor() as i32;
+            (y / TAMANO_CELDA).floor() as i32;
 
-        self.celda(
-            fila,
-            columna,
-        )
+        self.celda(fila, columna)
     }
 
     pub fn es_pared(
@@ -198,10 +156,7 @@ impl Map {
         y: f32,
     ) -> bool {
         let celda =
-            self.celda_desde_posicion(
-                x,
-                y,
-            );
+            self.celda_desde_posicion(x, y);
 
         matches!(
             celda,
@@ -215,10 +170,7 @@ impl Map {
         columna: i32,
     ) -> bool {
         matches!(
-            self.celda(
-                fila,
-                columna,
-            ),
+            self.celda(fila, columna),
             '#' | 'D'
         )
     }

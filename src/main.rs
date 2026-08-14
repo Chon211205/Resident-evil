@@ -131,6 +131,19 @@ fn main() {
             "No se pudo cargar assets/textures/floor.jpg",
         );
 
+    let mut door_image =
+        Image::load_image(
+            "assets/door.png",
+        )
+        .expect(
+            "No se pudo cargar assets/door.png",
+        );
+
+    let textura_puerta =
+        TextureData::from_image(
+            &mut door_image,
+        );
+
     let textura_pared =
         TextureData::from_image(
             &mut wall_image,
@@ -261,7 +274,8 @@ fn main() {
             &player,
             &camera,
             &textura_pared,
-            &textura_suelo,
+            &textura_puerta,
+            &textura_suelo
         );
 
         render_minimap(

@@ -17,6 +17,7 @@ pub struct RayHit {
     pub distancia: f32,
     pub impacto_x: f32,
     pub impacto_y: f32,
+    pub tipo: char,
 }
 
 pub fn render_3d(
@@ -25,6 +26,7 @@ pub fn render_3d(
     player: &Player,
     camera: &Camera,
     textura_pared: &TextureData,
+    textura_puerta: &TextureData,
     textura_suelo: &TextureData,
 ) {
     dibujar_cielo(
@@ -45,6 +47,7 @@ pub fn render_3d(
         player,
         camera,
         textura_pared,
+        textura_puerta,
     );
 }
 
@@ -86,11 +89,11 @@ pub fn lanzar_rayo(
             (1.0 / direccion_y).abs()
         };
 
-    let paso_x: i32;
-    let paso_y: i32;
+    let paso_x;
+    let paso_y;
 
-    let mut lado_dist_x: f32;
-    let mut lado_dist_y: f32;
+    let mut lado_dist_x;
+    let mut lado_dist_y;
 
     if direccion_x < 0.0 {
         paso_x = -1;
@@ -102,11 +105,10 @@ pub fn lanzar_rayo(
         paso_x = 1;
 
         lado_dist_x =
-            (
-                mapa_x as f32
-                    + 1.0
-                    - pos_mapa_x
-            ) * delta_dist_x;
+            (mapa_x as f32
+                + 1.0
+                - pos_mapa_x)
+                * delta_dist_x;
     }
 
     if direccion_y < 0.0 {
@@ -119,14 +121,16 @@ pub fn lanzar_rayo(
         paso_y = 1;
 
         lado_dist_y =
-            (
-                mapa_y as f32
-                    + 1.0
-                    - pos_mapa_y
-            ) * delta_dist_y;
+            (mapa_y as f32
+                + 1.0
+                - pos_mapa_y)
+                * delta_dist_y;
     }
 
-    let mut golpe_vertical = false;
+    let mut golpe_vertical =
+        false;
+
+    let tipo_impacto;
 
     loop {
         if lado_dist_x < lado_dist_y {
@@ -149,11 +153,19 @@ pub fn lanzar_rayo(
                 false;
         }
 
-        if mapa.celda(
-            mapa_y,
-            mapa_x,
-        ) == '#'
-        {
+        let celda =
+            mapa.celda(
+                mapa_y,
+                mapa_x,
+            );
+
+        if matches!(
+            celda,
+            '#' | 'D'
+        ) {
+            tipo_impacto =
+                celda;
+
             break;
         }
     }
@@ -185,6 +197,7 @@ pub fn lanzar_rayo(
         distancia,
         impacto_x,
         impacto_y,
+        tipo: tipo_impacto,
     }
 }
 
@@ -194,6 +207,7 @@ fn dibujar_paredes(
     player: &Player,
     camera: &Camera,
     textura_pared: &TextureData,
+    textura_puerta: &TextureData,
 ) {
     let angulo_inicial =
         camera.angle
@@ -201,10 +215,12 @@ fn dibujar_paredes(
 
     let incremento_angulo =
         FOV
-            / CANTIDAD_RAYOS as f32;
+            / CANTIDAD_RAYOS
+                as f32;
 
     let distancia_plano =
-        (ANCHO_VENTANA as f32 / 2.0)
+        (ANCHO_VENTANA as f32
+            / 2.0)
             / (FOV / 2.0).tan();
 
     for numero_rayo
@@ -229,7 +245,8 @@ fn dibujar_paredes(
 
         let distancia_corregida =
             hit.distancia
-                * diferencia_angulo.cos();
+                * diferencia_angulo
+                    .cos();
 
         let distancia_segura =
             distancia_corregida
@@ -243,9 +260,11 @@ fn dibujar_paredes(
         let altura_columna =
             altura_columna
                 .min(
-                    ALTO_VENTANA as f32
+                    ALTO_VENTANA
+                        as f32
                         * 2.0,
-                ) as i32;
+                )
+                as i32;
 
         let centro_pantalla =
             ALTO_VENTANA / 2
@@ -259,16 +278,23 @@ fn dibujar_paredes(
             centro_pantalla
                 + altura_columna / 2;
 
+        let textura_actual =
+            if hit.tipo == 'D' {
+                textura_puerta
+            } else {
+                textura_pared
+            };
+
         let textura_x =
             calcular_textura_x(
                 hit.impacto_x,
                 hit.impacto_y,
-                textura_pared.width,
+                textura_actual.width,
             );
 
         dibujar_columna_texturizada(
             framebuffer,
-            textura_pared,
+            textura_actual,
             numero_rayo,
             inicio_y,
             final_y,
@@ -316,16 +342,15 @@ fn calcular_textura_x(
                 / TAMANO_CELDA
         };
 
-    (
-        porcentaje
-            * ancho_textura as f32
-    )
+    (porcentaje
+        * ancho_textura as f32)
         .floor()
         .clamp(
             0.0,
             (ancho_textura - 1)
                 as f32,
-        ) as i32
+        )
+        as i32
 }
 
 fn dibujar_columna_texturizada(
@@ -360,23 +385,22 @@ fn dibujar_columna_texturizada(
         in inicio..=final_posicion
     {
         let porcentaje_y =
-            (
-                pantalla_y
-                    - inicio_y
-            ) as f32
-                / altura_pared as f32;
+            (pantalla_y
+                - inicio_y)
+                as f32
+                / altura_pared
+                    as f32;
 
         let textura_y =
-            (
-                porcentaje_y
-                    * textura.height as f32
-            )
+            (porcentaje_y
+                * textura.height as f32)
                 .floor()
                 .clamp(
                     0.0,
                     (textura.height - 1)
                         as f32,
-                ) as i32;
+                )
+                as i32;
 
         let color =
             textura.get(
@@ -444,7 +468,9 @@ fn dibujar_suelo_texturizado(
     let inicio_y =
         horizonte.max(0);
 
-    for y in inicio_y..ALTO_VENTANA {
+    for y in
+        inicio_y..ALTO_VENTANA
+    {
         let distancia_vertical =
             y as f32
                 - horizonte as f32;
@@ -503,7 +529,8 @@ fn dibujar_suelo_texturizado(
                         0.0,
                         (textura_suelo.width - 1)
                             as f32,
-                    ) as i32;
+                    )
+                    as i32;
 
             let textura_y =
                 (
@@ -520,7 +547,8 @@ fn dibujar_suelo_texturizado(
                         0.0,
                         (textura_suelo.height - 1)
                             as f32,
-                    ) as i32;
+                    )
+                    as i32;
 
             let color =
                 textura_suelo.get(
@@ -540,7 +568,9 @@ fn dibujar_suelo_texturizado(
                 color,
             );
 
-            if x + 1 < ANCHO_VENTANA {
+            if x + 1
+                < ANCHO_VENTANA
+            {
                 framebuffer.point_color(
                     x + 1,
                     y,
@@ -562,28 +592,26 @@ fn aplicar_oscuridad(
     distancia: f32,
 ) -> Color {
     let factor =
-        (
-            1.0
-                - distancia / 700.0
-        )
+        (1.0
+            - distancia / 700.0)
             .clamp(
                 0.25,
                 1.0,
             );
 
     Color::new(
-        (
-            color.r as f32
-                * factor
-        ) as u8,
-        (
-            color.g as f32
-                * factor
-        ) as u8,
-        (
-            color.b as f32
-                * factor
-        ) as u8,
+        (color.r as f32
+            * factor)
+            as u8,
+
+        (color.g as f32
+            * factor)
+            as u8,
+
+        (color.b as f32
+            * factor)
+            as u8,
+
         color.a,
     )
 }

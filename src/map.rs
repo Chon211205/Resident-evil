@@ -54,12 +54,10 @@ impl Map {
         let data =
             filas
                 .iter()
-                .map(
-                    |fila| {
-                        fila.chars()
-                            .collect::<Vec<char>>()
-                    },
-                )
+                .map(|fila| {
+                    fila.chars()
+                        .collect::<Vec<char>>()
+                })
                 .collect();
 
         Self {
@@ -74,12 +72,10 @@ impl Map {
         let contenido =
             self.data
                 .iter()
-                .map(
-                    |fila| {
-                        fila.iter()
-                            .collect::<String>()
-                    },
-                )
+                .map(|fila| {
+                    fila.iter()
+                        .collect::<String>()
+                })
                 .collect::<Vec<String>>()
                 .join("\n");
 
@@ -100,19 +96,11 @@ impl Map {
     pub fn buscar_jugador(
         &self,
     ) -> Option<(usize, usize)> {
-        for (
-            fila,
-            linea,
-        ) in self.data
-            .iter()
-            .enumerate()
+        for (fila, linea)
+            in self.data.iter().enumerate()
         {
-            for (
-                columna,
-                celda,
-            ) in linea
-                .iter()
-                .enumerate()
+            for (columna, celda)
+                in linea.iter().enumerate()
             {
                 if *celda == 'P' {
                     return Some(
@@ -135,26 +123,22 @@ impl Map {
     ) -> char {
         if fila < 0
             || fila
-                >= self.data.len()
-                    as i32
+                >= self.data.len() as i32
         {
             return '#';
         }
+
+        let fila_actual =
+            &self.data[fila as usize];
 
         if columna < 0
             || columna
-                >= self.data[
-                    fila as usize
-                ]
-                .len()
-                    as i32
+                >= fila_actual.len() as i32
         {
             return '#';
         }
 
-        self.data[
-            fila as usize
-        ][
+        fila_actual[
             columna as usize
         ]
     }
@@ -167,8 +151,7 @@ impl Map {
     ) {
         if fila < 0
             || fila
-                >= self.data.len()
-                    as i32
+                >= self.data.len() as i32
         {
             return;
         }
@@ -178,8 +161,7 @@ impl Map {
                 >= self.data[
                     fila as usize
                 ]
-                .len()
-                    as i32
+                .len() as i32
         {
             return;
         }
@@ -227,14 +209,26 @@ impl Map {
         )
     }
 
+    pub fn es_bloque_solido(
+        &self,
+        fila: i32,
+        columna: i32,
+    ) -> bool {
+        matches!(
+            self.celda(
+                fila,
+                columna,
+            ),
+            '#' | 'D'
+        )
+    }
+
     pub fn ancho(
         &self,
     ) -> usize {
         self.data
             .iter()
-            .map(
-                |fila| fila.len(),
-            )
+            .map(|fila| fila.len())
             .max()
             .unwrap_or(0)
     }

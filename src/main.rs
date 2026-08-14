@@ -173,18 +173,18 @@ fn main() {
 
     let mut wall_image =
         Image::load_image(
-            "assets/textures/wall.jpg",
+            "assets/textures/wall.png",
         )
         .expect(
-            "No se pudo cargar assets/textures/wall.jpg",
+            "No se pudo cargar assets/textures/wall.png",
         );
 
     let mut floor_image =
         Image::load_image(
-            "assets/textures/floor.jpg",
+            "assets/textures/floor.png",
         )
         .expect(
-            "No se pudo cargar assets/textures/floor.jpg",
+            "No se pudo cargar assets/textures/floor.png",
         );
 
     let mut door_image =

@@ -111,7 +111,7 @@ pub fn render_key_sprite(
 
     let alto_sprite =
         altura_celda
-            * 0.35;
+            * 0.20;
 
     let escala_sprite =
         alto_sprite

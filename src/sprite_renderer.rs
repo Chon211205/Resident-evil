@@ -2,6 +2,7 @@ use crate::camera::Camera;
 use crate::map::{Map, TAMANO_CELDA};
 use crate::player::Player;
 use crate::raycaster::{
+    lanzar_rayo,
     ALTO_VENTANA,
     ANCHO_VENTANA,
     FOV,
@@ -27,13 +28,11 @@ pub fn render_key_sprite(
     };
 
     let key_x =
-        columna as f32
-            * TAMANO_CELDA
+        columna as f32 * TAMANO_CELDA
             + TAMANO_CELDA / 2.0;
 
     let key_y =
-        fila as f32
-            * TAMANO_CELDA
+        fila as f32 * TAMANO_CELDA
             + TAMANO_CELDA / 2.0;
 
     let dx =
@@ -46,7 +45,7 @@ pub fn render_key_sprite(
         (dx * dx + dy * dy)
             .sqrt();
 
-    if distancia <= 1.0 {
+    if distancia < 1.0 {
         return;
     }
 
@@ -58,17 +57,29 @@ pub fn render_key_sprite(
             - camera.angle;
 
     while diferencia > PI {
-        diferencia -=
-            2.0 * PI;
+        diferencia -= 2.0 * PI;
     }
 
     while diferencia < -PI {
-        diferencia +=
-            2.0 * PI;
+        diferencia += 2.0 * PI;
     }
 
     if diferencia.abs()
         > FOV / 2.0
+    {
+        return;
+    }
+
+    let hit =
+        lanzar_rayo(
+            mapa,
+            player.x,
+            player.y,
+            angulo_llave,
+        );
+
+    if hit.distancia
+        < distancia - 4.0
     {
         return;
     }
@@ -82,47 +93,57 @@ pub fn render_key_sprite(
             + diferencia.tan()
                 * distancia_plano;
 
-    let tamano =
-        (1200.0 / distancia)
-            .clamp(
-                12.0,
-                90.0,
-            );
+
+    let distancia_corregida =
+        distancia
+            * diferencia.cos();
+
+    let distancia_segura =
+        distancia_corregida
+            .max(0.001);
+
+
+    let altura_celda =
+        TAMANO_CELDA
+            * distancia_plano
+            / distancia_segura;
+
+
+    let alto_sprite =
+        altura_celda
+            * 0.35;
 
     let escala_sprite =
-        tamano
+        alto_sprite
             / key_texture.height()
                 as f32;
 
     let ancho_sprite =
-        key_texture.width() as f32
+        key_texture.width()
+            as f32
             * escala_sprite;
 
-    let alto_sprite =
-        key_texture.height() as f32
-            * escala_sprite;
+
+    let suelo_pantalla =
+        ALTO_VENTANA as f32 / 2.0
+            + camera.vertical_offset
+                as f32
+            + altura_celda / 2.0;
 
     let x =
         offset_x
             + (
                 pantalla_x
                     - ancho_sprite / 2.0
-            )
-                * escala_pantalla;
+            ) * escala_pantalla;
 
-    let suelo_pantalla =
-        ALTO_VENTANA as f32
-            * 0.62
-            + camera.vertical_offset
-                as f32;
 
     let y =
         offset_y
             + (
                 suelo_pantalla
                     - alto_sprite
-            )
-                * escala_pantalla;
+            ) * escala_pantalla;
 
     dibujo.draw_texture_ex(
         key_texture,

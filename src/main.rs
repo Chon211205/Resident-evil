@@ -1,16 +1,28 @@
 mod camera;
 mod framebuffer;
+mod interaction;
+mod inventory;
 mod map;
 mod map_renderer;
 mod player;
+mod puzzle;
 mod raycaster;
 mod texture_data;
 
 use camera::Camera;
 use framebuffer::Framebuffer;
+
+use interaction::{
+    interactuar,
+    InteractionResult,
+};
+
+use inventory::Inventory;
+
 use map::Map;
 use map_renderer::render_minimap;
 use player::Player;
+use puzzle::Puzzle;
 use texture_data::TextureData;
 
 use raycaster::{
@@ -22,7 +34,8 @@ use raycaster::{
 use raylib::prelude::*;
 
 fn main() {
-    let mapa = Map::new();
+    let mut mapa =
+        Map::new();
 
     mapa.guardar_txt(
         "mapa_resident.txt",
@@ -33,6 +46,15 @@ fn main() {
 
     let mut camera =
         Camera::new();
+
+    let mut inventory =
+        Inventory::new();
+
+    let mut puzzle =
+        Puzzle::new();
+
+    let mut mensaje =
+        String::new();
 
     let mut framebuffer =
         Framebuffer::new(
@@ -137,6 +159,38 @@ fn main() {
             ventana.is_mouse_button_down(
                 MouseButton::MOUSE_BUTTON_RIGHT,
             );
+
+        if ventana.is_key_pressed(
+            KeyboardKey::KEY_E,
+        ) {
+            let resultado =
+                interactuar(
+                    &mut mapa,
+                    &player,
+                    &camera,
+                    &mut inventory,
+                    &mut puzzle,
+                );
+
+            mensaje =
+                match resultado {
+                    InteractionResult::LlaveRecogida => {
+                        "Recogiste una llave".to_string()
+                    }
+
+                    InteractionResult::PuertaAbierta => {
+                        "Abriste la puerta".to_string()
+                    }
+
+                    InteractionResult::PuertaCerrada => {
+                        "La puerta esta cerrada".to_string()
+                    }
+
+                    InteractionResult::None => {
+                        String::new()
+                    }
+                };
+        }
 
         if ventana.is_key_pressed(
             KeyboardKey::KEY_R,
@@ -253,13 +307,11 @@ fn main() {
                 * escala;
 
         let arma_ancho =
-            arma_actual.width()
-                as f32
+            arma_actual.width() as f32
                 * escala_arma;
 
         let arma_alto =
-            arma_actual.height()
-                as f32
+            arma_actual.height() as f32
                 * escala_arma;
 
         let arma_x =
@@ -328,6 +380,47 @@ fn main() {
                 mira_y as i32,
                 3.0 * escala.max(1.0),
                 Color::RED,
+            );
+        }
+
+        if !mensaje.is_empty() {
+            dibujo.draw_rectangle(
+                20,
+                dibujo.get_screen_height() - 70,
+                320,
+                40,
+                Color::new(
+                    0,
+                    0,
+                    0,
+                    180,
+                ),
+            );
+
+            dibujo.draw_text(
+                &mensaje,
+                30,
+                dibujo.get_screen_height() - 60,
+                20,
+                Color::WHITE,
+            );
+        }
+
+        if inventory.tiene_llave() {
+            dibujo.draw_text(
+                "Llave: SI",
+                10,
+                40,
+                18,
+                Color::YELLOW,
+            );
+        } else {
+            dibujo.draw_text(
+                "Llave: NO",
+                10,
+                40,
+                18,
+                Color::GRAY,
             );
         }
 

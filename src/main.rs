@@ -486,6 +486,8 @@ fn main() {
                 }
 
                 InteractionResult::PuertaAbierta => {
+                    sonidos.puerta();
+
                     mensaje =
                         "Abriste la puerta"
                             .to_string();

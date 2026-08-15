@@ -126,6 +126,18 @@ fn main() {
     let mut tiempo_disparo: f32 =
         0.0;
 
+    let mut recargando =
+        false;
+
+    let mut tiempo_recarga: f32 =
+        0.0;
+
+    const DURACION_RECARGA: f32 =
+        0.8;
+
+    const CAMBIO_FRAME_RECARGA: f32 =
+        0.4;
+
     let mut framebuffer =
         Framebuffer::new(
             ANCHO_VENTANA,
@@ -193,6 +205,26 @@ fn main() {
             )
             .expect(
                 "No se pudo cargar assets/textures/pistol3.png",
+            );
+
+    let pistol_r =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/pistolR.png",
+            )
+            .expect(
+                "No se pudo cargar assets/textures/pistolR.png",
+            );
+
+    let pistol_r2 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/pistolR2.png",
+            )
+            .expect(
+                "No se pudo cargar assets/textures/pistolR2.png",
             );
 
     let key_texture =
@@ -305,6 +337,38 @@ fn main() {
             if tiempo_disparo < 0.0 {
                 tiempo_disparo =
                     0.0;
+            }
+        }
+
+        if recargando {
+            tiempo_recarga -=
+                delta_time;
+
+            if tiempo_recarga <= 0.0 {
+                tiempo_recarga =
+                    0.0;
+
+                recargando =
+                    false;
+
+                let balas_faltantes =
+                    8
+                        - balas_cargador;
+
+                let cantidad_recargar =
+                    balas_faltantes.min(
+                        balas_reserva,
+                    );
+
+                balas_cargador +=
+                    cantidad_recargar;
+
+                balas_reserva -=
+                    cantidad_recargar;
+
+                mensaje =
+                    "Arma recargada"
+                        .to_string();
             }
         }
 
@@ -447,7 +511,9 @@ fn main() {
         ) {
             ventana.disable_cursor();
 
-            if vida_jugador > 0 {
+            if vida_jugador > 0
+                && !recargando
+            {
                 if balas_cargador > 0 {
                     tiempo_disparo =
                         0.12;
@@ -507,7 +573,9 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_R,
         ) {
-            if vida_jugador > 0 {
+            if vida_jugador > 0
+                && !recargando
+            {
                 if balas_cargador == 8 {
                     mensaje =
                         "El cargador ya esta lleno"
@@ -517,25 +585,19 @@ fn main() {
                         "No tienes balas de reserva"
                             .to_string();
                 } else {
-                    let balas_faltantes =
-                        8
-                            - balas_cargador;
+                    recargando =
+                        true;
 
-                    let cantidad_recargar =
-                        balas_faltantes.min(
-                            balas_reserva,
-                        );
+                    tiempo_recarga =
+                        DURACION_RECARGA;
 
-                    balas_cargador +=
-                        cantidad_recargar;
-
-                    balas_reserva -=
-                        cantidad_recargar;
+                    tiempo_disparo =
+                        0.0;
 
                     sonidos.recarga();
 
                     mensaje =
-                        "Arma recargada"
+                        "Recargando..."
                             .to_string();
                 }
             }
@@ -556,6 +618,15 @@ fn main() {
 
             balas_reserva =
                 24;
+
+            tiempo_disparo =
+                0.0;
+
+            recargando =
+                false;
+
+            tiempo_recarga =
+                0.0;
 
             damage_effect =
                 DamageEffect::new();
@@ -654,7 +725,15 @@ fn main() {
             ) / 2.0;
 
         let arma_actual =
-            if tiempo_disparo > 0.0 {
+            if recargando {
+                if tiempo_recarga
+                    > CAMBIO_FRAME_RECARGA
+                {
+                    &pistol_r2
+                } else {
+                    &pistol_r
+                }
+            } else if tiempo_disparo > 0.0 {
                 &pistol3
             } else if apuntando {
                 &pistol2
@@ -663,7 +742,15 @@ fn main() {
             };
 
         let escala_base_arma =
-            if tiempo_disparo > 0.0 {
+            if recargando {
+                if tiempo_recarga
+                    > CAMBIO_FRAME_RECARGA
+                {
+                    0.32
+                } else {
+                    0.32
+                }
+            } else if tiempo_disparo > 0.0 {
                 0.40
             } else if apuntando {
                 0.42
@@ -686,7 +773,9 @@ fn main() {
                 * escala_arma;
 
         let retroceso =
-            if tiempo_disparo > 0.0 {
+            if tiempo_disparo > 0.0
+                && !recargando
+            {
                 8.0
                     * escala
             } else {
@@ -786,7 +875,9 @@ fn main() {
             Color::WHITE,
         );
 
-        if apuntando {
+        if apuntando
+            && !recargando
+        {
             let mira_x =
                 offset_x
                     + ancho_render

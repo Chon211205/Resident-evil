@@ -5,7 +5,8 @@ use raylib::prelude::*;
 pub fn render_hud(
     dibujo: &mut RaylibDrawHandle,
     vida_jugador: i32,
-    municion: i32,
+    balas_cargador: i32,
+    balas_reserva: i32,
     inventory: &Inventory,
     mensaje: &str,
 ) {
@@ -21,7 +22,8 @@ pub fn render_hud(
 
     dibujar_municion(
         dibujo,
-        municion,
+        balas_cargador,
+        balas_reserva,
     );
 
     dibujar_mensaje(
@@ -93,19 +95,23 @@ fn dibujar_llave(
 
 fn dibujar_municion(
     dibujo: &mut RaylibDrawHandle,
-    municion: i32,
+    cargador: i32,
+    reserva: i32,
 ) {
     let texto =
         format!(
-            "Municion: {}/24",
-            municion,
+            "Municion: {}/{}",
+            cargador,
+            reserva,
         );
 
     let color =
-        if municion > 5 {
-            Color::WHITE
-        } else {
+        if cargador == 0 {
             Color::RED
+        } else if cargador <= 2 {
+            Color::YELLOW
+        } else {
+            Color::WHITE
         };
 
     dibujo.draw_text(
@@ -201,7 +207,7 @@ fn dibujar_muerte(
     );
 
     dibujo.draw_text(
-        "Presiona R para reiniciar",
+        "Presiona F5 para reiniciar",
         dibujo.get_screen_width() / 2
             - 120,
         dibujo.get_screen_height() / 2

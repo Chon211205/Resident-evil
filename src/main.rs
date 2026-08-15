@@ -105,7 +105,10 @@ fn main() {
     let mut vida_jugador =
         100;
 
-    let mut municion =
+    let mut balas_cargador =
+        8;
+
+    let mut balas_reserva =
         24;
 
     let mut tiempo_disparo: f32 =
@@ -378,11 +381,11 @@ fn main() {
             ventana.disable_cursor();
 
             if vida_jugador > 0 {
-                if municion > 0 {
+                if balas_cargador > 0 {
                     tiempo_disparo =
                         0.12;
 
-                    municion -=
+                    balas_cargador -=
                         1;
 
                     let resultado =
@@ -421,8 +424,13 @@ fn main() {
                         };
                 } else {
                     mensaje =
-                        "Sin municion"
-                            .to_string();
+                        if balas_reserva > 0 {
+                            "Cargador vacio. Presiona R para recargar"
+                                .to_string()
+                        } else {
+                            "Sin municion"
+                                .to_string()
+                        };
                 }
             }
         }
@@ -430,13 +438,50 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_R,
         ) {
+            if vida_jugador > 0 {
+                if balas_cargador == 8 {
+                    mensaje =
+                        "El cargador ya esta lleno"
+                            .to_string();
+                } else if balas_reserva <= 0 {
+                    mensaje =
+                        "No tienes balas de reserva"
+                            .to_string();
+                } else {
+                    let balas_faltantes =
+                        8 - balas_cargador;
+
+                    let cantidad_recargar =
+                        balas_faltantes.min(
+                            balas_reserva,
+                        );
+
+                    balas_cargador +=
+                        cantidad_recargar;
+
+                    balas_reserva -=
+                        cantidad_recargar;
+
+                    mensaje =
+                        "Arma recargada"
+                            .to_string();
+                }
+            }
+        }
+
+        if ventana.is_key_pressed(
+            KeyboardKey::KEY_F5,
+        ) {
             player.reset();
             camera.reset();
 
             vida_jugador =
                 100;
 
-            municion =
+            balas_cargador =
+                8;
+
+            balas_reserva =
                 24;
 
             mensaje =
@@ -666,7 +711,8 @@ fn main() {
         render_hud(
             &mut dibujo,
             vida_jugador,
-            municion,
+            balas_cargador,
+            balas_reserva,
             &inventory,
             &mensaje,
         );

@@ -1,115 +1,225 @@
-use crate::map::{Map, TAMANO_CELDA};
-use raylib::prelude::*;
-use std::f32::consts::PI;
+use crate::map::Map;
 
-pub const VELOCIDAD_MOVIMIENTO: f32 = 100.0;
+use raylib::prelude::*;
 
 pub struct Player {
     pub x: f32,
     pub y: f32,
 
-    initial_x: f32,
-    initial_y: f32,
+    spawn_x: f32,
+    spawn_y: f32,
+
+    velocidad: f32,
 }
 
 impl Player {
-    pub fn new(map: &Map) -> Self {
-        let (fila, columna) = map
-            .buscar_jugador()
-            .expect("No se encontró el jugador P");
+    pub fn new(
+        mapa: &Map,
+    ) -> Self {
+        let (
+            spawn_x,
+            spawn_y,
+        ) =
+            if let Some(
+                (
+                    fila,
+                    columna,
+                ),
+            ) = mapa.buscar_jugador()
+            {
+                (
+                    columna as f32
+                        * crate::map::TAMANO_CELDA
+                        + crate::map::TAMANO_CELDA
+                            / 2.0,
 
-        let x =
-            columna as f32 * TAMANO_CELDA
-                + TAMANO_CELDA / 2.0;
+                    fila as f32
+                        * crate::map::TAMANO_CELDA
+                        + crate::map::TAMANO_CELDA
+                            / 2.0,
+                )
+            } else {
+                (
+                    crate::map::TAMANO_CELDA
+                        * 1.5,
 
-        let y =
-            fila as f32 * TAMANO_CELDA
-                + TAMANO_CELDA / 2.0;
+                    crate::map::TAMANO_CELDA
+                        * 1.5,
+                )
+            };
 
         Self {
-            x,
-            y,
-            initial_x: x,
-            initial_y: y,
+            x: spawn_x,
+            y: spawn_y,
+
+            spawn_x,
+            spawn_y,
+
+            velocidad: 90.0,
         }
     }
 
     pub fn update(
         &mut self,
-        window: &RaylibHandle,
-        map: &Map,
-        camera_angle: f32,
+        ventana: &RaylibHandle,
+        mapa: &Map,
+        angulo: f32,
         delta_time: f32,
     ) {
-        let velocidad =
-            VELOCIDAD_MOVIMIENTO * delta_time;
+        let velocidad_frame =
+            self.velocidad
+                * delta_time;
 
-        // W = adelante
-        if window.is_key_down(KeyboardKey::KEY_W) {
-            self.mover(
-                map,
-                camera_angle,
-                velocidad,
-            );
+        let frente_x =
+            angulo.cos();
+
+        let frente_y =
+            angulo.sin();
+
+        let derecha_x =
+            -frente_y;
+
+        let derecha_y =
+            frente_x;
+
+        let mut movimiento_x =
+            0.0;
+
+        let mut movimiento_y =
+            0.0;
+
+        if ventana.is_key_down(
+            KeyboardKey::KEY_W,
+        ) {
+            movimiento_x +=
+                frente_x;
+
+            movimiento_y +=
+                frente_y;
         }
 
-        // S = atrás
-        if window.is_key_down(KeyboardKey::KEY_S) {
-            self.mover(
-                map,
-                camera_angle,
-                -velocidad,
-            );
+        if ventana.is_key_down(
+            KeyboardKey::KEY_S,
+        ) {
+            movimiento_x -=
+                frente_x;
+
+            movimiento_y -=
+                frente_y;
         }
 
-        // A = izquierda
-        if window.is_key_down(KeyboardKey::KEY_A) {
-            self.mover(
-                map,
-                camera_angle - PI / 2.0,
-                velocidad,
-            );
+        if ventana.is_key_down(
+            KeyboardKey::KEY_D,
+        ) {
+            movimiento_x +=
+                derecha_x;
+
+            movimiento_y +=
+                derecha_y;
         }
 
-        // D = derecha
-        if window.is_key_down(KeyboardKey::KEY_D) {
-            self.mover(
-                map,
-                camera_angle + PI / 2.0,
-                velocidad,
-            );
-        }
-    }
+        if ventana.is_key_down(
+            KeyboardKey::KEY_A,
+        ) {
+            movimiento_x -=
+                derecha_x;
 
-    fn mover(
-        &mut self,
-        map: &Map,
-        angle: f32,
-        movimiento: f32,
-    ) {
+            movimiento_y -=
+                derecha_y;
+        }
+
+        let longitud =
+            (
+                movimiento_x
+                    * movimiento_x
+                    + movimiento_y
+                        * movimiento_y
+            )
+                .sqrt();
+
+        if longitud > 0.0 {
+            movimiento_x /=
+                longitud;
+
+            movimiento_y /=
+                longitud;
+        }
+
         let nuevo_x =
-            self.x + angle.cos() * movimiento;
+            self.x
+                + movimiento_x
+                    * velocidad_frame;
 
         let nuevo_y =
-            self.y + angle.sin() * movimiento;
+            self.y
+                + movimiento_y
+                    * velocidad_frame;
 
-        if !map.es_pared(
+        if puede_moverse(
+            mapa,
             nuevo_x,
             self.y,
         ) {
-            self.x = nuevo_x;
+            self.x =
+                nuevo_x;
         }
 
-        if !map.es_pared(
+        if puede_moverse(
+            mapa,
             self.x,
             nuevo_y,
         ) {
-            self.y = nuevo_y;
+            self.y =
+                nuevo_y;
         }
     }
 
-    pub fn reset(&mut self) {
-        self.x = self.initial_x;
-        self.y = self.initial_y;
+    pub fn reset(
+        &mut self,
+    ) {
+        self.x =
+            self.spawn_x;
+
+        self.y =
+            self.spawn_y;
     }
+}
+
+fn puede_moverse(
+    mapa: &Map,
+    x: f32,
+    y: f32,
+) -> bool {
+    const RADIO_JUGADOR: f32 =
+        6.0;
+
+    if mapa.es_pared(
+        x - RADIO_JUGADOR,
+        y - RADIO_JUGADOR,
+    ) {
+        return false;
+    }
+
+    if mapa.es_pared(
+        x + RADIO_JUGADOR,
+        y - RADIO_JUGADOR,
+    ) {
+        return false;
+    }
+
+    if mapa.es_pared(
+        x - RADIO_JUGADOR,
+        y + RADIO_JUGADOR,
+    ) {
+        return false;
+    }
+
+    if mapa.es_pared(
+        x + RADIO_JUGADOR,
+        y + RADIO_JUGADOR,
+    ) {
+        return false;
+    }
+
+    true
 }

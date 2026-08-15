@@ -1,23 +1,252 @@
 use crate::camera::Camera;
 use crate::framebuffer::Framebuffer;
-use crate::map::{Map, TAMANO_CELDA};
+use crate::map::{
+    Map,
+    TAMANO_CELDA,
+};
 use crate::player::Player;
 use crate::texture_data::TextureData;
 
 use raylib::prelude::*;
+
 use std::f32::consts::PI;
 
-pub const ANCHO_VENTANA: i32 = 800;
-pub const ALTO_VENTANA: i32 = 600;
+pub const ANCHO_VENTANA: i32 =
+    800;
 
-pub const CANTIDAD_RAYOS: i32 = ANCHO_VENTANA;
-pub const FOV: f32 = PI / 3.0;
+pub const ALTO_VENTANA: i32 =
+    600;
+
+pub const FOV: f32 =
+    PI / 3.0;
 
 pub struct RayHit {
     pub distancia: f32,
-    pub impacto_x: f32,
-    pub impacto_y: f32,
+    pub offset_textura: f32,
+    pub golpe_vertical: bool,
     pub tipo: char,
+}
+
+pub fn lanzar_rayo(
+    mapa: &Map,
+    origen_x: f32,
+    origen_y: f32,
+    angulo: f32,
+) -> RayHit {
+    let dir_x =
+        angulo.cos();
+
+    let dir_y =
+        angulo.sin();
+
+    let posicion_mapa_x =
+        origen_x / TAMANO_CELDA;
+
+    let posicion_mapa_y =
+        origen_y / TAMANO_CELDA;
+
+    let mut mapa_x =
+        posicion_mapa_x
+            .floor() as i32;
+
+    let mut mapa_y =
+        posicion_mapa_y
+            .floor() as i32;
+
+    let delta_dist_x =
+        if dir_x.abs()
+            < 0.000001
+        {
+            f32::INFINITY
+        } else {
+            (1.0 / dir_x)
+                .abs()
+        };
+
+    let delta_dist_y =
+        if dir_y.abs()
+            < 0.000001
+        {
+            f32::INFINITY
+        } else {
+            (1.0 / dir_y)
+                .abs()
+        };
+
+    let paso_x: i32;
+
+    let paso_y: i32;
+
+    let mut distancia_lado_x: f32;
+
+    let mut distancia_lado_y: f32;
+
+    if dir_x < 0.0 {
+        paso_x =
+            -1;
+
+        distancia_lado_x =
+            (
+                posicion_mapa_x
+                    - mapa_x as f32
+            )
+                * delta_dist_x;
+    } else {
+        paso_x =
+            1;
+
+        distancia_lado_x =
+            (
+                mapa_x as f32
+                    + 1.0
+                    - posicion_mapa_x
+            )
+                * delta_dist_x;
+    }
+
+    if dir_y < 0.0 {
+        paso_y =
+            -1;
+
+        distancia_lado_y =
+            (
+                posicion_mapa_y
+                    - mapa_y as f32
+            )
+                * delta_dist_y;
+    } else {
+        paso_y =
+            1;
+
+        distancia_lado_y =
+            (
+                mapa_y as f32
+                    + 1.0
+                    - posicion_mapa_y
+            )
+                * delta_dist_y;
+    }
+
+    let mut golpe_vertical;
+
+    loop {
+        if distancia_lado_x
+            < distancia_lado_y
+        {
+            distancia_lado_x +=
+                delta_dist_x;
+
+            mapa_x +=
+                paso_x;
+
+            golpe_vertical =
+                true;
+        } else {
+            distancia_lado_y +=
+                delta_dist_y;
+
+            mapa_y +=
+                paso_y;
+
+            golpe_vertical =
+                false;
+        }
+
+        if mapa.es_bloque_solido(
+            mapa_y,
+            mapa_x,
+        ) {
+            break;
+        }
+    }
+
+    let distancia_celdas =
+        if golpe_vertical {
+            if dir_x.abs()
+                < 0.000001
+            {
+                0.0
+            } else {
+                (
+                    mapa_x as f32
+                        - posicion_mapa_x
+                        + (
+                            1 - paso_x
+                        ) as f32
+                            / 2.0
+                ) / dir_x
+            }
+        } else {
+            if dir_y.abs()
+                < 0.000001
+            {
+                0.0
+            } else {
+                (
+                    mapa_y as f32
+                        - posicion_mapa_y
+                        + (
+                            1 - paso_y
+                        ) as f32
+                            / 2.0
+                ) / dir_y
+            }
+        };
+
+    let distancia =
+        distancia_celdas.abs()
+            * TAMANO_CELDA;
+
+    let impacto_x =
+        origen_x
+            + dir_x
+                * distancia;
+
+    let impacto_y =
+        origen_y
+            + dir_y
+                * distancia;
+
+    let mut offset_textura =
+        if golpe_vertical {
+            impacto_y
+                / TAMANO_CELDA
+        } else {
+            impacto_x
+                / TAMANO_CELDA
+        };
+
+    offset_textura -=
+        offset_textura.floor();
+
+    if golpe_vertical
+        && dir_x > 0.0
+    {
+        offset_textura =
+            1.0
+                - offset_textura;
+    }
+
+    if !golpe_vertical
+        && dir_y < 0.0
+    {
+        offset_textura =
+            1.0
+                - offset_textura;
+    }
+
+    let tipo =
+        mapa.celda(
+            mapa_y,
+            mapa_x,
+        );
+
+    RayHit {
+        distancia,
+        offset_textura,
+        golpe_vertical,
+        tipo,
+    }
 }
 
 pub fn render_3d(
@@ -29,19 +258,14 @@ pub fn render_3d(
     textura_puerta: &TextureData,
     textura_suelo: &TextureData,
 ) {
-    dibujar_cielo(
-        framebuffer,
-        camera.vertical_offset,
-    );
-
-    dibujar_suelo_texturizado(
+    render_suelo(
         framebuffer,
         player,
         camera,
         textura_suelo,
     );
 
-    dibujar_paredes(
+    render_paredes(
         framebuffer,
         mapa,
         player,
@@ -51,157 +275,7 @@ pub fn render_3d(
     );
 }
 
-pub fn lanzar_rayo(
-    mapa: &Map,
-    inicio_x: f32,
-    inicio_y: f32,
-    angulo: f32,
-) -> RayHit {
-    let direccion_x =
-        angulo.cos();
-
-    let direccion_y =
-        angulo.sin();
-
-    let pos_mapa_x =
-        inicio_x / TAMANO_CELDA;
-
-    let pos_mapa_y =
-        inicio_y / TAMANO_CELDA;
-
-    let mut mapa_x =
-        pos_mapa_x.floor() as i32;
-
-    let mut mapa_y =
-        pos_mapa_y.floor() as i32;
-
-    let delta_dist_x =
-        if direccion_x.abs() < 0.00001 {
-            f32::INFINITY
-        } else {
-            (1.0 / direccion_x).abs()
-        };
-
-    let delta_dist_y =
-        if direccion_y.abs() < 0.00001 {
-            f32::INFINITY
-        } else {
-            (1.0 / direccion_y).abs()
-        };
-
-    let paso_x;
-    let paso_y;
-
-    let mut lado_dist_x;
-    let mut lado_dist_y;
-
-    if direccion_x < 0.0 {
-        paso_x = -1;
-
-        lado_dist_x =
-            (pos_mapa_x - mapa_x as f32)
-                * delta_dist_x;
-    } else {
-        paso_x = 1;
-
-        lado_dist_x =
-            (mapa_x as f32
-                + 1.0
-                - pos_mapa_x)
-                * delta_dist_x;
-    }
-
-    if direccion_y < 0.0 {
-        paso_y = -1;
-
-        lado_dist_y =
-            (pos_mapa_y - mapa_y as f32)
-                * delta_dist_y;
-    } else {
-        paso_y = 1;
-
-        lado_dist_y =
-            (mapa_y as f32
-                + 1.0
-                - pos_mapa_y)
-                * delta_dist_y;
-    }
-
-    let mut golpe_vertical =
-        false;
-
-    let tipo_impacto;
-
-    loop {
-        if lado_dist_x < lado_dist_y {
-            lado_dist_x +=
-                delta_dist_x;
-
-            mapa_x +=
-                paso_x;
-
-            golpe_vertical =
-                true;
-        } else {
-            lado_dist_y +=
-                delta_dist_y;
-
-            mapa_y +=
-                paso_y;
-
-            golpe_vertical =
-                false;
-        }
-
-        let celda =
-            mapa.celda(
-                mapa_y,
-                mapa_x,
-            );
-
-        if matches!(
-            celda,
-            '#' | 'D'
-        ) {
-            tipo_impacto =
-                celda;
-
-            break;
-        }
-    }
-
-    let distancia_celdas =
-        if golpe_vertical {
-            lado_dist_x
-                - delta_dist_x
-        } else {
-            lado_dist_y
-                - delta_dist_y
-        };
-
-    let distancia =
-        distancia_celdas
-            * TAMANO_CELDA;
-
-    let impacto_x =
-        inicio_x
-            + direccion_x
-                * distancia;
-
-    let impacto_y =
-        inicio_y
-            + direccion_y
-                * distancia;
-
-    RayHit {
-        distancia,
-        impacto_x,
-        impacto_y,
-        tipo: tipo_impacto,
-    }
-}
-
-fn dibujar_paredes(
+fn render_paredes(
     framebuffer: &mut Framebuffer,
     mapa: &Map,
     player: &Player,
@@ -209,27 +283,29 @@ fn dibujar_paredes(
     textura_pared: &TextureData,
     textura_puerta: &TextureData,
 ) {
-    let angulo_inicial =
-        camera.angle
-            - FOV / 2.0;
-
-    let incremento_angulo =
-        FOV
-            / CANTIDAD_RAYOS
-                as f32;
-
     let distancia_plano =
-        (ANCHO_VENTANA as f32
-            / 2.0)
-            / (FOV / 2.0).tan();
+        (
+            ANCHO_VENTANA as f32
+                / 2.0
+        )
+            / (
+                FOV / 2.0
+            )
+                .tan();
 
-    for numero_rayo
-        in 0..CANTIDAD_RAYOS
+    for columna
+        in 0..ANCHO_VENTANA
     {
+        let porcentaje =
+            columna as f32
+                / ANCHO_VENTANA
+                    as f32;
+
         let angulo_rayo =
-            angulo_inicial
-                + numero_rayo as f32
-                    * incremento_angulo;
+            camera.angle
+                - FOV / 2.0
+                + porcentaje
+                    * FOV;
 
         let hit =
             lanzar_rayo(
@@ -239,282 +315,324 @@ fn dibujar_paredes(
                 angulo_rayo,
             );
 
-        let diferencia_angulo =
-            angulo_rayo
-                - camera.angle;
-
         let distancia_corregida =
             hit.distancia
-                * diferencia_angulo
+                * (
+                    angulo_rayo
+                        - camera.angle
+                )
                     .cos();
 
+        // Evita que la altura tienda a infinito
+        // cuando estamos demasiado cerca.
         let distancia_segura =
             distancia_corregida
-                .max(0.001);
+                .max(6.0);
 
-        let altura_columna =
+        let mut altura_pared =
             TAMANO_CELDA
                 * distancia_plano
                 / distancia_segura;
 
-        let altura_columna =
-            altura_columna
-                .min(
-                    ALTO_VENTANA
-                        as f32
-                        * 2.0,
-                )
-                as i32;
+        // Protección extra ante valores absurdos.
+        let altura_maxima =
+            ALTO_VENTANA as f32
+                * 2.5;
 
-        let centro_pantalla =
-            ALTO_VENTANA / 2
-                + camera.vertical_offset;
+        if altura_pared
+            > altura_maxima
+        {
+            altura_pared =
+                altura_maxima;
+        }
 
-        let inicio_y =
-            centro_pantalla
-                - altura_columna / 2;
+        let centro_vertical =
+            ALTO_VENTANA as f32
+                / 2.0
+                + camera.vertical_offset
+                    as f32;
 
-        let final_y =
-            centro_pantalla
-                + altura_columna / 2;
+        let inicio_pared =
+            centro_vertical
+                - altura_pared
+                    / 2.0;
 
-        let textura_actual =
+        let fin_pared =
+            centro_vertical
+                + altura_pared
+                    / 2.0;
+
+        let textura =
             if hit.tipo == 'D' {
                 textura_puerta
             } else {
                 textura_pared
             };
 
-        let textura_x =
-            calcular_textura_x(
-                hit.impacto_x,
-                hit.impacto_y,
-                textura_actual.width,
-            );
-
-        dibujar_columna_texturizada(
+        dibujar_columna_pared(
             framebuffer,
-            textura_actual,
-            numero_rayo,
-            inicio_y,
-            final_y,
-            textura_x,
-            distancia_segura,
+            columna,
+            inicio_pared,
+            fin_pared,
+            hit.offset_textura,
+            hit.distancia,
+            hit.golpe_vertical,
+            textura,
         );
     }
 }
 
-fn calcular_textura_x(
-    impacto_x: f32,
-    impacto_y: f32,
-    ancho_textura: i32,
-) -> i32 {
-    let local_x =
-        impacto_x
-            .rem_euclid(
-                TAMANO_CELDA,
-            );
-
-    let local_y =
-        impacto_y
-            .rem_euclid(
-                TAMANO_CELDA,
-            );
-
-    let borde_x =
-        local_x.min(
-            TAMANO_CELDA
-                - local_x,
-        );
-
-    let borde_y =
-        local_y.min(
-            TAMANO_CELDA
-                - local_y,
-        );
-
-    let porcentaje =
-        if borde_x < borde_y {
-            local_y
-                / TAMANO_CELDA
-        } else {
-            local_x
-                / TAMANO_CELDA
-        };
-
-    (porcentaje
-        * ancho_textura as f32)
-        .floor()
-        .clamp(
-            0.0,
-            (ancho_textura - 1)
-                as f32,
-        )
-        as i32
-}
-
-fn dibujar_columna_texturizada(
+fn dibujar_columna_pared(
     framebuffer: &mut Framebuffer,
-    textura: &TextureData,
-    pantalla_x: i32,
-    inicio_y: i32,
-    final_y: i32,
-    textura_x: i32,
+    x: i32,
+    inicio: f32,
+    fin: f32,
+    offset_textura: f32,
     distancia: f32,
+    golpe_vertical: bool,
+    textura: &TextureData,
 ) {
-    let inicio =
-        inicio_y.max(0);
+    let altura =
+        fin - inicio;
 
-    let final_posicion =
-        final_y.min(
-            framebuffer.height() - 1,
+    if altura <= 0.0 {
+        return;
+    }
+
+    let tex_x =
+        (
+            offset_textura
+                * textura.width
+                    as f32
+        ) as i32;
+
+    let tex_x =
+        tex_x.clamp(
+            0,
+            textura.width - 1,
         );
 
-    if inicio > final_posicion {
-        return;
-    }
+    let inicio_pantalla =
+        inicio
+            .floor()
+            .max(0.0)
+            as i32;
 
-    let altura_pared =
-        final_y - inicio_y;
+    let fin_pantalla =
+        fin
+            .ceil()
+            .min(
+                ALTO_VENTANA
+                    as f32
+                    - 1.0,
+            )
+            as i32;
 
-    if altura_pared <= 0 {
-        return;
-    }
+    let oscuridad =
+        calcular_oscuridad(
+            distancia,
+        );
 
-    for pantalla_y
-        in inicio..=final_posicion
+    for y
+        in inicio_pantalla
+            ..=fin_pantalla
     {
         let porcentaje_y =
-            (pantalla_y
-                - inicio_y)
-                as f32
-                / altura_pared
-                    as f32;
+            (
+                y as f32
+                    - inicio
+            ) / altura;
 
-        let textura_y =
-            (porcentaje_y
-                * textura.height as f32)
-                .floor()
-                .clamp(
-                    0.0,
-                    (textura.height - 1)
-                        as f32,
-                )
-                as i32;
+        let tex_y =
+            (
+                porcentaje_y
+                    * textura.height
+                        as f32
+            ) as i32;
 
-        let color =
-            textura.get(
-                textura_x,
-                textura_y,
+        let tex_y =
+            tex_y.clamp(
+                0,
+                textura.height - 1,
             );
 
-        let color =
-            aplicar_oscuridad(
-                color,
-                distancia,
+        let mut color =
+            textura.get_pixel(
+                tex_x,
+                tex_y,
             );
+
+        if golpe_vertical {
+            color.r =
+                (
+                    color.r as f32
+                        * 0.85
+                ) as u8;
+
+            color.g =
+                (
+                    color.g as f32
+                        * 0.85
+                ) as u8;
+
+            color.b =
+                (
+                    color.b as f32
+                        * 0.85
+                ) as u8;
+        }
+
+        color.r =
+            (
+                color.r as f32
+                    * oscuridad
+            ) as u8;
+
+        color.g =
+            (
+                color.g as f32
+                    * oscuridad
+            ) as u8;
+
+        color.b =
+            (
+                color.b as f32
+                    * oscuridad
+            ) as u8;
 
         framebuffer.point_color(
-            pantalla_x,
-            pantalla_y,
+            x,
+            y,
             color,
         );
     }
 }
 
-fn dibujar_suelo_texturizado(
+fn render_suelo(
     framebuffer: &mut Framebuffer,
     player: &Player,
     camera: &Camera,
     textura_suelo: &TextureData,
 ) {
-    let horizonte =
-        ALTO_VENTANA / 2
-            + camera.vertical_offset;
+    let centro_vertical =
+        ALTO_VENTANA as f32
+            / 2.0
+            + camera.vertical_offset
+                as f32;
 
-    let direccion_x =
+    let distancia_plano =
+        (
+            ANCHO_VENTANA as f32
+                / 2.0
+        )
+            / (
+                FOV / 2.0
+            )
+                .tan();
+
+    let dir_x =
         camera.angle.cos();
 
-    let direccion_y =
+    let dir_y =
         camera.angle.sin();
 
     let plano_x =
-        -camera.angle.sin()
-            * (FOV / 2.0).tan();
+        -dir_y
+            * (
+                FOV / 2.0
+            )
+                .tan();
 
     let plano_y =
-        camera.angle.cos()
-            * (FOV / 2.0).tan();
+        dir_x
+            * (
+                FOV / 2.0
+            )
+                .tan();
 
-    let rayo_izquierda_x =
-        direccion_x
-            - plano_x;
+    let rayo_izquierdo_x =
+        dir_x - plano_x;
 
-    let rayo_izquierda_y =
-        direccion_y
-            - plano_y;
+    let rayo_izquierdo_y =
+        dir_y - plano_y;
 
-    let rayo_derecha_x =
-        direccion_x
-            + plano_x;
+    let rayo_derecho_x =
+        dir_x + plano_x;
 
-    let rayo_derecha_y =
-        direccion_y
-            + plano_y;
+    let rayo_derecho_y =
+        dir_y + plano_y;
 
     let altura_camara =
-        TAMANO_CELDA * 0.5;
+        TAMANO_CELDA
+            / 2.0;
 
     let inicio_y =
-        horizonte.max(0);
+        (
+            centro_vertical
+                + 1.0
+        )
+            .max(0.0)
+            as i32;
 
-    for y in
-        inicio_y..ALTO_VENTANA
+    for y
+        in (
+            inicio_y
+                ..ALTO_VENTANA
+        )
+            .step_by(2)
     {
-        let distancia_vertical =
+        let diferencia_y =
             y as f32
-                - horizonte as f32;
+                - centro_vertical;
 
-        if distancia_vertical <= 0.0 {
+        if diferencia_y.abs()
+            < 0.001
+        {
             continue;
         }
 
-        let distancia_fila =
+        let distancia =
             altura_camara
-                * ALTO_VENTANA as f32
-                / distancia_vertical;
+                * distancia_plano
+                / diferencia_y;
 
         let paso_x =
-            distancia_fila
+            distancia
                 * (
-                    rayo_derecha_x
-                        - rayo_izquierda_x
+                    rayo_derecho_x
+                        - rayo_izquierdo_x
                 )
-                / ANCHO_VENTANA as f32;
+                / ANCHO_VENTANA
+                    as f32;
 
         let paso_y =
-            distancia_fila
+            distancia
                 * (
-                    rayo_derecha_y
-                        - rayo_izquierda_y
+                    rayo_derecho_y
+                        - rayo_izquierdo_y
                 )
-                / ANCHO_VENTANA as f32;
+                / ANCHO_VENTANA
+                    as f32;
 
         let mut mundo_x =
             player.x
-                + distancia_fila
-                    * rayo_izquierda_x;
+                + distancia
+                    * rayo_izquierdo_x;
 
         let mut mundo_y =
             player.y
-                + distancia_fila
-                    * rayo_izquierda_y;
+                + distancia
+                    * rayo_izquierdo_y;
 
-        for x in
-            (0..ANCHO_VENTANA)
-                .step_by(2)
+        let oscuridad =
+            calcular_oscuridad(
+                distancia,
+            );
+
+        for x
+            in 0..ANCHO_VENTANA
         {
-            let textura_x =
+            let tex_x =
                 (
                     mundo_x
                         .rem_euclid(
@@ -523,16 +641,9 @@ fn dibujar_suelo_texturizado(
                         / TAMANO_CELDA
                         * textura_suelo.width
                             as f32
-                )
-                    .floor()
-                    .clamp(
-                        0.0,
-                        (textura_suelo.width - 1)
-                            as f32,
-                    )
-                    as i32;
+                ) as i32;
 
-            let textura_y =
+            let tex_y =
                 (
                     mundo_y
                         .rem_euclid(
@@ -541,26 +652,44 @@ fn dibujar_suelo_texturizado(
                         / TAMANO_CELDA
                         * textura_suelo.height
                             as f32
-                )
-                    .floor()
-                    .clamp(
-                        0.0,
-                        (textura_suelo.height - 1)
-                            as f32,
-                    )
-                    as i32;
+                ) as i32;
 
-            let color =
-                textura_suelo.get(
-                    textura_x,
-                    textura_y,
+            let tex_x =
+                tex_x.clamp(
+                    0,
+                    textura_suelo.width - 1,
                 );
 
-            let color =
-                aplicar_oscuridad(
-                    color,
-                    distancia_fila,
+            let tex_y =
+                tex_y.clamp(
+                    0,
+                    textura_suelo.height - 1,
                 );
+
+            let mut color =
+                textura_suelo
+                    .get_pixel(
+                        tex_x,
+                        tex_y,
+                    );
+
+            color.r =
+                (
+                    color.r as f32
+                        * oscuridad
+                ) as u8;
+
+            color.g =
+                (
+                    color.g as f32
+                        * oscuridad
+                ) as u8;
+
+            color.b =
+                (
+                    color.b as f32
+                        * oscuridad
+                ) as u8;
 
             framebuffer.point_color(
                 x,
@@ -568,83 +697,35 @@ fn dibujar_suelo_texturizado(
                 color,
             );
 
-            if x + 1
-                < ANCHO_VENTANA
+            if y + 1
+                < ALTO_VENTANA
             {
                 framebuffer.point_color(
-                    x + 1,
-                    y,
+                    x,
+                    y + 1,
                     color,
                 );
             }
 
             mundo_x +=
-                paso_x * 2.0;
+                paso_x;
 
             mundo_y +=
-                paso_y * 2.0;
+                paso_y;
         }
     }
 }
 
-fn aplicar_oscuridad(
-    color: Color,
+fn calcular_oscuridad(
     distancia: f32,
-) -> Color {
-    let factor =
-        (1.0
-            - distancia / 700.0)
-            .clamp(
-                0.25,
-                1.0,
-            );
+) -> f32 {
+    let oscuridad =
+        1.0
+            - distancia
+                / 700.0;
 
-    Color::new(
-        (color.r as f32
-            * factor)
-            as u8,
-
-        (color.g as f32
-            * factor)
-            as u8,
-
-        (color.b as f32
-            * factor)
-            as u8,
-
-        color.a,
+    oscuridad.clamp(
+        0.25,
+        1.0,
     )
-}
-
-fn dibujar_cielo(
-    framebuffer: &mut Framebuffer,
-    altura_camara: i32,
-) {
-    let horizonte =
-        (
-            ALTO_VENTANA / 2
-                + altura_camara
-        )
-            .clamp(
-                0,
-                ALTO_VENTANA,
-            );
-
-    let color =
-        Color::new(
-            10,
-            10,
-            15,
-            255,
-        );
-
-    for y in 0..horizonte {
-        for x in 0..ANCHO_VENTANA {
-            framebuffer.point_color(
-                x,
-                y,
-                color,
-            );
-        }
-    }
 }

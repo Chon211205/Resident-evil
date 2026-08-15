@@ -40,6 +40,32 @@ impl TextureData {
         }
     }
 
+    pub fn get_pixel(
+        &self,
+        x: i32,
+        y: i32,
+    ) -> Color {
+        let x =
+            x.clamp(
+                0,
+                self.width - 1,
+            );
+
+        let y =
+            y.clamp(
+                0,
+                self.height - 1,
+            );
+
+        let indice =
+            (
+                y * self.width
+                    + x
+            ) as usize;
+
+        self.pixels[indice]
+    }
+
     pub fn get(
         &self,
         x: i32,

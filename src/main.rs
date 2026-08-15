@@ -560,6 +560,8 @@ fn main() {
                             }
                         };
                 } else {
+                    sonidos.sin_municion();
+
                     mensaje =
                         if balas_reserva > 0 {
                             "Cargador vacio. Presiona R para recargar"
@@ -745,13 +747,7 @@ fn main() {
 
         let escala_base_arma =
             if recargando {
-                if tiempo_recarga
-                    > CAMBIO_FRAME_RECARGA
-                {
-                    0.32
-                } else {
-                    0.32
-                }
+                0.32
             } else if tiempo_disparo > 0.0 {
                 0.40
             } else if apuntando {

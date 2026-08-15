@@ -1,3 +1,4 @@
+mod audio;
 mod camera;
 mod damage_effect;
 mod framebuffer;
@@ -14,6 +15,7 @@ mod texture_data;
 mod zombie;
 mod zombie_renderer;
 
+use audio::AudioManager;
 use camera::Camera;
 use damage_effect::DamageEffect;
 use framebuffer::Framebuffer;
@@ -49,6 +51,7 @@ use texture_data::TextureData;
 use zombie::Zombie;
 use zombie_renderer::render_zombies;
 
+use raylib::audio::RaylibAudio;
 use raylib::prelude::*;
 
 fn main() {
@@ -150,6 +153,17 @@ fn main() {
     );
 
     ventana.disable_cursor();
+
+    let audio =
+        RaylibAudio::init_audio_device()
+            .expect(
+                "No se pudo iniciar el audio",
+            );
+
+    let sonidos =
+        AudioManager::new(
+            &audio,
+        );
 
     let pistol1 =
         ventana
@@ -441,6 +455,8 @@ fn main() {
                     balas_cargador -=
                         1;
 
+                    sonidos.disparo();
+
                     let resultado =
                         disparar(
                             &mut zombies,
@@ -515,6 +531,8 @@ fn main() {
 
                     balas_reserva -=
                         cantidad_recargar;
+
+                    sonidos.recarga();
 
                     mensaje =
                         "Arma recargada"

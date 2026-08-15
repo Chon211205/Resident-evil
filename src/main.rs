@@ -1,5 +1,6 @@
 mod camera;
 mod framebuffer;
+mod hud;
 mod interaction;
 mod inventory;
 mod map;
@@ -14,6 +15,7 @@ mod zombie_renderer;
 
 use camera::Camera;
 use framebuffer::Framebuffer;
+use hud::render_hud;
 
 use interaction::{
     disparar,
@@ -103,6 +105,9 @@ fn main() {
     let mut vida_jugador =
         100;
 
+    let mut municion =
+        24;
+
     let mut tiempo_disparo: f32 =
         0.0;
 
@@ -174,7 +179,7 @@ fn main() {
                 "No se pudo cargar assets/key.png",
             );
 
-    let zombie_idle =
+    let zombie1 =
         ventana
             .load_texture(
                 &thread,
@@ -184,7 +189,7 @@ fn main() {
                 "No se pudo cargar assets/zombie1.png",
             );
 
-    let zombie_run1 =
+    let zombie2 =
         ventana
             .load_texture(
                 &thread,
@@ -194,7 +199,7 @@ fn main() {
                 "No se pudo cargar assets/zombie2.png",
             );
 
-    let zombie_run2 =
+    let zombie3 =
         ventana
             .load_texture(
                 &thread,
@@ -373,43 +378,52 @@ fn main() {
             ventana.disable_cursor();
 
             if vida_jugador > 0 {
-                tiempo_disparo =
-                    0.12;
+                if municion > 0 {
+                    tiempo_disparo =
+                        0.12;
 
-                let resultado =
-                    disparar(
-                        &mut zombies,
-                        &player,
-                        &camera,
-                        &mut mapa,
-                    );
+                    municion -=
+                        1;
 
-                mensaje =
-                    match resultado {
-                        ShotResult::Miss => {
-                            "Disparo fallido"
-                                .to_string()
-                        }
+                    let resultado =
+                        disparar(
+                            &mut zombies,
+                            &player,
+                            &camera,
+                            &mut mapa,
+                        );
 
-                        ShotResult::Hit {
-                            vida_restante,
-                        } => {
-                            format!(
-                                "Le diste al zombie. Vida: {}",
+                    mensaje =
+                        match resultado {
+                            ShotResult::Miss => {
+                                "Disparo fallido"
+                                    .to_string()
+                            }
+
+                            ShotResult::Hit {
                                 vida_restante,
-                            )
-                        }
+                            } => {
+                                format!(
+                                    "Le diste al zombie. Vida: {}",
+                                    vida_restante,
+                                )
+                            }
 
-                        ShotResult::Kill => {
-                            "Zombie eliminado"
-                                .to_string()
-                        }
+                            ShotResult::Kill => {
+                                "Zombie eliminado"
+                                    .to_string()
+                            }
 
-                        ShotResult::KillConLlave => {
-                            "Zombie eliminado. Dejo caer una llave"
-                                .to_string()
-                        }
-                    };
+                            ShotResult::KillConLlave => {
+                                "Zombie eliminado. Dejo caer una llave"
+                                    .to_string()
+                            }
+                        };
+                } else {
+                    mensaje =
+                        "Sin municion"
+                            .to_string();
+                }
             }
         }
 
@@ -421,6 +435,9 @@ fn main() {
 
             vida_jugador =
                 100;
+
+            municion =
+                24;
 
             mensaje =
                 "Jugador reiniciado"
@@ -609,9 +626,9 @@ fn main() {
             &player,
             &camera,
             &zombies,
-            &zombie_idle,
-            &zombie_run1,
-            &zombie_run2,
+            &zombie1,
+            &zombie2,
+            &zombie3,
             offset_x,
             offset_y,
             escala,
@@ -646,128 +663,12 @@ fn main() {
             );
         }
 
-        let texto_vida =
-            format!(
-                "Vida: {}",
-                vida_jugador,
-            );
-
-        dibujo.draw_text(
-            &texto_vida,
-            10,
-            65,
-            20,
-            if vida_jugador > 30 {
-                Color::GREEN
-            } else {
-                Color::RED
-            },
-        );
-
-        if inventory.tiene_llave() {
-            dibujo.draw_text(
-                "Llave: SI",
-                10,
-                40,
-                18,
-                Color::YELLOW,
-            );
-        } else {
-            dibujo.draw_text(
-                "Llave: NO",
-                10,
-                40,
-                18,
-                Color::GRAY,
-            );
-        }
-
-        if !mensaje.is_empty() {
-            dibujo.draw_rectangle(
-                20,
-                dibujo.get_screen_height()
-                    - 70,
-                440,
-                40,
-                Color::new(
-                    0,
-                    0,
-                    0,
-                    180,
-                ),
-            );
-
-            dibujo.draw_text(
-                &mensaje,
-                30,
-                dibujo.get_screen_height()
-                    - 60,
-                20,
-                Color::WHITE,
-            );
-        }
-
-        if vida_jugador <= 0 {
-            let texto =
-                "HAS MUERTO";
-
-            let ancho_texto =
-                dibujo.measure_text(
-                    texto,
-                    50,
-                );
-
-            dibujo.draw_rectangle(
-                0,
-                0,
-                dibujo.get_screen_width(),
-                dibujo.get_screen_height(),
-                Color::new(
-                    0,
-                    0,
-                    0,
-                    170,
-                ),
-            );
-
-            dibujo.draw_text(
-                texto,
-                dibujo.get_screen_width()
-                    / 2
-                    - ancho_texto / 2,
-                dibujo.get_screen_height()
-                    / 2
-                    - 25,
-                50,
-                Color::RED,
-            );
-
-            dibujo.draw_text(
-                "Presiona R para reiniciar",
-                dibujo.get_screen_width()
-                    / 2
-                    - 120,
-                dibujo.get_screen_height()
-                    / 2
-                    + 40,
-                20,
-                Color::WHITE,
-            );
-        }
-
-        let texto_fps =
-            format!(
-                "FPS: {}",
-                dibujo.get_fps(),
-            );
-
-        dibujo.draw_text(
-            &texto_fps,
-            dibujo.get_screen_width()
-                - 100,
-            10,
-            20,
-            Color::GREEN,
+        render_hud(
+            &mut dibujo,
+            vida_jugador,
+            municion,
+            &inventory,
+            &mensaje,
         );
     }
 }

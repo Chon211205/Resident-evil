@@ -155,80 +155,80 @@ fn main() {
         ventana
             .load_texture(
                 &thread,
-                "assets/pistol1.png",
+                "assets/textures/pistol1.png",
             )
             .expect(
-                "No se pudo cargar assets/pistol1.png",
+                "No se pudo cargar assets/textures/pistol1.png",
             );
 
     let pistol2 =
         ventana
             .load_texture(
                 &thread,
-                "assets/pistol2.png",
+                "assets/textures/pistol2.png",
             )
             .expect(
-                "No se pudo cargar assets/pistol2.png",
+                "No se pudo cargar assets/textures/pistol2.png",
             );
 
     let pistol3 =
         ventana
             .load_texture(
                 &thread,
-                "assets/pistol3.png",
+                "assets/textures/pistol3.png",
             )
             .expect(
-                "No se pudo cargar assets/pistol3.png",
+                "No se pudo cargar assets/textures/pistol3.png",
             );
 
     let key_texture =
         ventana
             .load_texture(
                 &thread,
-                "assets/key.png",
+                "assets/textures/key.png",
             )
             .expect(
-                "No se pudo cargar assets/key.png",
+                "No se pudo cargar assets/textures/key.png",
             );
 
     let ammo_texture =
         ventana
             .load_texture(
                 &thread,
-                "assets/ammo.png",
+                "assets/textures/ammo.png",
             )
             .expect(
-                "No se pudo cargar assets/ammo.png",
+                "No se pudo cargar assets/textures/ammo.png",
             );
 
     let zombie1 =
         ventana
             .load_texture(
                 &thread,
-                "assets/zombie1.png",
+                "assets/textures/zombie1.png",
             )
             .expect(
-                "No se pudo cargar assets/zombie1.png",
+                "No se pudo cargar assets/textures/zombie1.png",
             );
 
     let zombie2 =
         ventana
             .load_texture(
                 &thread,
-                "assets/zombie2.png",
+                "assets/textures/zombie2.png",
             )
             .expect(
-                "No se pudo cargar assets/zombie2.png",
+                "No se pudo cargar assets/textures/zombie2.png",
             );
 
     let zombie3 =
         ventana
             .load_texture(
                 &thread,
-                "assets/zombie3.png",
+                "assets/textures/zombie3.png",
             )
             .expect(
-                "No se pudo cargar assets/zombie3.png",
+                "No se pudo cargar assets/textures/zombie3.png",
             );
 
     let mut wall_image =

@@ -1,4 +1,5 @@
 mod camera;
+mod damage_effect;
 mod framebuffer;
 mod hud;
 mod interaction;
@@ -14,6 +15,7 @@ mod zombie;
 mod zombie_renderer;
 
 use camera::Camera;
+use damage_effect::DamageEffect;
 use framebuffer::Framebuffer;
 use hud::render_hud;
 
@@ -102,6 +104,9 @@ fn main() {
 
     let mut puzzle =
         Puzzle::new();
+
+    let mut damage_effect =
+        DamageEffect::new();
 
     let mut mensaje =
         String::new();
@@ -289,6 +294,10 @@ fn main() {
             }
         }
 
+        damage_effect.update(
+            delta_time,
+        );
+
         camera.update(
             &ventana,
             delta_time,
@@ -315,20 +324,22 @@ fn main() {
                         delta_time,
                     );
 
-                vida_jugador -=
-                    dano;
-
-                if vida_jugador < 0 {
-                    vida_jugador =
-                        0;
-                }
-
                 if dano > 0 {
+                    vida_jugador -=
+                        dano;
+
+                    if vida_jugador < 0 {
+                        vida_jugador =
+                            0;
+                    }
+
                     mensaje =
                         format!(
                             "Un zombie te hizo {} de dano",
                             dano,
                         );
+
+                    damage_effect.activar();
                 }
             }
         }
@@ -455,7 +466,7 @@ fn main() {
                             }
 
                             ShotResult::Kill => {
-                                "Zombie eliminado. Dejo municion"
+                                "Zombie eliminado"
                                     .to_string()
                             }
 
@@ -491,7 +502,8 @@ fn main() {
                             .to_string();
                 } else {
                     let balas_faltantes =
-                        8 - balas_cargador;
+                        8
+                            - balas_cargador;
 
                     let cantidad_recargar =
                         balas_faltantes.min(
@@ -515,6 +527,7 @@ fn main() {
             KeyboardKey::KEY_F5,
         ) {
             player.reset();
+
             camera.reset();
 
             vida_jugador =
@@ -525,6 +538,9 @@ fn main() {
 
             balas_reserva =
                 24;
+
+            damage_effect =
+                DamageEffect::new();
 
             mensaje =
                 "Jugador reiniciado"
@@ -584,11 +600,13 @@ fn main() {
 
         let escala_x =
             pantalla_ancho
-                / ANCHO_VENTANA as f32;
+                / ANCHO_VENTANA
+                    as f32;
 
         let escala_y =
             pantalla_alto
-                / ALTO_VENTANA as f32;
+                / ALTO_VENTANA
+                    as f32;
 
         let escala =
             escala_x.min(
@@ -596,11 +614,13 @@ fn main() {
             );
 
         let ancho_render =
-            ANCHO_VENTANA as f32
+            ANCHO_VENTANA
+                as f32
                 * escala;
 
         let alto_render =
-            ALTO_VENTANA as f32
+            ALTO_VENTANA
+                as f32
                 * escala;
 
         let offset_x =
@@ -649,15 +669,18 @@ fn main() {
 
         let retroceso =
             if tiempo_disparo > 0.0 {
-                8.0 * escala
+                8.0
+                    * escala
             } else {
                 0.0
             };
 
         let arma_x =
             offset_x
-                + ancho_render / 2.0
-                - arma_ancho / 2.0;
+                + ancho_render
+                    / 2.0
+                - arma_ancho
+                    / 2.0;
 
         let arma_y =
             offset_y
@@ -679,8 +702,10 @@ fn main() {
             Rectangle::new(
                 0.0,
                 0.0,
-                ANCHO_VENTANA as f32,
-                ALTO_VENTANA as f32,
+                ANCHO_VENTANA
+                    as f32,
+                ALTO_VENTANA
+                    as f32,
             ),
             Rectangle::new(
                 offset_x,
@@ -746,17 +771,21 @@ fn main() {
         if apuntando {
             let mira_x =
                 offset_x
-                    + ancho_render / 2.0;
+                    + ancho_render
+                        / 2.0;
 
             let mira_y =
                 offset_y
-                    + alto_render / 2.0;
+                    + alto_render
+                        / 2.0;
 
             dibujo.draw_circle(
                 mira_x as i32,
                 mira_y as i32,
                 3.0
-                    * escala.max(1.0),
+                    * escala.max(
+                        1.0,
+                    ),
                 Color::RED,
             );
         }
@@ -768,6 +797,10 @@ fn main() {
             balas_reserva,
             &inventory,
             &mensaje,
+        );
+
+        damage_effect.render(
+            &mut dibujo,
         );
     }
 }

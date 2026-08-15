@@ -13,6 +13,8 @@ pub struct Zombie {
     pub persiguiendo: bool,
     pub tiempo_animacion: f32,
 
+    pub puede_dropear_llave: bool,
+
     tiempo_ultimo_ataque: f32,
 }
 
@@ -24,14 +26,29 @@ impl Zombie {
         Self {
             x,
             y,
-
             vida: 100,
             velocidad: 22.0,
             vivo: true,
-
             persiguiendo: false,
             tiempo_animacion: 0.0,
+            puede_dropear_llave: false,
+            tiempo_ultimo_ataque: 0.0,
+        }
+    }
 
+    pub fn new_con_llave(
+        x: f32,
+        y: f32,
+    ) -> Self {
+        Self {
+            x,
+            y,
+            vida: 100,
+            velocidad: 22.0,
+            vivo: true,
+            persiguiendo: false,
+            tiempo_animacion: 0.0,
+            puede_dropear_llave: true,
             tiempo_ultimo_ataque: 0.0,
         }
     }
@@ -57,8 +74,7 @@ impl Zombie {
             player.y - self.y;
 
         let distancia =
-            (dx * dx + dy * dy)
-                .sqrt();
+            (dx * dx + dy * dy).sqrt();
 
         let distancia_deteccion =
             250.0;
@@ -66,20 +82,13 @@ impl Zombie {
         let distancia_ataque =
             22.0;
 
-        // Si está demasiado lejos,
-        // se queda quieto.
-        if distancia
-            > distancia_deteccion
-        {
+        if distancia > distancia_deteccion {
             self.persiguiendo = false;
             self.tiempo_animacion = 0.0;
 
             return 0;
         }
 
-        // Si hay una pared o puerta
-        // entre el zombie y el jugador,
-        // no puede verlo.
         if !self.puede_ver_jugador(
             player,
             mapa,
@@ -91,21 +100,13 @@ impl Zombie {
             return 0;
         }
 
-        // Si llegó aquí,
-        // el zombie puede ver al jugador.
         self.persiguiendo = true;
 
         self.tiempo_animacion +=
             delta_time;
 
-        // Si está suficientemente cerca,
-        // ataca.
-        if distancia
-            <= distancia_ataque
-        {
-            if self.tiempo_ultimo_ataque
-                >= 1.0
-            {
+        if distancia <= distancia_ataque {
+            if self.tiempo_ultimo_ataque >= 1.0 {
                 self.tiempo_ultimo_ataque =
                     0.0;
 
@@ -137,9 +138,6 @@ impl Zombie {
                     * self.velocidad
                     * delta_time;
 
-        // Movimiento separado en X/Y
-        // para que pueda deslizarse
-        // por las paredes.
         if !mapa.es_pared(
             nuevo_x,
             self.y,
@@ -191,8 +189,7 @@ impl Zombie {
             return;
         }
 
-        self.vida -=
-            dano;
+        self.vida -= dano;
 
         if self.vida <= 0 {
             self.vida = 0;

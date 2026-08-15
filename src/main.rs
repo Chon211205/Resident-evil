@@ -53,12 +53,25 @@ fn main() {
     let mut zombies =
         posiciones_zombies
             .into_iter()
-            .map(|(x, y)| {
-                Zombie::new(
+            .map(
+                |(
                     x,
                     y,
-                )
-            })
+                    tiene_llave,
+                )| {
+                    if tiene_llave {
+                        Zombie::new_con_llave(
+                            x,
+                            y,
+                        )
+                    } else {
+                        Zombie::new(
+                            x,
+                            y,
+                        )
+                    }
+                },
+            )
             .collect::<Vec<Zombie>>();
 
     println!(
@@ -121,8 +134,6 @@ fn main() {
 
     ventana.disable_cursor();
 
-    // ARMAS
-
     let pistol1 =
         ventana
             .load_texture(
@@ -153,8 +164,6 @@ fn main() {
                 "No se pudo cargar assets/pistol3.png",
             );
 
-    // LLAVE
-
     let key_texture =
         ventana
             .load_texture(
@@ -164,8 +173,6 @@ fn main() {
             .expect(
                 "No se pudo cargar assets/key.png",
             );
-
-    // ZOMBIES
 
     let zombie_idle =
         ventana
@@ -196,8 +203,6 @@ fn main() {
             .expect(
                 "No se pudo cargar assets/zombie3.png",
             );
-
-    // TEXTURAS DEL MAPA
 
     let mut wall_image =
         Image::load_image(
@@ -252,10 +257,6 @@ fn main() {
         let delta_time =
             ventana.get_frame_time();
 
-
-        // ANIMACIÓN DISPARO
-
-
         if tiempo_disparo > 0.0 {
             tiempo_disparo -=
                 delta_time;
@@ -266,15 +267,11 @@ fn main() {
             }
         }
 
-        // CÁMARA
-
         camera.update(
             &ventana,
             delta_time,
             2.0,
         );
-
-        // JUGADOR
 
         if vida_jugador > 0 {
             player.update(
@@ -284,8 +281,6 @@ fn main() {
                 delta_time,
             );
         }
-
-        // ZOMBIES
 
         if vida_jugador > 0 {
             for zombie in
@@ -316,8 +311,6 @@ fn main() {
             }
         }
 
-        // RECOGER LLAVE
-
         let resultado_recoger =
             recoger_objetos_cercanos(
                 &mut mapa,
@@ -333,8 +326,6 @@ fn main() {
                 "Recogiste una llave"
                     .to_string();
         }
-
-        // PUERTAS
 
         if ventana.is_key_pressed(
             KeyboardKey::KEY_E,
@@ -371,14 +362,10 @@ fn main() {
             }
         }
 
-        // APUNTAR
-
         let apuntando =
             ventana.is_mouse_button_down(
                 MouseButton::MOUSE_BUTTON_RIGHT,
             );
-
-        // DISPARAR
 
         if ventana.is_mouse_button_pressed(
             MouseButton::MOUSE_BUTTON_LEFT,
@@ -394,7 +381,7 @@ fn main() {
                         &mut zombies,
                         &player,
                         &camera,
-                        &mapa,
+                        &mut mapa,
                     );
 
                 mensaje =
@@ -417,11 +404,14 @@ fn main() {
                             "Zombie eliminado"
                                 .to_string()
                         }
+
+                        ShotResult::KillConLlave => {
+                            "Zombie eliminado. Dejo caer una llave"
+                                .to_string()
+                        }
                     };
             }
         }
-
-        // RESET
 
         if ventana.is_key_pressed(
             KeyboardKey::KEY_R,
@@ -436,8 +426,6 @@ fn main() {
                 "Jugador reiniciado"
                     .to_string();
         }
-
-        // VENTANA
 
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F11,
@@ -454,8 +442,6 @@ fn main() {
         ) {
             ventana.enable_cursor();
         }
-
-        // RENDER 3D
 
         framebuffer.clear();
 
@@ -483,8 +469,6 @@ fn main() {
             .expect(
                 "No se pudo actualizar la textura del framebuffer",
             );
-
-        // ESCALADO VENTANA
 
         let pantalla_ancho =
             ventana.get_screen_width()
@@ -526,8 +510,6 @@ fn main() {
                 pantalla_alto
                     - alto_render
             ) / 2.0;
-
-        // SPRITE DEL ARMA
 
         let arma_actual =
             if tiempo_disparo > 0.0 {
@@ -579,8 +561,6 @@ fn main() {
                 - arma_alto
                 - retroceso;
 
-        // DRAWING
-
         let mut dibujo =
             ventana.begin_drawing(
                 &thread,
@@ -612,7 +592,6 @@ fn main() {
             Color::WHITE,
         );
 
-        // Llave
         render_key_sprite(
             &mut dibujo,
             &mapa,
@@ -624,7 +603,6 @@ fn main() {
             escala,
         );
 
-        // Zombies
         render_zombies(
             &mut dibujo,
             &mapa,
@@ -639,7 +617,6 @@ fn main() {
             escala,
         );
 
-        // Arma
         dibujo.draw_texture_ex(
             arma_actual,
             Vector2::new(
@@ -651,7 +628,6 @@ fn main() {
             Color::WHITE,
         );
 
-        // Mira
         if apuntando {
             let mira_x =
                 offset_x
@@ -669,8 +645,6 @@ fn main() {
                 Color::RED,
             );
         }
-
-        // HUD
 
         let texto_vida =
             format!(
@@ -713,7 +687,7 @@ fn main() {
                 20,
                 dibujo.get_screen_height()
                     - 70,
-                400,
+                440,
                 40,
                 Color::new(
                     0,
@@ -732,8 +706,6 @@ fn main() {
                 Color::WHITE,
             );
         }
-
-        // MUERTE
 
         if vida_jugador <= 0 {
             let texto =
@@ -782,8 +754,6 @@ fn main() {
                 Color::WHITE,
             );
         }
-
-        // FPS
 
         let texto_fps =
             format!(

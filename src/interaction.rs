@@ -1,6 +1,9 @@
 use crate::camera::Camera;
 use crate::inventory::Inventory;
-use crate::map::{Map, TAMANO_CELDA};
+use crate::map::{
+    Map,
+    TAMANO_CELDA,
+};
 use crate::player::Player;
 use crate::puzzle::Puzzle;
 use crate::raycaster::lanzar_rayo;
@@ -17,10 +20,14 @@ pub enum InteractionResult {
 
 pub enum ShotResult {
     Miss,
+
     Hit {
         vida_restante: i32,
     },
+
     Kill,
+
+    KillConLlave,
 }
 
 pub fn interactuar(
@@ -61,6 +68,7 @@ pub fn interactuar(
         'D' => {
             if inventory.tiene_llave() {
                 inventory.usar_llave();
+
                 puzzle.abrir_puerta();
 
                 mapa.cambiar_celda(
@@ -102,6 +110,7 @@ pub fn recoger_objetos_cercanos(
     match objeto {
         'K' => {
             inventory.recoger_llave();
+
             puzzle.recoger_llave();
 
             mapa.cambiar_celda(
@@ -121,7 +130,7 @@ pub fn disparar(
     zombies: &mut [Zombie],
     player: &Player,
     camera: &Camera,
-    mapa: &Map,
+    mapa: &mut Map,
 ) -> ShotResult {
     let angulo_disparo =
         camera.angle;
@@ -155,8 +164,7 @@ pub fn disparar(
             zombie.y - player.y;
 
         let distancia =
-            (dx * dx + dy * dy)
-                .sqrt();
+            (dx * dx + dy * dy).sqrt();
 
         if distancia >= distancia_pared {
             continue;
@@ -230,10 +238,38 @@ pub fn disparar(
         );
 
     if zombies[indice].vivo {
-        ShotResult::Hit {
+        return ShotResult::Hit {
             vida_restante:
                 zombies[indice].vida,
-        }
+        };
+    }
+
+    if zombies[indice]
+        .puede_dropear_llave
+    {
+        let columna =
+            (
+                zombies[indice].x
+                    / TAMANO_CELDA
+            )
+                .floor()
+                as i32;
+
+        let fila =
+            (
+                zombies[indice].y
+                    / TAMANO_CELDA
+            )
+                .floor()
+                as i32;
+
+        mapa.cambiar_celda(
+            fila,
+            columna,
+            'K',
+        );
+
+        ShotResult::KillConLlave
     } else {
         ShotResult::Kill
     }

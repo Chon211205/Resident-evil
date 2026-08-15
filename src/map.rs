@@ -11,14 +11,14 @@ impl Map {
         let filas = vec![
             "#########################################",
             "#P        #             #               #",
-            "#         #             #       Z       #",
-            "#         #         Z   #               #",
             "#         #             #               #",
-            "##### #########   #############   #######",
+            "#    L    #             #               #",
             "#         #             #               #",
-            "#   K     #       Z     #    Z      Z   #",
-            "#         D             #       Z       #",
+            "####D##########   #############   #######",
             "#         #             #               #",
+            "#         #       L     #               #",
+            "#         #             #               #",
+            "#                       #               #",
             "###########   ###################   #####",
             "#         #             #               #",
             "#         #             #               #",
@@ -35,7 +35,7 @@ impl Map {
             "#                                       #",
             "#########   #####################   #####",
             "#             #                         #",
-            "#             #           Z             #",
+            "#             #           L             #",
             "#             #                         #",
             "#             #                         #",
             "#####   #####################   #########",
@@ -51,14 +51,10 @@ impl Map {
             "#########################################",
         ];
 
-        let data =
-            filas
-                .iter()
-                .map(|fila| {
-                    fila.chars()
-                        .collect::<Vec<char>>()
-                })
-                .collect();
+        let data = filas
+            .iter()
+            .map(|fila| fila.chars().collect::<Vec<char>>())
+            .collect();
 
         Self { data }
     }
@@ -67,46 +63,26 @@ impl Map {
         &self,
         nombre: &str,
     ) {
-        let contenido =
-            self.data
-                .iter()
-                .map(|fila| {
-                    fila.iter()
-                        .collect::<String>()
-                })
-                .collect::<Vec<String>>()
-                .join("\n");
+        let contenido = self
+            .data
+            .iter()
+            .map(|fila| fila.iter().collect::<String>())
+            .collect::<Vec<String>>()
+            .join("\n");
 
-        fs::write(
-            nombre,
-            contenido,
-        )
-        .expect(
-            "No se pudo guardar el mapa",
-        );
+        fs::write(nombre, contenido)
+            .expect("No se pudo guardar el mapa");
 
-        println!(
-            "Mapa guardado en {}",
-            nombre,
-        );
+        println!("Mapa guardado en {}", nombre);
     }
 
     pub fn buscar_jugador(
         &self,
     ) -> Option<(usize, usize)> {
-        for (fila, linea)
-            in self.data.iter().enumerate()
-        {
-            for (columna, celda)
-                in linea.iter().enumerate()
-            {
+        for (fila, linea) in self.data.iter().enumerate() {
+            for (columna, celda) in linea.iter().enumerate() {
                 if *celda == 'P' {
-                    return Some(
-                        (
-                            fila,
-                            columna,
-                        ),
-                    );
+                    return Some((fila, columna));
                 }
             }
         }
@@ -116,13 +92,17 @@ impl Map {
 
     pub fn extraer_zombies(
         &mut self,
-    ) -> Vec<(f32, f32)> {
-        let mut posiciones =
-            Vec::new();
+    ) -> Vec<(f32, f32, bool)> {
+        let mut posiciones = Vec::new();
 
         for fila in 0..self.data.len() {
             for columna in 0..self.data[fila].len() {
-                if self.data[fila][columna] == 'Z' {
+                let celda =
+                    self.data[fila][columna];
+
+                if celda == 'Z'
+                    || celda == 'L'
+                {
                     let x =
                         columna as f32
                             * TAMANO_CELDA
@@ -133,19 +113,15 @@ impl Map {
                             * TAMANO_CELDA
                             + TAMANO_CELDA / 2.0;
 
+                    let tiene_llave =
+                        celda == 'L';
+
                     posiciones.push(
                         (
                             x,
                             y,
+                            tiene_llave,
                         ),
-                    );
-
-                    println!(
-                        "Zombie encontrado: fila={}, columna={}, x={}, y={}",
-                        fila,
-                        columna,
-                        x,
-                        y,
                     );
 
                     self.data[fila][columna] =
@@ -156,7 +132,7 @@ impl Map {
 
         println!(
             "Total zombies encontrados: {}",
-            posiciones.len(),
+            posiciones.len()
         );
 
         posiciones
@@ -182,9 +158,7 @@ impl Map {
             return '#';
         }
 
-        fila_actual[
-            columna as usize
-        ]
+        fila_actual[columna as usize]
     }
 
     pub fn cambiar_celda(
@@ -223,10 +197,7 @@ impl Map {
             (y / TAMANO_CELDA)
                 .floor() as i32;
 
-        self.celda(
-            fila,
-            columna,
-        )
+        self.celda(fila, columna)
     }
 
     pub fn es_pared(
@@ -234,14 +205,8 @@ impl Map {
         x: f32,
         y: f32,
     ) -> bool {
-        let celda =
-            self.celda_desde_posicion(
-                x,
-                y,
-            );
-
         matches!(
-            celda,
+            self.celda_desde_posicion(x, y),
             '#' | 'D'
         )
     }
@@ -252,17 +217,12 @@ impl Map {
         columna: i32,
     ) -> bool {
         matches!(
-            self.celda(
-                fila,
-                columna,
-            ),
+            self.celda(fila, columna),
             '#' | 'D'
         )
     }
 
-    pub fn ancho(
-        &self,
-    ) -> usize {
+    pub fn ancho(&self) -> usize {
         self.data
             .iter()
             .map(|fila| fila.len())
@@ -270,9 +230,7 @@ impl Map {
             .unwrap_or(0)
     }
 
-    pub fn alto(
-        &self,
-    ) -> usize {
+    pub fn alto(&self) -> usize {
         self.data.len()
     }
 }

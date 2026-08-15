@@ -8,12 +8,14 @@ use crate::player::Player;
 use crate::puzzle::Puzzle;
 use crate::raycaster::lanzar_rayo;
 use crate::zombie::Zombie;
+use rand::Rng;
 
 use std::f32::consts::PI;
 
 pub enum InteractionResult {
     None,
     LlaveRecogida,
+    MunicionRecogida(i32),
     PuertaAbierta,
     PuertaCerrada,
 }
@@ -122,6 +124,18 @@ pub fn recoger_objetos_cercanos(
             InteractionResult::LlaveRecogida
         }
 
+        'A' => {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                ' ',
+            );
+
+            InteractionResult::MunicionRecogida(
+                8,
+            )
+        }
+
         _ => InteractionResult::None,
     }
 }
@@ -164,7 +178,8 @@ pub fn disparar(
             zombie.y - player.y;
 
         let distancia =
-            (dx * dx + dy * dy).sqrt();
+            (dx * dx + dy * dy)
+                .sqrt();
 
         if distancia >= distancia_pared {
             continue;
@@ -244,25 +259,23 @@ pub fn disparar(
         };
     }
 
+    let columna =
+        (
+            zombies[indice].x
+                / TAMANO_CELDA
+        )
+            .floor() as i32;
+
+    let fila =
+        (
+            zombies[indice].y
+                / TAMANO_CELDA
+        )
+            .floor() as i32;
+
     if zombies[indice]
         .puede_dropear_llave
     {
-        let columna =
-            (
-                zombies[indice].x
-                    / TAMANO_CELDA
-            )
-                .floor()
-                as i32;
-
-        let fila =
-            (
-                zombies[indice].y
-                    / TAMANO_CELDA
-            )
-                .floor()
-                as i32;
-
         mapa.cambiar_celda(
             fila,
             columna,
@@ -271,6 +284,20 @@ pub fn disparar(
 
         ShotResult::KillConLlave
     } else {
+        let mut rng =
+            rand::thread_rng();
+
+        let dropea_municion =
+            rng.gen_bool(0.35);
+
+        if dropea_municion {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'A',
+            );
+        }
+
         ShotResult::Kill
     }
 }

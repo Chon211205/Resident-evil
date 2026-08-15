@@ -37,7 +37,11 @@ use raycaster::{
     ANCHO_VENTANA,
 };
 
-use sprite_renderer::render_key_sprite;
+use sprite_renderer::{
+    render_ammo_sprites,
+    render_key_sprite,
+};
+
 use texture_data::TextureData;
 
 use zombie::Zombie;
@@ -180,6 +184,16 @@ fn main() {
             )
             .expect(
                 "No se pudo cargar assets/key.png",
+            );
+
+    let ammo_texture =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/ammo.png",
+            )
+            .expect(
+                "No se pudo cargar assets/ammo.png",
             );
 
     let zombie1 =
@@ -327,12 +341,27 @@ fn main() {
                 &mut puzzle,
             );
 
-        if let InteractionResult::LlaveRecogida =
-            resultado_recoger
-        {
-            mensaje =
-                "Recogiste una llave"
-                    .to_string();
+        match resultado_recoger {
+            InteractionResult::LlaveRecogida => {
+                mensaje =
+                    "Recogiste una llave"
+                        .to_string();
+            }
+
+            InteractionResult::MunicionRecogida(
+                cantidad,
+            ) => {
+                balas_reserva +=
+                    cantidad;
+
+                mensaje =
+                    format!(
+                        "Recogiste {} balas",
+                        cantidad,
+                    );
+            }
+
+            _ => {}
         }
 
         if ventana.is_key_pressed(
@@ -352,6 +381,19 @@ fn main() {
                     mensaje =
                         "Recogiste una llave"
                             .to_string();
+                }
+
+                InteractionResult::MunicionRecogida(
+                    cantidad,
+                ) => {
+                    balas_reserva +=
+                        cantidad;
+
+                    mensaje =
+                        format!(
+                            "Recogiste {} balas",
+                            cantidad,
+                        );
                 }
 
                 InteractionResult::PuertaAbierta => {
@@ -413,12 +455,12 @@ fn main() {
                             }
 
                             ShotResult::Kill => {
-                                "Zombie eliminado"
+                                "Zombie eliminado. Dejo municion"
                                     .to_string()
                             }
 
                             ShotResult::KillConLlave => {
-                                "Zombie eliminado. Dejo caer una llave"
+                                "Zombie eliminado. Dejo una llave"
                                     .to_string()
                             }
                         };
@@ -660,6 +702,17 @@ fn main() {
             &player,
             &camera,
             &key_texture,
+            offset_x,
+            offset_y,
+            escala,
+        );
+
+        render_ammo_sprites(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &ammo_texture,
             offset_x,
             offset_y,
             escala,

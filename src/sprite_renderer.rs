@@ -1,6 +1,10 @@
 use crate::camera::Camera;
-use crate::map::{Map, TAMANO_CELDA};
+use crate::map::{
+    Map,
+    TAMANO_CELDA,
+};
 use crate::player::Player;
+
 use crate::raycaster::{
     lanzar_rayo,
     ALTO_VENTANA,
@@ -9,6 +13,7 @@ use crate::raycaster::{
 };
 
 use raylib::prelude::*;
+
 use std::f32::consts::PI;
 
 pub fn render_key_sprite(
@@ -21,25 +26,94 @@ pub fn render_key_sprite(
     offset_y: f32,
     escala_pantalla: f32,
 ) {
-    let Some((fila, columna)) =
-        buscar_llave(mapa)
-    else {
-        return;
-    };
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            if mapa.celda(
+                fila as i32,
+                columna as i32,
+            ) == 'K'
+            {
+                render_objeto(
+                    dibujo,
+                    mapa,
+                    player,
+                    camera,
+                    fila,
+                    columna,
+                    key_texture,
+                    0.30,
+                    offset_x,
+                    offset_y,
+                    escala_pantalla,
+                );
+            }
+        }
+    }
+}
 
-    let key_x =
-        columna as f32 * TAMANO_CELDA
+pub fn render_ammo_sprites(
+    dibujo: &mut RaylibDrawHandle,
+    mapa: &Map,
+    player: &Player,
+    camera: &Camera,
+    ammo_texture: &Texture2D,
+    offset_x: f32,
+    offset_y: f32,
+    escala_pantalla: f32,
+) {
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            if mapa.celda(
+                fila as i32,
+                columna as i32,
+            ) == 'A'
+            {
+                render_objeto(
+                    dibujo,
+                    mapa,
+                    player,
+                    camera,
+                    fila,
+                    columna,
+                    ammo_texture,
+                    0.38,
+                    offset_x,
+                    offset_y,
+                    escala_pantalla,
+                );
+            }
+        }
+    }
+}
+
+fn render_objeto(
+    dibujo: &mut RaylibDrawHandle,
+    mapa: &Map,
+    player: &Player,
+    camera: &Camera,
+    fila: usize,
+    columna: usize,
+    textura: &Texture2D,
+    factor_tamano: f32,
+    offset_x: f32,
+    offset_y: f32,
+    escala_pantalla: f32,
+) {
+    let objeto_x =
+        columna as f32
+            * TAMANO_CELDA
             + TAMANO_CELDA / 2.0;
 
-    let key_y =
-        fila as f32 * TAMANO_CELDA
+    let objeto_y =
+        fila as f32
+            * TAMANO_CELDA
             + TAMANO_CELDA / 2.0;
 
     let dx =
-        key_x - player.x;
+        objeto_x - player.x;
 
     let dy =
-        key_y - player.y;
+        objeto_y - player.y;
 
     let distancia =
         (dx * dx + dy * dy)
@@ -49,19 +123,21 @@ pub fn render_key_sprite(
         return;
     }
 
-    let angulo_llave =
+    let angulo_objeto =
         dy.atan2(dx);
 
     let mut diferencia =
-        angulo_llave
+        angulo_objeto
             - camera.angle;
 
     while diferencia > PI {
-        diferencia -= 2.0 * PI;
+        diferencia -=
+            2.0 * PI;
     }
 
     while diferencia < -PI {
-        diferencia += 2.0 * PI;
+        diferencia +=
+            2.0 * PI;
     }
 
     if diferencia.abs()
@@ -75,7 +151,7 @@ pub fn render_key_sprite(
             mapa,
             player.x,
             player.y,
-            angulo_llave,
+            angulo_objeto,
         );
 
     if hit.distancia
@@ -93,7 +169,6 @@ pub fn render_key_sprite(
             + diferencia.tan()
                 * distancia_plano;
 
-
     let distancia_corregida =
         distancia
             * diferencia.cos();
@@ -102,33 +177,31 @@ pub fn render_key_sprite(
         distancia_corregida
             .max(0.001);
 
-
     let altura_celda =
         TAMANO_CELDA
             * distancia_plano
             / distancia_segura;
 
-
     let alto_sprite =
         altura_celda
-            * 0.20;
+            * factor_tamano;
 
     let escala_sprite =
         alto_sprite
-            / key_texture.height()
+            / textura.height()
                 as f32;
 
     let ancho_sprite =
-        key_texture.width()
+        textura.width()
             as f32
             * escala_sprite;
-
 
     let suelo_pantalla =
         ALTO_VENTANA as f32 / 2.0
             + camera.vertical_offset
                 as f32
-            + altura_celda / 2.0;
+            + altura_celda
+                / 2.0;
 
     let x =
         offset_x
@@ -136,7 +209,6 @@ pub fn render_key_sprite(
                 pantalla_x
                     - ancho_sprite / 2.0
             ) * escala_pantalla;
-
 
     let y =
         offset_y
@@ -146,7 +218,7 @@ pub fn render_key_sprite(
             ) * escala_pantalla;
 
     dibujo.draw_texture_ex(
-        key_texture,
+        textura,
         Vector2::new(
             x,
             y,
@@ -156,27 +228,4 @@ pub fn render_key_sprite(
             * escala_pantalla,
         Color::WHITE,
     );
-}
-
-fn buscar_llave(
-    mapa: &Map,
-) -> Option<(usize, usize)> {
-    for fila in 0..mapa.alto() {
-        for columna in 0..mapa.ancho() {
-            if mapa.celda(
-                fila as i32,
-                columna as i32,
-            ) == 'K'
-            {
-                return Some(
-                    (
-                        fila,
-                        columna,
-                    ),
-                );
-            }
-        }
-    }
-
-    None
 }

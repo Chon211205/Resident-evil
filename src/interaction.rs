@@ -6,7 +6,7 @@ use crate::puzzle::Puzzle;
 use crate::raycaster::lanzar_rayo;
 use crate::zombie::Zombie;
 
-use rand::Rng;
+use rand::{thread_rng, Rng};
 use std::f32::consts::PI;
 
 pub enum InteractionResult {
@@ -16,104 +16,73 @@ pub enum InteractionResult {
     CuracionRecogida(i32),
     PuertaAbierta,
     PuertaCerrada,
+    SalidaNivel,
 }
 
 pub enum ShotResult {
     Miss,
-    Hit { vida_restante: i32 },
+
+    Hit {
+        vida_restante: i32,
+    },
+
     Kill,
+
     KillConLlave,
 }
 
-pub fn interactuar(
-    mapa: &mut Map,
-    player: &Player,
-    camera: &Camera,
-    inventory: &mut Inventory,
-    puzzle: &mut Puzzle,
-) -> InteractionResult {
-    let distancia_interaccion =
-        TAMANO_CELDA * 1.5;
-
-    let frente_x =
-        player.x
-            + camera.angle.cos()
-                * distancia_interaccion;
-
-    let frente_y =
-        player.y
-            + camera.angle.sin()
-                * distancia_interaccion;
-
-    let columna =
-        (frente_x / TAMANO_CELDA)
-            .floor() as i32;
-
-    let fila =
-        (frente_y / TAMANO_CELDA)
-            .floor() as i32;
-
-    let objeto =
-        mapa.celda(
-            fila,
-            columna,
-        );
-
-    match objeto {
-        'D' => {
-            if inventory.tiene_llave() {
-                inventory.usar_llave();
-
-                puzzle.abrir_puerta();
-
-                mapa.cambiar_celda(
-                    fila,
-                    columna,
-                    'O',
-                );
-
-                InteractionResult::PuertaAbierta
-            } else {
-                InteractionResult::PuertaCerrada
-            }
-        }
-
-        _ => InteractionResult::None,
+fn normalizar_angulo(
+    mut angulo: f32,
+) -> f32 {
+    while angulo > PI {
+        angulo -= 2.0 * PI;
     }
+
+    while angulo < -PI {
+        angulo += 2.0 * PI;
+    }
+
+    angulo
 }
 
 pub fn recoger_objetos_cercanos(
     mapa: &mut Map,
     player: &Player,
     inventory: &mut Inventory,
-    puzzle: &mut Puzzle,
+    _puzzle: &mut Puzzle,
     vida_actual: i32,
 ) -> InteractionResult {
     let columna =
-        (player.x / TAMANO_CELDA)
-            .floor() as i32;
+        (
+            player.x
+                / TAMANO_CELDA
+        )
+            .floor()
+            as i32;
 
     let fila =
-        (player.y / TAMANO_CELDA)
-            .floor() as i32;
+        (
+            player.y
+                / TAMANO_CELDA
+        )
+            .floor()
+            as i32;
 
-    let objeto =
+    let celda =
         mapa.celda(
             fila,
             columna,
         );
 
-    match objeto {
+    match celda {
         'K' => {
-            inventory.recoger_llave();
-
-            puzzle.recoger_llave();
-
             mapa.cambiar_celda(
                 fila,
                 columna,
                 ' ',
             );
+
+            inventory.recoger_llave();
 
             InteractionResult::LlaveRecogida
         }
@@ -146,116 +115,199 @@ pub fn recoger_objetos_cercanos(
             )
         }
 
-        _ => InteractionResult::None,
+        'X' => {
+            InteractionResult::SalidaNivel
+        }
+
+        _ => {
+            InteractionResult::None
+        }
     }
 }
 
+pub fn interactuar(
+    mapa: &mut Map,
+    player: &Player,
+    camera: &Camera,
+    inventory: &mut Inventory,
+    _puzzle: &mut Puzzle,
+) -> InteractionResult {
+    let distancias = [
+        15.0,
+        20.0,
+        25.0,
+        30.0,
+        35.0,
+        40.0,
+    ];
+
+    for distancia in distancias {
+        let objetivo_x =
+            player.x
+                + camera.angle.cos()
+                    * distancia;
+
+        let objetivo_y =
+            player.y
+                + camera.angle.sin()
+                    * distancia;
+
+        let columna =
+            (
+                objetivo_x
+                    / TAMANO_CELDA
+            )
+                .floor()
+                as i32;
+
+        let fila =
+            (
+                objetivo_y
+                    / TAMANO_CELDA
+            )
+                .floor()
+                as i32;
+
+        let celda =
+            mapa.celda(
+                fila,
+                columna,
+            );
+
+        if celda == 'D' {
+            if inventory.tiene_llave() {
+                mapa.cambiar_celda(
+                    fila,
+                    columna,
+                    'O',
+                );
+
+                inventory.usar_llave();
+
+                return InteractionResult::PuertaAbierta;
+            }
+
+            return InteractionResult::PuertaCerrada;
+        }
+    }
+
+    InteractionResult::None
+}
+
 pub fn disparar(
-    zombies: &mut [Zombie],
+    zombies: &mut Vec<Zombie>,
     player: &Player,
     camera: &Camera,
     mapa: &mut Map,
 ) -> ShotResult {
-    let angulo_disparo =
-        camera.angle;
+    const DANO: i32 =
+        50;
 
-    let hit_pared =
-        lanzar_rayo(
-            mapa,
-            player.x,
-            player.y,
-            angulo_disparo,
-        );
-
-    let distancia_pared =
-        hit_pared.distancia;
+    const TOLERANCIA: f32 =
+        0.08;
 
     let mut objetivo:
         Option<(usize, f32)> =
         None;
 
-    for (indice, zombie)
-        in zombies.iter().enumerate()
+    for (
+        indice,
+        zombie,
+    ) in zombies
+        .iter()
+        .enumerate()
     {
         if !zombie.vivo {
             continue;
         }
 
         let dx =
-            zombie.x - player.x;
+            zombie.x
+                - player.x;
 
         let dy =
-            zombie.y - player.y;
+            zombie.y
+                - player.y;
 
         let distancia =
-            (dx * dx + dy * dy)
+            (
+                dx * dx
+                    + dy * dy
+            )
                 .sqrt();
 
-        if distancia
-            >= distancia_pared
-        {
+        if distancia <= 0.001 {
             continue;
         }
 
         let angulo_zombie =
-            dy.atan2(dx);
+            dy.atan2(
+                dx,
+            );
 
-        let mut diferencia =
-            angulo_zombie
-                - angulo_disparo;
-
-        while diferencia > PI {
-            diferencia -=
-                2.0 * PI;
-        }
-
-        while diferencia < -PI {
-            diferencia +=
-                2.0 * PI;
-        }
-
-        let tolerancia =
-            0.08;
+        let diferencia =
+            normalizar_angulo(
+                angulo_zombie
+                    - camera.angle,
+            );
 
         if diferencia.abs()
-            <= tolerancia
+            > TOLERANCIA
         {
-            match objetivo {
-                None => {
+            continue;
+        }
+
+        let impacto_pared =
+            lanzar_rayo(
+                mapa,
+                player.x,
+                player.y,
+                angulo_zombie,
+            );
+
+        if impacto_pared.distancia
+            < distancia - 4.0
+        {
+            continue;
+        }
+
+        match objetivo {
+            Some((
+                _,
+                distancia_actual,
+            )) => {
+                if distancia
+                    < distancia_actual
+                {
                     objetivo =
                         Some((
                             indice,
                             distancia,
                         ));
                 }
+            }
 
-                Some((
-                    _,
-                    mejor_distancia,
-                )) => {
-                    if distancia
-                        < mejor_distancia
-                    {
-                        objetivo =
-                            Some((
-                                indice,
-                                distancia,
-                            ));
-                    }
-                }
+            None => {
+                objetivo =
+                    Some((
+                        indice,
+                        distancia,
+                    ));
             }
         }
     }
 
-    let Some((indice, _)) =
-        objetivo
+    let Some((
+        indice,
+        _,
+    )) = objetivo
     else {
         return ShotResult::Miss;
     };
 
     zombies[indice]
         .recibir_dano(
-            50,
+            DANO,
         );
 
     if zombies[indice].vivo {
@@ -276,14 +328,24 @@ pub fn procesar_muerte_zombie(
     mapa: &mut Map,
 ) -> ShotResult {
     let columna =
-        (zombie.x / TAMANO_CELDA)
-            .floor() as i32;
+        (
+            zombie.x
+                / TAMANO_CELDA
+        )
+            .floor()
+            as i32;
 
     let fila =
-        (zombie.y / TAMANO_CELDA)
-            .floor() as i32;
+        (
+            zombie.y
+                / TAMANO_CELDA
+        )
+            .floor()
+            as i32;
 
-    if zombie.puede_dropear_llave {
+    if zombie
+        .puede_dropear_llave
+    {
         mapa.cambiar_celda(
             fila,
             columna,
@@ -294,9 +356,10 @@ pub fn procesar_muerte_zombie(
     }
 
     let mut rng =
-        rand::thread_rng();
+        thread_rng();
 
-    let probabilidad: f32 =
+    let probabilidad:
+        f32 =
         rng.gen();
 
     if probabilidad < 0.35 {

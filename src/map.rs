@@ -17,15 +17,37 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new() -> Self {
+    pub fn new(
+        nivel: i32,
+    ) -> Self {
         let contenido =
-            include_str!("../mapa_resident.txt");
+            match nivel {
+                1 => {
+                    include_str!(
+                        "../mapa_nivel1.txt"
+                    )
+                }
+
+                2 => {
+                    include_str!(
+                        "../mapa_nivel2.txt"
+                    )
+                }
+
+                _ => {
+                    include_str!(
+                        "../mapa_nivel1.txt"
+                    )
+                }
+            };
 
         let lineas: Vec<&str> =
             contenido
                 .lines()
                 .map(|linea| {
-                    linea.trim_end_matches('\r')
+                    linea.trim_end_matches(
+                        '\r',
+                    )
                 })
                 .collect();
 
@@ -42,17 +64,27 @@ impl Map {
                 .unwrap_or(0);
 
         let mut celdas =
-            Vec::with_capacity(alto);
+            Vec::with_capacity(
+                alto,
+            );
 
         for linea in lineas {
             let mut fila: Vec<char> =
-                linea.chars().collect();
+                linea
+                    .chars()
+                    .collect();
 
-            while fila.len() < ancho {
-                fila.push(' ');
+            while fila.len()
+                < ancho
+            {
+                fila.push(
+                    '#',
+                );
             }
 
-            celdas.push(fila);
+            celdas.push(
+                fila,
+            );
         }
 
         Self {
@@ -62,11 +94,15 @@ impl Map {
         }
     }
 
-    pub fn ancho(&self) -> usize {
+    pub fn ancho(
+        &self,
+    ) -> usize {
         self.ancho
     }
 
-    pub fn alto(&self) -> usize {
+    pub fn alto(
+        &self,
+    ) -> usize {
         self.alto
     }
 
@@ -77,8 +113,12 @@ impl Map {
     ) -> char {
         if fila < 0
             || columna < 0
-            || fila >= self.alto as i32
-            || columna >= self.ancho as i32
+            || fila
+                >= self.alto
+                    as i32
+            || columna
+                >= self.ancho
+                    as i32
         {
             return '#';
         }
@@ -96,8 +136,12 @@ impl Map {
     ) {
         if fila < 0
             || columna < 0
-            || fila >= self.alto as i32
-            || columna >= self.ancho as i32
+            || fila
+                >= self.alto
+                    as i32
+            || columna
+                >= self.ancho
+                    as i32
         {
             return;
         }
@@ -128,12 +172,20 @@ impl Map {
         y: f32,
     ) -> bool {
         let columna =
-            (x / TAMANO_CELDA)
-                .floor() as i32;
+            (
+                x
+                    / TAMANO_CELDA
+            )
+                .floor()
+                as i32;
 
         let fila =
-            (y / TAMANO_CELDA)
-                .floor() as i32;
+            (
+                y
+                    / TAMANO_CELDA
+            )
+                .floor()
+                as i32;
 
         self.es_bloque_solido(
             fila,
@@ -143,7 +195,10 @@ impl Map {
 
     pub fn buscar_jugador(
         &self,
-    ) -> Option<(f32, f32)> {
+    ) -> Option<(
+        f32,
+        f32,
+    )> {
         for fila in 0..self.alto {
             for columna in 0..self.ancho {
                 if self.celdas
@@ -152,21 +207,25 @@ impl Map {
                     == 'P'
                 {
                     let x =
-                        columna as f32
+                        columna
+                            as f32
                             * TAMANO_CELDA
                             + TAMANO_CELDA
                                 / 2.0;
 
                     let y =
-                        fila as f32
+                        fila
+                            as f32
                             * TAMANO_CELDA
                             + TAMANO_CELDA
                                 / 2.0;
 
-                    return Some((
-                        x,
-                        y,
-                    ));
+                    return Some(
+                        (
+                            x,
+                            y,
+                        ),
+                    );
                 }
             }
         }
@@ -227,22 +286,26 @@ impl Map {
                 };
 
                 let x =
-                    columna as f32
+                    columna
+                        as f32
                         * TAMANO_CELDA
                         + TAMANO_CELDA
                             / 2.0;
 
                 let y =
-                    fila as f32
+                    fila
+                        as f32
                         * TAMANO_CELDA
                         + TAMANO_CELDA
                             / 2.0;
 
-                zombies.push((
-                    x,
-                    y,
-                    tipo,
-                ));
+                zombies.push(
+                    (
+                        x,
+                        y,
+                        tipo,
+                    ),
+                );
 
                 self.celdas
                     [fila]
@@ -267,9 +330,13 @@ impl Map {
                         .collect::<String>()
                 })
                 .collect::<Vec<String>>()
-                .join("\n");
+                .join(
+                    "\n",
+                );
 
-        if let Err(error) =
+        if let Err(
+            error,
+        ) =
             fs::write(
                 ruta,
                 contenido,

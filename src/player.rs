@@ -22,21 +22,14 @@ impl Player {
         ) =
             if let Some(
                 (
-                    fila,
-                    columna,
+                    x,
+                    y,
                 ),
             ) = mapa.buscar_jugador()
             {
                 (
-                    columna as f32
-                        * crate::map::TAMANO_CELDA
-                        + crate::map::TAMANO_CELDA
-                            / 2.0,
-
-                    fila as f32
-                        * crate::map::TAMANO_CELDA
-                        + crate::map::TAMANO_CELDA
-                            / 2.0,
+                    x,
+                    y,
                 )
             } else {
                 (

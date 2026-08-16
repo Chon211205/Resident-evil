@@ -14,16 +14,32 @@ pub fn render_hud(
     alto_render: f32,
     escala: f32,
 ) {
+    let escala_ui =
+        escala.clamp(
+            1.0,
+            1.25,
+        );
+
     let margen =
-        18.0 * escala;
+        16.0 * escala_ui;
 
     let tamano_texto =
-        (18.0 * escala)
-            .max(14.0) as i32;
+        (
+            18.0
+                * escala_ui
+        ) as i32;
 
     let tamano_mensaje =
-        (16.0 * escala)
-            .max(13.0) as i32;
+        (
+            16.0
+                * escala_ui
+        ) as i32;
+
+    let tamano_fps =
+        (
+            18.0
+                * escala_ui
+        ) as i32;
 
     let x_izquierda =
         offset_x
@@ -32,70 +48,84 @@ pub fn render_hud(
     let y_inferior =
         offset_y
             + alto_render
-            - 35.0 * escala;
+            - margen
+            - tamano_texto
+                as f32;
 
-    dibujo.draw_text(
-        &format!(
+    let texto_vida =
+        format!(
             "Vida: {}",
             vida_jugador,
-        ),
-        x_izquierda as i32,
-        y_inferior as i32,
-        tamano_texto,
-        Color::GREEN,
-    );
+        );
 
     dibujo.draw_text(
-        &format!(
+        &texto_vida,
+        x_izquierda
+            as i32,
+        y_inferior
+            as i32,
+        tamano_texto,
+        if vida_jugador > 50 {
+            Color::GREEN
+        } else if vida_jugador > 25 {
+            Color::YELLOW
+        } else {
+            Color::RED
+        },
+    );
+
+    let texto_municion =
+        format!(
             "Municion: {}/{}",
             balas_cargador,
             balas_reserva,
-        ),
-        (
-            x_izquierda
-                + 150.0 * escala
-        ) as i32,
-        y_inferior as i32,
+        );
+
+    let ancho_vida =
+        dibujo.measure_text(
+            &texto_vida,
+            tamano_texto,
+        );
+
+    let x_municion =
+        x_izquierda
+            + ancho_vida
+                as f32
+            + 35.0
+                * escala_ui;
+
+    dibujo.draw_text(
+        &texto_municion,
+        x_municion
+            as i32,
+        y_inferior
+            as i32,
         tamano_texto,
         Color::WHITE,
     );
 
     if inventory.tiene_llave() {
-        dibujo.draw_text(
-            "Llave",
-            (
-                x_izquierda
-                    + 360.0 * escala
-            ) as i32,
-            y_inferior as i32,
-            tamano_texto,
-            Color::YELLOW,
-        );
-    }
-
-    if !mensaje.is_empty() {
-        let ancho_mensaje =
+        let ancho_municion =
             dibujo.measure_text(
-                mensaje,
-                tamano_mensaje,
+                &texto_municion,
+                tamano_texto,
             );
 
-        let x_mensaje =
-            offset_x
-                + ancho_render / 2.0
-                - ancho_mensaje as f32 / 2.0;
-
-        let y_mensaje =
-            offset_y
-                + alto_render
-                - 65.0 * escala;
+        let x_llave =
+            x_municion
+                + ancho_municion
+                    as f32
+                + 35.0
+                    * escala_ui;
 
         dibujo.draw_text(
-            mensaje,
-            x_mensaje as i32,
-            y_mensaje as i32,
-            tamano_mensaje,
-            Color::WHITE,
+            "Llave",
+            x_llave
+                as i32,
+            y_inferior
+                as i32,
+            tamano_texto,
+            Color::YELLOW,
         );
     }
 
@@ -108,10 +138,6 @@ pub fn render_hud(
             fps,
         );
 
-    let tamano_fps =
-        (18.0 * escala)
-            .max(14.0) as i32;
-
     let ancho_fps =
         dibujo.measure_text(
             &texto_fps,
@@ -123,8 +149,9 @@ pub fn render_hud(
         (
             offset_x
                 + ancho_render
-                - ancho_fps as f32
                 - margen
+                - ancho_fps
+                    as f32
         ) as i32,
         (
             offset_y
@@ -133,4 +160,34 @@ pub fn render_hud(
         tamano_fps,
         Color::GREEN,
     );
+
+    if !mensaje.is_empty() {
+        let ancho_mensaje =
+            dibujo.measure_text(
+                mensaje,
+                tamano_mensaje,
+            );
+
+        let x_mensaje =
+            offset_x
+                + ancho_render
+                    / 2.0
+                - ancho_mensaje
+                    as f32
+                    / 2.0;
+
+        let y_mensaje =
+            offset_y
+                + margen;
+
+        dibujo.draw_text(
+            mensaje,
+            x_mensaje
+                as i32,
+            y_mensaje
+                as i32,
+            tamano_mensaje,
+            Color::WHITE,
+        );
+    }
 }

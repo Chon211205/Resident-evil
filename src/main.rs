@@ -55,7 +55,8 @@ use raylib::audio::RaylibAudio;
 use raylib::prelude::*;
 
 fn main() {
-    let mut mapa = Map::new();
+    let mut mapa =
+        Map::new();
 
     let posiciones_zombies =
         mapa.extraer_zombies();
@@ -442,6 +443,8 @@ fn main() {
 
         match resultado_recoger {
             InteractionResult::LlaveRecogida => {
+                sonidos.llave();
+
                 mensaje =
                     "Recogiste una llave"
                         .to_string();
@@ -477,6 +480,8 @@ fn main() {
 
             match resultado {
                 InteractionResult::LlaveRecogida => {
+                    sonidos.llave();
+
                     mensaje =
                         "Recogiste una llave"
                             .to_string();

@@ -1,5 +1,4 @@
 use crate::inventory::Inventory;
-
 use raylib::prelude::*;
 
 pub fn render_hud(
@@ -9,210 +8,129 @@ pub fn render_hud(
     balas_reserva: i32,
     inventory: &Inventory,
     mensaje: &str,
+    offset_x: f32,
+    offset_y: f32,
+    ancho_render: f32,
+    alto_render: f32,
+    escala: f32,
 ) {
-    dibujar_vida(
-        dibujo,
-        vida_jugador,
-    );
+    let margen =
+        18.0 * escala;
 
-    dibujar_llave(
-        dibujo,
-        inventory,
-    );
+    let tamano_texto =
+        (18.0 * escala)
+            .max(14.0) as i32;
 
-    dibujar_municion(
-        dibujo,
-        balas_cargador,
-        balas_reserva,
-    );
+    let tamano_mensaje =
+        (16.0 * escala)
+            .max(13.0) as i32;
 
-    dibujar_mensaje(
-        dibujo,
-        mensaje,
-    );
+    let x_izquierda =
+        offset_x
+            + margen;
 
-    dibujar_fps(
-        dibujo,
-    );
+    let y_inferior =
+        offset_y
+            + alto_render
+            - 35.0 * escala;
 
-    if vida_jugador <= 0 {
-        dibujar_muerte(
-            dibujo,
-        );
-    }
-}
-
-fn dibujar_vida(
-    dibujo: &mut RaylibDrawHandle,
-    vida: i32,
-) {
-    let texto =
-        format!(
+    dibujo.draw_text(
+        &format!(
             "Vida: {}",
-            vida,
-        );
-
-    let color =
-        if vida > 60 {
-            Color::GREEN
-        } else if vida > 30 {
-            Color::YELLOW
-        } else {
-            Color::RED
-        };
-
-    dibujo.draw_text(
-        &texto,
-        10,
-        65,
-        20,
-        color,
-    );
-}
-
-fn dibujar_llave(
-    dibujo: &mut RaylibDrawHandle,
-    inventory: &Inventory,
-) {
-    if inventory.tiene_llave() {
-        dibujo.draw_text(
-            "Llave: SI",
-            10,
-            40,
-            18,
-            Color::YELLOW,
-        );
-    } else {
-        dibujo.draw_text(
-            "Llave: NO",
-            10,
-            40,
-            18,
-            Color::GRAY,
-        );
-    }
-}
-
-fn dibujar_municion(
-    dibujo: &mut RaylibDrawHandle,
-    cargador: i32,
-    reserva: i32,
-) {
-    let texto =
-        format!(
-            "Municion: {}/{}",
-            cargador,
-            reserva,
-        );
-
-    let color =
-        if cargador == 0 {
-            Color::RED
-        } else if cargador <= 2 {
-            Color::YELLOW
-        } else {
-            Color::WHITE
-        };
-
-    dibujo.draw_text(
-        &texto,
-        10,
-        90,
-        20,
-        color,
-    );
-}
-
-fn dibujar_mensaje(
-    dibujo: &mut RaylibDrawHandle,
-    mensaje: &str,
-) {
-    if mensaje.is_empty() {
-        return;
-    }
-
-    dibujo.draw_rectangle(
-        20,
-        dibujo.get_screen_height() - 70,
-        440,
-        40,
-        Color::new(
-            0,
-            0,
-            0,
-            180,
+            vida_jugador,
         ),
-    );
-
-    dibujo.draw_text(
-        mensaje,
-        30,
-        dibujo.get_screen_height() - 60,
-        20,
-        Color::WHITE,
-    );
-}
-
-fn dibujar_fps(
-    dibujo: &mut RaylibDrawHandle,
-) {
-    let texto =
-        format!(
-            "FPS: {}",
-            dibujo.get_fps(),
-        );
-
-    dibujo.draw_text(
-        &texto,
-        dibujo.get_screen_width() - 100,
-        10,
-        20,
+        x_izquierda as i32,
+        y_inferior as i32,
+        tamano_texto,
         Color::GREEN,
     );
-}
 
-fn dibujar_muerte(
-    dibujo: &mut RaylibDrawHandle,
-) {
-    let texto =
-        "HAS MUERTO";
+    dibujo.draw_text(
+        &format!(
+            "Municion: {}/{}",
+            balas_cargador,
+            balas_reserva,
+        ),
+        (
+            x_izquierda
+                + 150.0 * escala
+        ) as i32,
+        y_inferior as i32,
+        tamano_texto,
+        Color::WHITE,
+    );
 
-    let ancho_texto =
-        dibujo.measure_text(
-            texto,
-            50,
+    if inventory.tiene_llave() {
+        dibujo.draw_text(
+            "Llave",
+            (
+                x_izquierda
+                    + 360.0 * escala
+            ) as i32,
+            y_inferior as i32,
+            tamano_texto,
+            Color::YELLOW,
+        );
+    }
+
+    if !mensaje.is_empty() {
+        let ancho_mensaje =
+            dibujo.measure_text(
+                mensaje,
+                tamano_mensaje,
+            );
+
+        let x_mensaje =
+            offset_x
+                + ancho_render / 2.0
+                - ancho_mensaje as f32 / 2.0;
+
+        let y_mensaje =
+            offset_y
+                + alto_render
+                - 65.0 * escala;
+
+        dibujo.draw_text(
+            mensaje,
+            x_mensaje as i32,
+            y_mensaje as i32,
+            tamano_mensaje,
+            Color::WHITE,
+        );
+    }
+
+    let fps =
+        dibujo.get_fps();
+
+    let texto_fps =
+        format!(
+            "FPS: {}",
+            fps,
         );
 
-    dibujo.draw_rectangle(
-        0,
-        0,
-        dibujo.get_screen_width(),
-        dibujo.get_screen_height(),
-        Color::new(
-            0,
-            0,
-            0,
-            170,
-        ),
-    );
+    let tamano_fps =
+        (18.0 * escala)
+            .max(14.0) as i32;
+
+    let ancho_fps =
+        dibujo.measure_text(
+            &texto_fps,
+            tamano_fps,
+        );
 
     dibujo.draw_text(
-        texto,
-        dibujo.get_screen_width() / 2
-            - ancho_texto / 2,
-        dibujo.get_screen_height() / 2
-            - 25,
-        50,
-        Color::RED,
-    );
-
-    dibujo.draw_text(
-        "Presiona F5 para reiniciar",
-        dibujo.get_screen_width() / 2
-            - 120,
-        dibujo.get_screen_height() / 2
-            + 40,
-        20,
-        Color::WHITE,
+        &texto_fps,
+        (
+            offset_x
+                + ancho_render
+                - ancho_fps as f32
+                - margen
+        ) as i32,
+        (
+            offset_y
+                + margen
+        ) as i32,
+        tamano_fps,
+        Color::GREEN,
     );
 }

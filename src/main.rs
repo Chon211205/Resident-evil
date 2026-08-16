@@ -197,6 +197,8 @@ fn main() {
         )
         .build();
 
+    ventana.toggle_fullscreen();
+
     ventana.set_target_fps(
         60,
     );
@@ -522,13 +524,13 @@ fn main() {
             delta_time,
         );
 
-        camera.update(
-            &ventana,
-            delta_time,
-            2.0,
-        );
-
         if vida_jugador > 0 {
+            camera.update(
+                &ventana,
+                delta_time,
+                2.0,
+            );
+
             player.update(
                 &ventana,
                 &mapa,
@@ -614,11 +616,17 @@ fn main() {
                     } else {
                         sonidos.dano();
 
-                        mensaje =
-                            format!(
-                                "Zombie te hizo {} de dano",
-                                dano_final,
-                            );
+                        if vida_jugador <= 0 {
+                            mensaje =
+                                "Has muerto"
+                                    .to_string();
+                        } else {
+                            mensaje =
+                                format!(
+                                    "Zombie te hizo {} de dano",
+                                    dano_final,
+                                );
+                        }
                     }
 
                     damage_effect.activar();
@@ -674,232 +682,157 @@ fn main() {
             sonidos.detener_zombie_fuerte();
         }
 
-        let resultado_recoger =
-            recoger_objetos_cercanos(
-                &mut mapa,
-                &player,
-                &mut inventory,
-                &mut puzzle,
-                vida_jugador,
-            );
+        if vida_jugador > 0 {
+            let resultado_recoger =
+                recoger_objetos_cercanos(
+                    &mut mapa,
+                    &player,
+                    &mut inventory,
+                    &mut puzzle,
+                    vida_jugador,
+                );
 
-        match resultado_recoger {
-            InteractionResult::LlaveRecogida => {
-                sonidos.llave();
-
-                mensaje =
-                    "Recogiste una llave"
-                        .to_string();
-            }
-
-            InteractionResult::MunicionRecogida(
-                cantidad,
-            ) => {
-                sonidos.recoger_municion();
-
-                balas_reserva +=
-                    cantidad;
-
-                mensaje =
-                    format!(
-                        "Recogiste {} balas",
-                        cantidad,
-                    );
-            }
-
-            InteractionResult::CuracionRecogida(
-                cantidad,
-            ) => {
-                sonidos.curacion();
-
-                vida_jugador =
-                    (
-                        vida_jugador
-                            + cantidad
-                    )
-                        .min(
-                            100,
-                        );
-
-                mensaje =
-                    format!(
-                        "Te curaste {} de vida",
-                        cantidad,
-                    );
-            }
-
-            _ => {}
-        }
-
-        if ventana.is_key_pressed(
-            KeyboardKey::KEY_ONE,
-        ) {
-            arma_equipada =
-                ArmaActual::Pistola;
-
-            tiempo_hachazo =
-                0.0;
-
-            mensaje =
-                "Pistola equipada"
-                    .to_string();
-        }
-
-        if ventana.is_key_pressed(
-            KeyboardKey::KEY_TWO,
-        ) {
-            arma_equipada =
-                ArmaActual::Hacha;
-
-            recargando =
-                false;
-
-            tiempo_recarga =
-                0.0;
-
-            tiempo_disparo =
-                0.0;
-
-            mensaje =
-                "Hacha equipada"
-                    .to_string();
-        }
-
-        if ventana.is_key_pressed(
-            KeyboardKey::KEY_E,
-        ) {
-            match interactuar(
-                &mut mapa,
-                &player,
-                &camera,
-                &mut inventory,
-                &mut puzzle,
-            ) {
-                InteractionResult::PuertaAbierta => {
-                    sonidos.puerta();
+            match resultado_recoger {
+                InteractionResult::LlaveRecogida => {
+                    sonidos.llave();
 
                     mensaje =
-                        "Abriste la puerta"
+                        "Recogiste una llave"
                             .to_string();
                 }
 
-                InteractionResult::PuertaCerrada => {
+                InteractionResult::MunicionRecogida(
+                    cantidad,
+                ) => {
+                    sonidos.recoger_municion();
+
+                    balas_reserva +=
+                        cantidad;
+
                     mensaje =
-                        "La puerta esta cerrada"
-                            .to_string();
+                        format!(
+                            "Recogiste {} balas",
+                            cantidad,
+                        );
+                }
+
+                InteractionResult::CuracionRecogida(
+                    cantidad,
+                ) => {
+                    sonidos.curacion();
+
+                    vida_jugador =
+                        (
+                            vida_jugador
+                                + cantidad
+                        )
+                            .min(
+                                100,
+                            );
+
+                    mensaje =
+                        format!(
+                            "Te curaste {} de vida",
+                            cantidad,
+                        );
                 }
 
                 _ => {}
             }
         }
 
+        if vida_jugador > 0 {
+            if ventana.is_key_pressed(
+                KeyboardKey::KEY_ONE,
+            ) {
+                arma_equipada =
+                    ArmaActual::Pistola;
+
+                tiempo_hachazo =
+                    0.0;
+
+                mensaje =
+                    "Pistola equipada"
+                        .to_string();
+            }
+
+            if ventana.is_key_pressed(
+                KeyboardKey::KEY_TWO,
+            ) {
+                arma_equipada =
+                    ArmaActual::Hacha;
+
+                recargando =
+                    false;
+
+                tiempo_recarga =
+                    0.0;
+
+                tiempo_disparo =
+                    0.0;
+
+                mensaje =
+                    "Hacha equipada"
+                        .to_string();
+            }
+
+            if ventana.is_key_pressed(
+                KeyboardKey::KEY_E,
+            ) {
+                match interactuar(
+                    &mut mapa,
+                    &player,
+                    &camera,
+                    &mut inventory,
+                    &mut puzzle,
+                ) {
+                    InteractionResult::PuertaAbierta => {
+                        sonidos.puerta();
+
+                        mensaje =
+                            "Abriste la puerta"
+                                .to_string();
+                    }
+
+                    InteractionResult::PuertaCerrada => {
+                        mensaje =
+                            "La puerta esta cerrada"
+                                .to_string();
+                    }
+
+                    _ => {}
+                }
+            }
+        }
+
         let apuntando =
-            arma_equipada
-                == ArmaActual::Pistola
+            vida_jugador > 0
+                && arma_equipada
+                    == ArmaActual::Pistola
                 && !recargando
                 && ventana
                     .is_mouse_button_down(
                         MouseButton::MOUSE_BUTTON_RIGHT,
                     );
 
-        if ventana.is_mouse_button_pressed(
-            MouseButton::MOUSE_BUTTON_LEFT,
-        ) {
+        if vida_jugador > 0
+            && ventana.is_mouse_button_pressed(
+                MouseButton::MOUSE_BUTTON_LEFT,
+            )
+        {
             ventana.disable_cursor();
 
-            if vida_jugador > 0 {
-                match arma_equipada {
-                    ArmaActual::Pistola => {
-                        if !recargando {
-                            if balas_cargador > 0 {
-                                tiempo_disparo =
-                                    0.12;
+            match arma_equipada {
+                ArmaActual::Pistola => {
+                    if !recargando {
+                        if balas_cargador > 0 {
+                            tiempo_disparo =
+                                0.12;
 
-                                balas_cargador -=
-                                    1;
+                            balas_cargador -=
+                                1;
 
-                                sonidos.disparo();
-
-                                let vivos_antes =
-                                    zombies
-                                        .iter()
-                                        .filter(
-                                            |z| z.vivo,
-                                        )
-                                        .count();
-
-                                let resultado =
-                                    disparar(
-                                        &mut zombies,
-                                        &player,
-                                        &camera,
-                                        &mut mapa,
-                                    );
-
-                                let vivos_despues =
-                                    zombies
-                                        .iter()
-                                        .filter(
-                                            |z| z.vivo,
-                                        )
-                                        .count();
-
-                                if vivos_despues
-                                    < vivos_antes
-                                {
-                                    sonidos.zombie_muere();
-                                }
-
-                                mensaje =
-                                    match resultado {
-                                        ShotResult::Miss => {
-                                            "Disparo fallido"
-                                                .to_string()
-                                        }
-
-                                        ShotResult::Hit {
-                                            vida_restante,
-                                        } => {
-                                            format!(
-                                                "Impacto. Vida zombie: {}",
-                                                vida_restante,
-                                            )
-                                        }
-
-                                        ShotResult::Kill => {
-                                            "Zombie eliminado"
-                                                .to_string()
-                                        }
-
-                                        ShotResult::KillConLlave => {
-                                            "Zombie eliminado. Dejo una llave"
-                                                .to_string()
-                                        }
-                                    };
-                            } else {
-                                sonidos.sin_municion();
-
-                                if balas_reserva > 0 {
-                                    mensaje =
-                                        "Cargador vacio. Presiona R"
-                                            .to_string();
-                                } else {
-                                    mensaje =
-                                        "Sin municion"
-                                            .to_string();
-                                }
-                            }
-                        }
-                    }
-
-                    ArmaActual::Hacha => {
-                        if tiempo_hachazo <= 0.0
-                            && !bloqueando
-                        {
-                            tiempo_hachazo =
-                                DURACION_HACHAZO;
-
-                            sonidos.hachazo();
+                            sonidos.disparo();
 
                             let vivos_antes =
                                 zombies
@@ -910,7 +843,7 @@ fn main() {
                                     .count();
 
                             let resultado =
-                                atacar_con_hacha(
+                                disparar(
                                     &mut zombies,
                                     &player,
                                     &camera,
@@ -934,7 +867,7 @@ fn main() {
                             mensaje =
                                 match resultado {
                                     ShotResult::Miss => {
-                                        "Hachazo fallido"
+                                        "Disparo fallido"
                                             .to_string()
                                     }
 
@@ -942,13 +875,13 @@ fn main() {
                                         vida_restante,
                                     } => {
                                         format!(
-                                            "Golpeaste al zombie. Vida: {}",
+                                            "Impacto. Vida zombie: {}",
                                             vida_restante,
                                         )
                                     }
 
                                     ShotResult::Kill => {
-                                        "Zombie eliminado con el hacha"
+                                        "Zombie eliminado"
                                             .to_string()
                                     }
 
@@ -957,18 +890,99 @@ fn main() {
                                             .to_string()
                                     }
                                 };
+                        } else {
+                            sonidos.sin_municion();
+
+                            if balas_reserva > 0 {
+                                mensaje =
+                                    "Cargador vacio. Presiona R"
+                                        .to_string();
+                            } else {
+                                mensaje =
+                                    "Sin municion"
+                                        .to_string();
+                            }
                         }
+                    }
+                }
+
+                ArmaActual::Hacha => {
+                    if tiempo_hachazo <= 0.0
+                        && !bloqueando
+                    {
+                        tiempo_hachazo =
+                            DURACION_HACHAZO;
+
+                        sonidos.hachazo();
+
+                        let vivos_antes =
+                            zombies
+                                .iter()
+                                .filter(
+                                    |z| z.vivo,
+                                )
+                                .count();
+
+                        let resultado =
+                            atacar_con_hacha(
+                                &mut zombies,
+                                &player,
+                                &camera,
+                                &mut mapa,
+                            );
+
+                        let vivos_despues =
+                            zombies
+                                .iter()
+                                .filter(
+                                    |z| z.vivo,
+                                )
+                                .count();
+
+                        if vivos_despues
+                            < vivos_antes
+                        {
+                            sonidos.zombie_muere();
+                        }
+
+                        mensaje =
+                            match resultado {
+                                ShotResult::Miss => {
+                                    "Hachazo fallido"
+                                        .to_string()
+                                }
+
+                                ShotResult::Hit {
+                                    vida_restante,
+                                } => {
+                                    format!(
+                                        "Golpeaste al zombie. Vida: {}",
+                                        vida_restante,
+                                    )
+                                }
+
+                                ShotResult::Kill => {
+                                    "Zombie eliminado con el hacha"
+                                        .to_string()
+                                }
+
+                                ShotResult::KillConLlave => {
+                                    "Zombie eliminado. Dejo una llave"
+                                        .to_string()
+                                }
+                            };
                     }
                 }
             }
         }
 
-        if ventana.is_key_pressed(
-            KeyboardKey::KEY_R,
-        ) {
-            if vida_jugador > 0
-                && arma_equipada
-                    == ArmaActual::Pistola
+        if vida_jugador > 0
+            && ventana.is_key_pressed(
+                KeyboardKey::KEY_R,
+            )
+        {
+            if arma_equipada
+                == ArmaActual::Pistola
                 && !recargando
             {
                 if balas_cargador == 8 {
@@ -1057,16 +1071,14 @@ fn main() {
             mensaje =
                 "Juego reiniciado"
                     .to_string();
+
+            ventana.disable_cursor();
         }
 
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F11,
         ) {
-            if ventana.is_window_maximized() {
-                ventana.restore_window();
-            } else {
-                ventana.maximize_window();
-            }
+            ventana.toggle_fullscreen();
         }
 
         if ventana.is_key_pressed(
@@ -1128,11 +1140,13 @@ fn main() {
             );
 
         let ancho_render =
-            ANCHO_VENTANA as f32
+            ANCHO_VENTANA
+                as f32
                 * escala;
 
         let alto_render =
-            ALTO_VENTANA as f32
+            ALTO_VENTANA
+                as f32
                 * escala;
 
         let offset_x =
@@ -1182,23 +1196,23 @@ fn main() {
             match arma_equipada {
                 ArmaActual::Pistola => {
                     if recargando {
-                        0.32
+                        0.28
                     } else if tiempo_disparo > 0.0 {
-                        0.40
+                        0.34
                     } else if apuntando {
-                        0.42
+                        0.36
                     } else {
-                        0.38
+                        0.32
                     }
                 }
 
                 ArmaActual::Hacha => {
                     if bloqueando {
-                        0.50
-                    } else if tiempo_hachazo > 0.0 {
                         0.42
+                    } else if tiempo_hachazo > 0.0 {
+                        0.37
                     } else {
-                        0.40
+                        0.34
                     }
                 }
             };
@@ -1223,15 +1237,18 @@ fn main() {
                 && tiempo_disparo > 0.0
                 && !recargando
             {
-                8.0 * escala
+                8.0
+                    * escala
             } else {
                 0.0
             };
 
         let arma_x =
             offset_x
-                + ancho_render / 2.0
-                - arma_ancho / 2.0;
+                + ancho_render
+                    / 2.0
+                - arma_ancho
+                    / 2.0;
 
         let arma_y =
             offset_y
@@ -1362,35 +1379,39 @@ fn main() {
             escala,
         );
 
-        dibujo.draw_texture_ex(
-            textura_arma,
-            Vector2::new(
-                arma_x,
-                arma_y,
-            ),
-            0.0,
-            escala_arma,
-            Color::WHITE,
-        );
-
-        if apuntando {
-            let mira_x =
-                offset_x
-                    + ancho_render / 2.0;
-
-            let mira_y =
-                offset_y
-                    + alto_render / 2.0;
-
-            dibujo.draw_circle(
-                mira_x as i32,
-                mira_y as i32,
-                3.0
-                    * escala.max(
-                        1.0,
-                    ),
-                Color::RED,
+        if vida_jugador > 0 {
+            dibujo.draw_texture_ex(
+                textura_arma,
+                Vector2::new(
+                    arma_x,
+                    arma_y,
+                ),
+                0.0,
+                escala_arma,
+                Color::WHITE,
             );
+
+            if apuntando {
+                let mira_x =
+                    offset_x
+                        + ancho_render
+                            / 2.0;
+
+                let mira_y =
+                    offset_y
+                        + alto_render
+                            / 2.0;
+
+                dibujo.draw_circle(
+                    mira_x as i32,
+                    mira_y as i32,
+                    3.0
+                        * escala.max(
+                            1.0,
+                        ),
+                    Color::RED,
+                );
+            }
         }
 
         unsafe {
@@ -1404,10 +1425,115 @@ fn main() {
             balas_reserva,
             &inventory,
             &mensaje,
+            offset_x,
+            offset_y,
+            ancho_render,
+            alto_render,
+            escala,
         );
 
         damage_effect.render(
             &mut dibujo,
         );
+
+        if vida_jugador <= 0 {
+            let screen_width =
+                dibujo.get_screen_width();
+
+            let screen_height =
+                dibujo.get_screen_height();
+
+            dibujo.draw_rectangle(
+                0,
+                0,
+                screen_width,
+                screen_height,
+                Color::new(
+                    0,
+                    0,
+                    0,
+                    205,
+                ),
+            );
+
+            let titulo =
+                "GAME OVER";
+
+            let reiniciar =
+                "F5 - REINICIAR";
+
+            let salir =
+                "ESC - SALIR";
+
+            let tamano_titulo =
+                (
+                    64.0
+                        * escala.min(1.5)
+                )
+                    .max(48.0)
+                    as i32;
+
+            let tamano_opcion =
+                (
+                    22.0
+                        * escala.min(1.5)
+                )
+                    .max(18.0)
+                    as i32;
+
+            let ancho_titulo =
+                dibujo.measure_text(
+                    titulo,
+                    tamano_titulo,
+                );
+
+            let ancho_reiniciar =
+                dibujo.measure_text(
+                    reiniciar,
+                    tamano_opcion,
+                );
+
+            let ancho_salir =
+                dibujo.measure_text(
+                    salir,
+                    tamano_opcion,
+                );
+
+            let centro_x =
+                screen_width / 2;
+
+            let centro_y =
+                screen_height / 2;
+
+            dibujo.draw_text(
+                titulo,
+                centro_x
+                    - ancho_titulo / 2,
+                centro_y
+                    - 100,
+                tamano_titulo,
+                Color::RED,
+            );
+
+            dibujo.draw_text(
+                reiniciar,
+                centro_x
+                    - ancho_reiniciar / 2,
+                centro_y
+                    + 15,
+                tamano_opcion,
+                Color::WHITE,
+            );
+
+            dibujo.draw_text(
+                salir,
+                centro_x
+                    - ancho_salir / 2,
+                centro_y
+                    + 55,
+                tamano_opcion,
+                Color::GRAY,
+            );
+        }
     }
 }

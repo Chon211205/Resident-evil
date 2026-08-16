@@ -419,6 +419,8 @@ fn main() {
                             0;
                     }
 
+                    sonidos.dano();
+
                     mensaje =
                         format!(
                             "Un zombie te hizo {} de dano",

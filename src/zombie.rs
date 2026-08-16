@@ -11,6 +11,7 @@ use crate::raycaster::lanzar_rayo;
 pub enum TipoZombie {
     Normal,
     Medio,
+    Fuerte,
 }
 
 pub struct Zombie {
@@ -81,6 +82,24 @@ impl Zombie {
         }
     }
 
+    pub fn new_fuerte(
+        x: f32,
+        y: f32,
+    ) -> Self {
+        Self {
+            x,
+            y,
+            vida: 300,
+            velocidad: 24.0,
+            vivo: true,
+            persiguiendo: false,
+            tiempo_animacion: 0.0,
+            puede_dropear_llave: false,
+            tipo: TipoZombie::Fuerte,
+            tiempo_ultimo_ataque: 0.0,
+        }
+    }
+
     pub fn recibir_dano(
         &mut self,
         cantidad: i32,
@@ -89,18 +108,12 @@ impl Zombie {
             return;
         }
 
-        self.vida -=
-            cantidad;
+        self.vida -= cantidad;
 
         if self.vida <= 0 {
-            self.vida =
-                0;
-
-            self.vivo =
-                false;
-
-            self.persiguiendo =
-                false;
+            self.vida = 0;
+            self.vivo = false;
+            self.persiguiendo = false;
         }
     }
 
@@ -139,6 +152,10 @@ impl Zombie {
                 TipoZombie::Medio => {
                     320.0
                 }
+
+                TipoZombie::Fuerte => {
+                    380.0
+                }
             };
 
         let distancia_ataque =
@@ -149,6 +166,10 @@ impl Zombie {
 
                 TipoZombie::Medio => {
                     24.0
+                }
+
+                TipoZombie::Fuerte => {
+                    26.0
                 }
             };
 
@@ -223,13 +244,9 @@ impl Zombie {
                 0.0;
 
             return match self.tipo {
-                TipoZombie::Normal => {
-                    10
-                }
-
-                TipoZombie::Medio => {
-                    15
-                }
+                TipoZombie::Normal => 10,
+                TipoZombie::Medio => 15,
+                TipoZombie::Fuerte => 25,
             };
         }
 

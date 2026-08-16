@@ -55,6 +55,10 @@ pub fn render_zombies(
     zombie_v22: &Texture2D,
     zombie_v23: &Texture2D,
 
+    zombie_v31: &Texture2D,
+    zombie_v32: &Texture2D,
+    zombie_v33: &Texture2D,
+
     offset_x: f32,
     offset_y: f32,
     escala: f32,
@@ -238,17 +242,34 @@ pub fn render_zombies(
                         zombie_v21
                     }
                 }
+
+                TipoZombie::Fuerte => {
+                    if zombie.persiguiendo {
+                        let frame =
+                            (
+                                zombie
+                                    .tiempo_animacion
+                                    * 5.0
+                            )
+                                as i32
+                                % 2;
+
+                        if frame == 0 {
+                            zombie_v32
+                        } else {
+                            zombie_v33
+                        }
+                    } else {
+                        zombie_v31
+                    }
+                }
             };
 
         let factor_tamano =
             match zombie.tipo {
-                TipoZombie::Normal => {
-                    0.80
-                }
-
-                TipoZombie::Medio => {
-                    0.95
-                }
+                TipoZombie::Normal => 0.80,
+                TipoZombie::Medio => 0.95,
+                TipoZombie::Fuerte => 1.10,
             };
 
         let altura_mundo =

@@ -11,6 +11,7 @@ pub struct AudioManager<'a> {
 
     zombie_sound: Sound<'a>,
     zombie2_sound: Sound<'a>,
+    zombie3_sound: Sound<'a>,
 
     damage_sound: Sound<'a>,
     key_sound: Sound<'a>,
@@ -19,7 +20,6 @@ pub struct AudioManager<'a> {
 
     axe_sound: Sound<'a>,
     axe_block_sound: Sound<'a>,
-
     heal_sound: Sound<'a>,
 }
 
@@ -33,7 +33,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/shoot.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/shoot.mp3",
+                    "No se pudo cargar shoot.mp3",
                 );
 
         let reload_sound =
@@ -42,7 +42,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/reload.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/reload.mp3",
+                    "No se pudo cargar reload.mp3",
                 );
 
         let door_sound =
@@ -51,7 +51,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/door.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/door.mp3",
+                    "No se pudo cargar door.mp3",
                 );
 
         let noammo_sound =
@@ -60,7 +60,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/noammo.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/noammo.mp3",
+                    "No se pudo cargar noammo.mp3",
                 );
 
         let zombie_sound =
@@ -69,7 +69,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/zombie.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/zombie.mp3",
+                    "No se pudo cargar zombie.mp3",
                 );
 
         let zombie2_sound =
@@ -78,7 +78,16 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/zombie2.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/zombie2.mp3",
+                    "No se pudo cargar zombie2.mp3",
+                );
+
+        let zombie3_sound =
+            audio
+                .new_sound(
+                    "assets/sounds/zombie3.mp3",
+                )
+                .expect(
+                    "No se pudo cargar zombie3.mp3",
                 );
 
         let damage_sound =
@@ -87,7 +96,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/damage.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/damage.mp3",
+                    "No se pudo cargar damage.mp3",
                 );
 
         let key_sound =
@@ -96,7 +105,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/key.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/key.mp3",
+                    "No se pudo cargar key.mp3",
                 );
 
         let zombiedie_sound =
@@ -105,7 +114,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/zombiedie.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/zombiedie.mp3",
+                    "No se pudo cargar zombiedie.mp3",
                 );
 
         let collectammo_sound =
@@ -114,7 +123,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/collectammo.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/collectammo.mp3",
+                    "No se pudo cargar collectammo.mp3",
                 );
 
         let axe_sound =
@@ -123,7 +132,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/axe.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/axe.mp3",
+                    "No se pudo cargar axe.mp3",
                 );
 
         let axe_block_sound =
@@ -132,7 +141,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/axeblock.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/axeblock.mp3",
+                    "No se pudo cargar axeblock.mp3",
                 );
 
         let heal_sound =
@@ -141,7 +150,7 @@ impl<'a> AudioManager<'a> {
                     "assets/sounds/heal.mp3",
                 )
                 .expect(
-                    "No se pudo cargar assets/sounds/heal.mp3",
+                    "No se pudo cargar heal.mp3",
                 );
 
         Self {
@@ -149,12 +158,16 @@ impl<'a> AudioManager<'a> {
             reload_sound,
             door_sound,
             noammo_sound,
+
             zombie_sound,
             zombie2_sound,
+            zombie3_sound,
+
             damage_sound,
             key_sound,
             zombiedie_sound,
             collectammo_sound,
+
             axe_sound,
             axe_block_sound,
             heal_sound,
@@ -193,6 +206,16 @@ impl<'a> AudioManager<'a> {
         &self,
     ) {
         self.zombie2_sound.stop();
+    }
+
+    pub fn zombie_fuerte(&self) {
+        self.zombie3_sound.play();
+    }
+
+    pub fn detener_zombie_fuerte(
+        &self,
+    ) {
+        self.zombie3_sound.stop();
     }
 
     pub fn dano(&self) {

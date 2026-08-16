@@ -99,6 +99,13 @@ fn crear_zombies(
                         y,
                     )
                 }
+
+                TipoSpawnZombie::Fuerte => {
+                    Zombie::new_fuerte(
+                        x,
+                        y,
+                    )
+                }
             }
         })
         .collect()
@@ -377,6 +384,36 @@ fn main() {
                 "No se pudo cargar zombiev23.png",
             );
 
+    let zombie_v31 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV31.png",
+            )
+            .expect(
+                "No se pudo cargar zombieV31.png",
+            );
+
+    let zombie_v32 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV32.png",
+            )
+            .expect(
+                "No se pudo cargar zombieV32.png",
+            );
+
+    let zombie_v33 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV33.png",
+            )
+            .expect(
+                "No se pudo cargar zombieV33.png",
+            );
+
     let mut wall_image =
         Image::load_image(
             "assets/textures/wall.png",
@@ -535,6 +572,10 @@ fn main() {
                         TipoZombie::Medio => {
                             sonidos.zombie_medio();
                         }
+
+                        TipoZombie::Fuerte => {
+                            sonidos.zombie_fuerte();
+                        }
                     }
                 }
 
@@ -605,6 +646,16 @@ fn main() {
                             == TipoZombie::Medio
                 });
 
+        let hay_fuerte =
+            zombies
+                .iter()
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie.persiguiendo
+                        && zombie.tipo
+                            == TipoZombie::Fuerte
+                });
+
         if !hay_normal
             || vida_jugador <= 0
         {
@@ -615,6 +666,12 @@ fn main() {
             || vida_jugador <= 0
         {
             sonidos.detener_zombie_medio();
+        }
+
+        if !hay_fuerte
+            || vida_jugador <= 0
+        {
+            sonidos.detener_zombie_fuerte();
         }
 
         let resultado_recoger =
@@ -946,6 +1003,7 @@ fn main() {
         ) {
             sonidos.detener_zombie();
             sonidos.detener_zombie_medio();
+            sonidos.detener_zombie_fuerte();
 
             mapa =
                 Map::new();
@@ -1286,12 +1344,19 @@ fn main() {
             &player,
             &camera,
             &zombies,
+
             &zombie1,
             &zombie2,
             &zombie3,
+
             &zombie_v21,
             &zombie_v22,
             &zombie_v23,
+
+            &zombie_v31,
+            &zombie_v32,
+            &zombie_v33,
+
             offset_x,
             offset_y,
             escala,

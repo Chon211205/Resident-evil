@@ -7,6 +7,7 @@ pub enum TipoSpawnZombie {
     Normal,
     ConLlave,
     Medio,
+    Fuerte,
 }
 
 pub struct Map {
@@ -207,6 +208,12 @@ impl Map {
                         'M' => {
                             Some(
                                 TipoSpawnZombie::Medio,
+                            )
+                        }
+
+                        'F' => {
+                            Some(
+                                TipoSpawnZombie::Fuerte,
                             )
                         }
 

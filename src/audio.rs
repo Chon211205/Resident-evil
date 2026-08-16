@@ -12,6 +12,7 @@ pub struct AudioManager<'a> {
     damage_sound: Sound<'a>,
     key_sound: Sound<'a>,
     zombiedie_sound: Sound<'a>,
+    collectammo_sound: Sound<'a>,
 }
 
 impl<'a> AudioManager<'a> {
@@ -90,6 +91,15 @@ impl<'a> AudioManager<'a> {
                     "No se pudo cargar assets/sounds/zombiedie.mp3",
                 );
 
+        let collectammo_sound =
+            audio
+                .new_sound(
+                    "assets/sounds/collectammo.mp3",
+                )
+                .expect(
+                    "No se pudo cargar assets/sounds/collectammo.mp3",
+                );
+
         Self {
             shoot_sound,
             reload_sound,
@@ -99,6 +109,7 @@ impl<'a> AudioManager<'a> {
             damage_sound,
             key_sound,
             zombiedie_sound,
+            collectammo_sound,
         }
     }
 
@@ -136,5 +147,9 @@ impl<'a> AudioManager<'a> {
 
     pub fn zombie_muere(&self) {
         self.zombiedie_sound.play();
+    }
+
+    pub fn recoger_municion(&self) {
+        self.collectammo_sound.play();
     }
 }

@@ -469,6 +469,8 @@ fn main() {
             InteractionResult::MunicionRecogida(
                 cantidad,
             ) => {
+                sonidos.recoger_municion();
+
                 balas_reserva +=
                     cantidad;
 
@@ -506,6 +508,8 @@ fn main() {
                 InteractionResult::MunicionRecogida(
                     cantidad,
                 ) => {
+                    sonidos.recoger_municion();
+
                     balas_reserva +=
                         cantidad;
 

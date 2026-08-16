@@ -620,9 +620,52 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F5,
         ) {
-            player.reset();
+            mapa =
+                Map::new();
 
-            camera.reset();
+            let posiciones_zombies =
+                mapa.extraer_zombies();
+
+            zombies =
+                posiciones_zombies
+                    .into_iter()
+                    .map(
+                        |(
+                            x,
+                            y,
+                            tiene_llave,
+                        )| {
+                            if tiene_llave {
+                                Zombie::new_con_llave(
+                                    x,
+                                    y,
+                                )
+                            } else {
+                                Zombie::new(
+                                    x,
+                                    y,
+                                )
+                            }
+                        },
+                    )
+                    .collect::<Vec<Zombie>>();
+
+            player =
+                Player::new(
+                    &mapa,
+                );
+
+            camera =
+                Camera::new();
+
+            inventory =
+                Inventory::new();
+
+            puzzle =
+                Puzzle::new();
+
+            damage_effect =
+                DamageEffect::new();
 
             vida_jugador =
                 100;
@@ -642,11 +685,8 @@ fn main() {
             tiempo_recarga =
                 0.0;
 
-            damage_effect =
-                DamageEffect::new();
-
             mensaje =
-                "Jugador reiniciado"
+                "Juego reiniciado"
                     .to_string();
         }
 

@@ -8,6 +8,7 @@ use crate::player::Player;
 use crate::puzzle::Puzzle;
 use crate::raycaster::lanzar_rayo;
 use crate::zombie::Zombie;
+
 use rand::Rng;
 
 use std::f32::consts::PI;
@@ -211,30 +212,24 @@ pub fn disparar(
             match objetivo {
                 None => {
                     objetivo =
-                        Some(
-                            (
-                                indice,
-                                distancia,
-                            ),
-                        );
+                        Some((
+                            indice,
+                            distancia,
+                        ));
                 }
 
-                Some(
-                    (
-                        _,
-                        mejor_distancia,
-                    ),
-                ) => {
+                Some((
+                    _,
+                    mejor_distancia,
+                )) => {
                     if distancia
                         < mejor_distancia
                     {
                         objetivo =
-                            Some(
-                                (
-                                    indice,
-                                    distancia,
-                                ),
-                            );
+                            Some((
+                                indice,
+                                distancia,
+                            ));
                     }
                 }
             }
@@ -259,45 +254,49 @@ pub fn disparar(
         };
     }
 
+    procesar_muerte_zombie(
+        &zombies[indice],
+        mapa,
+    )
+}
+
+pub fn procesar_muerte_zombie(
+    zombie: &Zombie,
+    mapa: &mut Map,
+) -> ShotResult {
     let columna =
-        (
-            zombies[indice].x
-                / TAMANO_CELDA
-        )
+        (zombie.x / TAMANO_CELDA)
             .floor() as i32;
 
     let fila =
-        (
-            zombies[indice].y
-                / TAMANO_CELDA
-        )
+        (zombie.y / TAMANO_CELDA)
             .floor() as i32;
 
-    if zombies[indice]
-        .puede_dropear_llave
-    {
+    if zombie.puede_dropear_llave {
         mapa.cambiar_celda(
             fila,
             columna,
             'K',
         );
 
-        ShotResult::KillConLlave
-    } else {
-        let mut rng =
-            rand::thread_rng();
-
-        let dropea_municion =
-            rng.gen_bool(0.35);
-
-        if dropea_municion {
-            mapa.cambiar_celda(
-                fila,
-                columna,
-                'A',
-            );
-        }
-
-        ShotResult::Kill
+        return ShotResult::KillConLlave;
     }
+
+    let mut rng =
+        rand::thread_rng();
+
+    let dropea_municion =
+        rng.gen_bool(
+            0.40,
+        );
+
+    if dropea_municion {
+        mapa.cambiar_celda(
+            fila,
+            columna,
+            'A',
+        );
+    }
+
+    ShotResult::Kill
 }

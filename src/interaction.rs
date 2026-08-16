@@ -1,35 +1,27 @@
 use crate::camera::Camera;
 use crate::inventory::Inventory;
-use crate::map::{
-    Map,
-    TAMANO_CELDA,
-};
+use crate::map::{Map, TAMANO_CELDA};
 use crate::player::Player;
 use crate::puzzle::Puzzle;
 use crate::raycaster::lanzar_rayo;
 use crate::zombie::Zombie;
 
 use rand::Rng;
-
 use std::f32::consts::PI;
 
 pub enum InteractionResult {
     None,
     LlaveRecogida,
     MunicionRecogida(i32),
+    CuracionRecogida(i32),
     PuertaAbierta,
     PuertaCerrada,
 }
 
 pub enum ShotResult {
     Miss,
-
-    Hit {
-        vida_restante: i32,
-    },
-
+    Hit { vida_restante: i32 },
     Kill,
-
     KillConLlave,
 }
 
@@ -95,6 +87,7 @@ pub fn recoger_objetos_cercanos(
     player: &Player,
     inventory: &mut Inventory,
     puzzle: &mut Puzzle,
+    vida_actual: i32,
 ) -> InteractionResult {
     let columna =
         (player.x / TAMANO_CELDA)
@@ -134,6 +127,22 @@ pub fn recoger_objetos_cercanos(
 
             InteractionResult::MunicionRecogida(
                 8,
+            )
+        }
+
+        'H' => {
+            if vida_actual >= 100 {
+                return InteractionResult::None;
+            }
+
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                ' ',
+            );
+
+            InteractionResult::CuracionRecogida(
+                25,
             )
         }
 
@@ -182,7 +191,9 @@ pub fn disparar(
             (dx * dx + dy * dy)
                 .sqrt();
 
-        if distancia >= distancia_pared {
+        if distancia
+            >= distancia_pared
+        {
             continue;
         }
 
@@ -285,12 +296,16 @@ pub fn procesar_muerte_zombie(
     let mut rng =
         rand::thread_rng();
 
-    let dropea_municion =
-        rng.gen_bool(
-            0.40,
-        );
+    let probabilidad: f32 =
+        rng.gen();
 
-    if dropea_municion {
+    if probabilidad < 0.35 {
+        mapa.cambiar_celda(
+            fila,
+            columna,
+            'H',
+        );
+    } else if probabilidad < 0.70 {
         mapa.cambiar_celda(
             fila,
             columna,

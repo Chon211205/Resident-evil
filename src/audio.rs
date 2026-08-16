@@ -12,6 +12,7 @@ pub struct AudioManager<'a> {
     collectammo_sound: Sound<'a>,
     axe_sound: Sound<'a>,
     axe_block_sound: Sound<'a>,
+    heal_sound: Sound<'a>,
 }
 
 impl<'a> AudioManager<'a> {
@@ -60,6 +61,10 @@ impl<'a> AudioManager<'a> {
             .new_sound("assets/sounds/axeblock.mp3")
             .expect("No se pudo cargar assets/sounds/axeblock.mp3");
 
+        let heal_sound = audio
+            .new_sound("assets/sounds/heal.mp3")
+            .expect("No se pudo cargar assets/sounds/heal.mp3");
+
         Self {
             shoot_sound,
             reload_sound,
@@ -72,6 +77,7 @@ impl<'a> AudioManager<'a> {
             collectammo_sound,
             axe_sound,
             axe_block_sound,
+            heal_sound,
         }
     }
 
@@ -121,5 +127,9 @@ impl<'a> AudioManager<'a> {
 
     pub fn bloqueo_hacha(&self) {
         self.axe_block_sound.play();
+    }
+
+    pub fn curacion(&self) {
+        self.heal_sound.play();
     }
 }

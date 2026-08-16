@@ -44,6 +44,7 @@ use raycaster::{
 
 use sprite_renderer::{
     render_ammo_sprites,
+    render_heal_sprites,
     render_key_sprite,
 };
 
@@ -281,6 +282,16 @@ fn main() {
             )
             .expect(
                 "No se pudo cargar ammo.png",
+            );
+
+    let heal_texture =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/heal.png",
+            )
+            .expect(
+                "No se pudo cargar heal.png",
             );
 
     let zombie1 =
@@ -534,6 +545,7 @@ fn main() {
                 &player,
                 &mut inventory,
                 &mut puzzle,
+                vida_jugador,
             );
 
         match resultado_recoger {
@@ -556,6 +568,26 @@ fn main() {
                 mensaje =
                     format!(
                         "Recogiste {} balas",
+                        cantidad,
+                    );
+            }
+
+            InteractionResult::CuracionRecogida(
+                cantidad,
+            ) => {
+                sonidos.curacion();
+
+                vida_jugador +=
+                    cantidad;
+
+                if vida_jugador > 100 {
+                    vida_jugador =
+                        100;
+                }
+
+                mensaje =
+                    format!(
+                        "Te curaste {} de vida",
                         cantidad,
                     );
             }
@@ -1157,6 +1189,17 @@ fn main() {
             &player,
             &camera,
             &ammo_texture,
+            offset_x,
+            offset_y,
+            escala,
+        );
+
+        render_heal_sprites(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &heal_texture,
             offset_x,
             offset_y,
             escala,

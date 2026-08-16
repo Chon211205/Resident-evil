@@ -433,6 +433,22 @@ fn main() {
             }
         }
 
+        let hay_zombie_persiguiendo =
+            zombies
+                .iter()
+                .any(
+                    |zombie| {
+                        zombie.vivo
+                            && zombie.persiguiendo
+                    },
+                );
+
+        if !hay_zombie_persiguiendo
+            || vida_jugador <= 0
+        {
+            sonidos.detener_zombie();
+        }
+
         let resultado_recoger =
             recoger_objetos_cercanos(
                 &mut mapa,
@@ -540,6 +556,16 @@ fn main() {
 
                     sonidos.disparo();
 
+                    let vivos_antes =
+                        zombies
+                            .iter()
+                            .filter(
+                                |zombie| {
+                                    zombie.vivo
+                                },
+                            )
+                            .count();
+
                     let resultado =
                         disparar(
                             &mut zombies,
@@ -547,6 +573,36 @@ fn main() {
                             &camera,
                             &mut mapa,
                         );
+
+                    let vivos_despues =
+                        zombies
+                            .iter()
+                            .filter(
+                                |zombie| {
+                                    zombie.vivo
+                                },
+                            )
+                            .count();
+
+                    if vivos_despues
+                        < vivos_antes
+                    {
+                        sonidos.zombie_muere();
+                    }
+
+                    let sigue_persiguiendo =
+                        zombies
+                            .iter()
+                            .any(
+                                |zombie| {
+                                    zombie.vivo
+                                        && zombie.persiguiendo
+                                },
+                            );
+
+                    if !sigue_persiguiendo {
+                        sonidos.detener_zombie();
+                    }
 
                     mensaje =
                         match resultado {
@@ -625,6 +681,8 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F5,
         ) {
+            sonidos.detener_zombie();
+
             mapa =
                 Map::new();
 

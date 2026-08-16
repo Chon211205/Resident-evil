@@ -1,14 +1,18 @@
 use crate::camera::Camera;
+
 use crate::map::{
     Map,
     TAMANO_CELDA,
 };
+
 use crate::player::Player;
+
 use crate::raycaster::{
     lanzar_rayo,
     ALTO_VENTANA,
     ANCHO_VENTANA,
 };
+
 use crate::zombie::{
     TipoZombie,
     Zombie,
@@ -55,7 +59,8 @@ pub fn render_zombies(
     offset_y: f32,
     escala: f32,
 ) {
-    let mut orden: Vec<usize> =
+    let mut orden:
+        Vec<usize> =
         zombies
             .iter()
             .enumerate()
@@ -99,7 +104,9 @@ pub fn render_zombies(
                     )
                         .powi(2);
 
-            db.partial_cmp(&da)
+            db.partial_cmp(
+                &da,
+            )
                 .unwrap_or(
                     std::cmp::Ordering::Equal,
                 )
@@ -111,10 +118,12 @@ pub fn render_zombies(
             &zombies[indice];
 
         let dx =
-            zombie.x - player.x;
+            zombie.x
+                - player.x;
 
         let dy =
-            zombie.y - player.y;
+            zombie.y
+                - player.y;
 
         let distancia =
             (
@@ -123,14 +132,14 @@ pub fn render_zombies(
             )
                 .sqrt();
 
-        if distancia
-            <= 1.0
-        {
+        if distancia <= 1.0 {
             continue;
         }
 
         let angulo_zombie =
-            dy.atan2(dx);
+            dy.atan2(
+                dx,
+            );
 
         let diferencia =
             normalizar_angulo(
@@ -140,7 +149,7 @@ pub fn render_zombies(
 
         if diferencia.abs()
             > FOV / 2.0
-                + 0.25
+                + 0.20
         {
             continue;
         }
@@ -164,11 +173,14 @@ pub fn render_zombies(
                 distancia
                     * diferencia.cos()
             )
-                .max(1.0);
+                .max(
+                    1.0,
+                );
 
         let plano_proyeccion =
             (
-                ANCHO_VENTANA as f32
+                ANCHO_VENTANA
+                    as f32
                     / 2.0
             )
                 / (
@@ -177,7 +189,8 @@ pub fn render_zombies(
                     .tan();
 
         let screen_x =
-            ANCHO_VENTANA as f32
+            ANCHO_VENTANA
+                as f32
                 / 2.0
                 + diferencia.tan()
                     * plano_proyeccion;
@@ -191,7 +204,8 @@ pub fn render_zombies(
                                 zombie
                                     .tiempo_animacion
                                     * 6.0
-                            ) as i32
+                            )
+                                as i32
                                 % 2;
 
                         if frame == 0 {
@@ -211,7 +225,8 @@ pub fn render_zombies(
                                 zombie
                                     .tiempo_animacion
                                     * 6.0
-                            ) as i32
+                            )
+                                as i32
                                 % 2;
 
                         if frame == 0 {
@@ -245,14 +260,13 @@ pub fn render_zombies(
                 / distancia_corregida
                 * plano_proyeccion;
 
-        if altura_sprite
-            <= 1.0
-        {
+        if altura_sprite <= 1.0 {
             continue;
         }
 
         let proporcion =
-            textura.width() as f32
+            textura.width()
+                as f32
                 / textura.height()
                     as f32;
 
@@ -261,9 +275,11 @@ pub fn render_zombies(
                 * proporcion;
 
         let centro_y =
-            ALTO_VENTANA as f32
+            ALTO_VENTANA
+                as f32
                 / 2.0
-                + camera.vertical_offset as f32;
+                + camera.vertical_offset
+                    as f32;
 
         let suelo =
             centro_y
@@ -298,6 +314,48 @@ pub fn render_zombies(
         let alto_final =
             altura_sprite
                 * escala;
+
+        let limite_izquierdo =
+            offset_x;
+
+        let limite_derecho =
+            offset_x
+                + ANCHO_VENTANA
+                    as f32
+                    * escala;
+
+        let limite_superior =
+            offset_y;
+
+        let limite_inferior =
+            offset_y
+                + ALTO_VENTANA
+                    as f32
+                    * escala;
+
+        if x + ancho_final
+            <= limite_izquierdo
+        {
+            continue;
+        }
+
+        if x
+            >= limite_derecho
+        {
+            continue;
+        }
+
+        if y + alto_final
+            <= limite_superior
+        {
+            continue;
+        }
+
+        if y
+            >= limite_inferior
+        {
+            continue;
+        }
 
         dibujo.draw_texture_pro(
             textura,

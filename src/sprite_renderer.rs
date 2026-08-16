@@ -4,49 +4,104 @@ use crate::map::{
     TAMANO_CELDA,
 };
 use crate::player::Player;
-
 use crate::raycaster::{
     lanzar_rayo,
     ALTO_VENTANA,
     ANCHO_VENTANA,
-    FOV,
 };
 
 use raylib::prelude::*;
-
 use std::f32::consts::PI;
+
+const FOV: f32 =
+    PI / 3.0;
+
+fn normalizar_angulo(
+    mut angulo: f32,
+) -> f32 {
+    while angulo > PI {
+        angulo -=
+            2.0 * PI;
+    }
+
+    while angulo < -PI {
+        angulo +=
+            2.0 * PI;
+    }
+
+    angulo
+}
 
 pub fn render_key_sprite(
     dibujo: &mut RaylibDrawHandle,
     mapa: &Map,
     player: &Player,
     camera: &Camera,
-    key_texture: &Texture2D,
+    textura: &Texture2D,
     offset_x: f32,
     offset_y: f32,
-    escala_pantalla: f32,
+    escala: f32,
 ) {
     for fila in 0..mapa.alto() {
         for columna in 0..mapa.ancho() {
             if mapa.celda(
                 fila as i32,
                 columna as i32,
-            ) == 'K'
+            ) != 'K'
             {
-                render_objeto(
-                    dibujo,
-                    mapa,
-                    player,
-                    camera,
-                    fila,
-                    columna,
-                    key_texture,
-                    0.30,
-                    offset_x,
-                    offset_y,
-                    escala_pantalla,
-                );
+                continue;
             }
+
+            render_objeto(
+                dibujo,
+                mapa,
+                player,
+                camera,
+                fila,
+                columna,
+                textura,
+                0.30,
+                offset_x,
+                offset_y,
+                escala,
+            );
+        }
+    }
+}
+
+pub fn render_ammo_sprites(
+    dibujo: &mut RaylibDrawHandle,
+    mapa: &Map,
+    player: &Player,
+    camera: &Camera,
+    textura: &Texture2D,
+    offset_x: f32,
+    offset_y: f32,
+    escala: f32,
+) {
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            if mapa.celda(
+                fila as i32,
+                columna as i32,
+            ) != 'A'
+            {
+                continue;
+            }
+
+            render_objeto(
+                dibujo,
+                mapa,
+                player,
+                camera,
+                fila,
+                columna,
+                textura,
+                0.38,
+                offset_x,
+                offset_y,
+                escala,
+            );
         }
     }
 }
@@ -88,41 +143,6 @@ pub fn render_heal_sprites(
     }
 }
 
-pub fn render_ammo_sprites(
-    dibujo: &mut RaylibDrawHandle,
-    mapa: &Map,
-    player: &Player,
-    camera: &Camera,
-    ammo_texture: &Texture2D,
-    offset_x: f32,
-    offset_y: f32,
-    escala_pantalla: f32,
-) {
-    for fila in 0..mapa.alto() {
-        for columna in 0..mapa.ancho() {
-            if mapa.celda(
-                fila as i32,
-                columna as i32,
-            ) == 'A'
-            {
-                render_objeto(
-                    dibujo,
-                    mapa,
-                    player,
-                    camera,
-                    fila,
-                    columna,
-                    ammo_texture,
-                    0.38,
-                    offset_x,
-                    offset_y,
-                    escala_pantalla,
-                );
-            }
-        }
-    }
-}
-
 fn render_objeto(
     dibujo: &mut RaylibDrawHandle,
     mapa: &Map,
@@ -134,56 +154,58 @@ fn render_objeto(
     factor_tamano: f32,
     offset_x: f32,
     offset_y: f32,
-    escala_pantalla: f32,
+    escala: f32,
 ) {
     let objeto_x =
         columna as f32
             * TAMANO_CELDA
-            + TAMANO_CELDA / 2.0;
+            + TAMANO_CELDA
+                / 2.0;
 
     let objeto_y =
         fila as f32
             * TAMANO_CELDA
-            + TAMANO_CELDA / 2.0;
+            + TAMANO_CELDA
+                / 2.0;
 
     let dx =
-        objeto_x - player.x;
+        objeto_x
+            - player.x;
 
     let dy =
-        objeto_y - player.y;
+        objeto_y
+            - player.y;
 
     let distancia =
-        (dx * dx + dy * dy)
+        (
+            dx * dx
+                + dy * dy
+        )
             .sqrt();
 
-    if distancia < 1.0 {
+    if distancia <= 1.0 {
         return;
     }
 
     let angulo_objeto =
-        dy.atan2(dx);
+        dy.atan2(
+            dx,
+        );
 
-    let mut diferencia =
-        angulo_objeto
-            - camera.angle;
-
-    while diferencia > PI {
-        diferencia -=
-            2.0 * PI;
-    }
-
-    while diferencia < -PI {
-        diferencia +=
-            2.0 * PI;
-    }
+    let diferencia =
+        normalizar_angulo(
+            angulo_objeto
+                - camera.angle,
+        );
 
     if diferencia.abs()
         > FOV / 2.0
+            + 0.20
     {
         return;
     }
 
-    let hit =
+    let hit_pared =
         lanzar_rayo(
             mapa,
             player.x,
@@ -191,78 +213,161 @@ fn render_objeto(
             angulo_objeto,
         );
 
-    if hit.distancia
-        < distancia - 4.0
+    if hit_pared.distancia
+        < distancia - 3.0
     {
         return;
     }
 
-    let distancia_plano =
-        (ANCHO_VENTANA as f32 / 2.0)
-            / (FOV / 2.0).tan();
-
-    let pantalla_x =
-        ANCHO_VENTANA as f32 / 2.0
-            + diferencia.tan()
-                * distancia_plano;
-
     let distancia_corregida =
-        distancia
-            * diferencia.cos();
+        (
+            distancia
+                * diferencia.cos()
+        )
+            .max(
+                1.0,
+            );
 
-    let distancia_segura =
-        distancia_corregida
-            .max(0.001);
+    let plano_proyeccion =
+        (
+            ANCHO_VENTANA as f32
+                / 2.0
+        )
+            / (
+                FOV / 2.0
+            )
+                .tan();
 
-    let altura_celda =
+    let screen_x =
+        ANCHO_VENTANA as f32
+            / 2.0
+            + diferencia.tan()
+                * plano_proyeccion;
+
+    let altura_mundo =
         TAMANO_CELDA
-            * distancia_plano
-            / distancia_segura;
-
-    let alto_sprite =
-        altura_celda
             * factor_tamano;
 
-    let escala_sprite =
-        alto_sprite
+    let altura_sprite =
+        altura_mundo
+            / distancia_corregida
+            * plano_proyeccion;
+
+    if altura_sprite <= 1.0 {
+        return;
+    }
+
+    let proporcion =
+        textura.width()
+            as f32
             / textura.height()
                 as f32;
 
     let ancho_sprite =
-        textura.width()
-            as f32
-            * escala_sprite;
+        altura_sprite
+            * proporcion;
 
-    let suelo_pantalla =
-        ALTO_VENTANA as f32 / 2.0
+    let centro_y =
+        ALTO_VENTANA as f32
+            / 2.0
             + camera.vertical_offset
-                as f32
-            + altura_celda
-                / 2.0;
+                as f32;
+
+    let suelo =
+        centro_y
+            + (
+                TAMANO_CELDA
+                    / 2.0
+            )
+                / distancia_corregida
+                * plano_proyeccion;
 
     let x =
         offset_x
             + (
-                pantalla_x
-                    - ancho_sprite / 2.0
-            ) * escala_pantalla;
+                screen_x
+                    - ancho_sprite
+                        / 2.0
+            )
+                * escala;
 
     let y =
         offset_y
             + (
-                suelo_pantalla
-                    - alto_sprite
-            ) * escala_pantalla;
+                suelo
+                    - altura_sprite
+            )
+                * escala;
 
-    dibujo.draw_texture_ex(
+    let ancho_final =
+        ancho_sprite
+            * escala;
+
+    let alto_final =
+        altura_sprite
+            * escala;
+
+    let limite_izquierdo =
+        offset_x;
+
+    let limite_derecho =
+        offset_x
+            + ANCHO_VENTANA as f32
+                * escala;
+
+    let limite_superior =
+        offset_y;
+
+    let limite_inferior =
+        offset_y
+            + ALTO_VENTANA as f32
+                * escala;
+
+    if x + ancho_final
+        <= limite_izquierdo
+    {
+        return;
+    }
+
+    if x
+        >= limite_derecho
+    {
+        return;
+    }
+
+    if y + alto_final
+        <= limite_superior
+    {
+        return;
+    }
+
+    if y
+        >= limite_inferior
+    {
+        return;
+    }
+
+    dibujo.draw_texture_pro(
         textura,
-        Vector2::new(
+        Rectangle::new(
+            0.0,
+            0.0,
+            textura.width()
+                as f32,
+            textura.height()
+                as f32,
+        ),
+        Rectangle::new(
             x,
             y,
+            ancho_final,
+            alto_final,
+        ),
+        Vector2::new(
+            0.0,
+            0.0,
         ),
         0.0,
-        escala_sprite
-            * escala_pantalla,
         Color::WHITE,
     );
 }

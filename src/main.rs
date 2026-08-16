@@ -70,25 +70,19 @@ fn main() {
     let mut zombies =
         posiciones_zombies
             .into_iter()
-            .map(
-                |(
-                    x,
-                    y,
-                    tiene_llave,
-                )| {
-                    if tiene_llave {
-                        Zombie::new_con_llave(
-                            x,
-                            y,
-                        )
-                    } else {
-                        Zombie::new(
-                            x,
-                            y,
-                        )
-                    }
-                },
-            )
+            .map(|(x, y, tiene_llave)| {
+                if tiene_llave {
+                    Zombie::new_con_llave(
+                        x,
+                        y,
+                    )
+                } else {
+                    Zombie::new(
+                        x,
+                        y,
+                    )
+                }
+            })
             .collect::<Vec<Zombie>>();
 
     mapa.guardar_txt(
@@ -497,15 +491,17 @@ fn main() {
                             0;
                     }
 
-                    sonidos.dano();
-
                     if bloqueo_valido {
+                        sonidos.bloqueo_hacha();
+
                         mensaje =
                             format!(
                                 "Bloqueaste el ataque. Dano: {}",
                                 dano_final,
                             );
                     } else {
+                        sonidos.dano();
+
                         mensaje =
                             format!(
                                 "Un zombie te hizo {} de dano",
@@ -521,12 +517,10 @@ fn main() {
         let hay_zombie_persiguiendo =
             zombies
                 .iter()
-                .any(
-                    |zombie| {
-                        zombie.vivo
-                            && zombie.persiguiendo
-                    },
-                );
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie.persiguiendo
+                });
 
         if !hay_zombie_persiguiendo
             || vida_jugador <= 0
@@ -744,6 +738,8 @@ fn main() {
                         {
                             tiempo_hachazo =
                                 DURACION_HACHAZO;
+
+                            sonidos.hachazo();
 
                             let vivos_antes =
                                 zombies
@@ -1125,8 +1121,10 @@ fn main() {
             Rectangle::new(
                 0.0,
                 0.0,
-                ANCHO_VENTANA as f32,
-                ALTO_VENTANA as f32,
+                ANCHO_VENTANA
+                    as f32,
+                ALTO_VENTANA
+                    as f32,
             ),
             Rectangle::new(
                 offset_x,

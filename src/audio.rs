@@ -1,7 +1,4 @@
-use raylib::audio::{
-    RaylibAudio,
-    Sound,
-};
+use raylib::audio::{RaylibAudio, Sound};
 
 pub struct AudioManager<'a> {
     shoot_sound: Sound<'a>,
@@ -13,92 +10,55 @@ pub struct AudioManager<'a> {
     key_sound: Sound<'a>,
     zombiedie_sound: Sound<'a>,
     collectammo_sound: Sound<'a>,
+    axe_sound: Sound<'a>,
+    axe_block_sound: Sound<'a>,
 }
 
 impl<'a> AudioManager<'a> {
-    pub fn new(
-        audio: &'a RaylibAudio,
-    ) -> Self {
-        let shoot_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/shoot.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/shoot.mp3",
-                );
+    pub fn new(audio: &'a RaylibAudio) -> Self {
+        let shoot_sound = audio
+            .new_sound("assets/sounds/shoot.mp3")
+            .expect("No se pudo cargar assets/sounds/shoot.mp3");
 
-        let reload_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/reload.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/reload.mp3",
-                );
+        let reload_sound = audio
+            .new_sound("assets/sounds/reload.mp3")
+            .expect("No se pudo cargar assets/sounds/reload.mp3");
 
-        let door_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/door.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/door.mp3",
-                );
+        let door_sound = audio
+            .new_sound("assets/sounds/door.mp3")
+            .expect("No se pudo cargar assets/sounds/door.mp3");
 
-        let noammo_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/noammo.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/noammo.mp3",
-                );
+        let noammo_sound = audio
+            .new_sound("assets/sounds/noammo.mp3")
+            .expect("No se pudo cargar assets/sounds/noammo.mp3");
 
-        let zombie_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/zombie.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/zombie.mp3",
-                );
+        let zombie_sound = audio
+            .new_sound("assets/sounds/zombie.mp3")
+            .expect("No se pudo cargar assets/sounds/zombie.mp3");
 
-        let damage_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/damage.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/damage.mp3",
-                );
+        let damage_sound = audio
+            .new_sound("assets/sounds/damage.mp3")
+            .expect("No se pudo cargar assets/sounds/damage.mp3");
 
-        let key_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/key.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/key.mp3",
-                );
+        let key_sound = audio
+            .new_sound("assets/sounds/key.mp3")
+            .expect("No se pudo cargar assets/sounds/key.mp3");
 
-        let zombiedie_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/zombiedie.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/zombiedie.mp3",
-                );
+        let zombiedie_sound = audio
+            .new_sound("assets/sounds/zombiedie.mp3")
+            .expect("No se pudo cargar assets/sounds/zombiedie.mp3");
 
-        let collectammo_sound =
-            audio
-                .new_sound(
-                    "assets/sounds/collectammo.mp3",
-                )
-                .expect(
-                    "No se pudo cargar assets/sounds/collectammo.mp3",
-                );
+        let collectammo_sound = audio
+            .new_sound("assets/sounds/collectammo.mp3")
+            .expect("No se pudo cargar assets/sounds/collectammo.mp3");
+
+        let axe_sound = audio
+            .new_sound("assets/sounds/axe.mp3")
+            .expect("No se pudo cargar assets/sounds/axe.mp3");
+
+        let axe_block_sound = audio
+            .new_sound("assets/sounds/axeblock.mp3")
+            .expect("No se pudo cargar assets/sounds/axeblock.mp3");
 
         Self {
             shoot_sound,
@@ -110,6 +70,8 @@ impl<'a> AudioManager<'a> {
             key_sound,
             zombiedie_sound,
             collectammo_sound,
+            axe_sound,
+            axe_block_sound,
         }
     }
 
@@ -151,5 +113,13 @@ impl<'a> AudioManager<'a> {
 
     pub fn recoger_municion(&self) {
         self.collectammo_sound.play();
+    }
+
+    pub fn hachazo(&self) {
+        self.axe_sound.play();
+    }
+
+    pub fn bloqueo_hacha(&self) {
+        self.axe_block_sound.play();
     }
 }

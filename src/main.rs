@@ -55,8 +55,7 @@ use raylib::audio::RaylibAudio;
 use raylib::prelude::*;
 
 fn main() {
-    let mut mapa =
-        Map::new();
+    let mut mapa = Map::new();
 
     let posiciones_zombies =
         mapa.extraer_zombies();
@@ -395,12 +394,21 @@ fn main() {
             for zombie in
                 &mut zombies
             {
+                let estaba_persiguiendo =
+                    zombie.persiguiendo;
+
                 let dano =
                     zombie.update(
                         &player,
                         &mapa,
                         delta_time,
                     );
+
+                if !estaba_persiguiendo
+                    && zombie.persiguiendo
+                {
+                    sonidos.zombie();
+                }
 
                 if dano > 0 {
                     vida_jugador -=

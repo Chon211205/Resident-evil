@@ -31,8 +31,14 @@ use interaction::{
 };
 
 use inventory::Inventory;
-use map::Map;
+
+use map::{
+    Map,
+    TipoSpawnZombie,
+};
+
 use map_renderer::render_minimap;
+
 use player::Player;
 use puzzle::Puzzle;
 
@@ -56,39 +62,62 @@ use weapon::{
     ArmaActual,
 };
 
-use zombie::Zombie;
+use zombie::{
+    TipoZombie,
+    Zombie,
+};
+
 use zombie_renderer::render_zombies;
 
 use raylib::audio::RaylibAudio;
 use raylib::prelude::*;
 
-fn main() {
-    let mut mapa = Map::new();
+fn crear_zombies(
+    mapa: &mut Map,
+) -> Vec<Zombie> {
+    mapa.extraer_zombies()
+        .into_iter()
+        .map(
+            |(
+                x,
+                y,
+                tipo,
+            )| {
+                match tipo {
+                    TipoSpawnZombie::Normal => {
+                        Zombie::new(
+                            x,
+                            y,
+                        )
+                    }
 
-    let posiciones_zombies =
-        mapa.extraer_zombies();
+                    TipoSpawnZombie::ConLlave => {
+                        Zombie::new_con_llave(
+                            x,
+                            y,
+                        )
+                    }
+
+                    TipoSpawnZombie::Medio => {
+                        Zombie::new_medio(
+                            x,
+                            y,
+                        )
+                    }
+                }
+            },
+        )
+        .collect()
+}
+
+fn main() {
+    let mut mapa =
+        Map::new();
 
     let mut zombies =
-        posiciones_zombies
-            .into_iter()
-            .map(|(x, y, tiene_llave)| {
-                if tiene_llave {
-                    Zombie::new_con_llave(
-                        x,
-                        y,
-                    )
-                } else {
-                    Zombie::new(
-                        x,
-                        y,
-                    )
-                }
-            })
-            .collect::<Vec<Zombie>>();
-
-    mapa.guardar_txt(
-        "mapa_resident.txt",
-    );
+        crear_zombies(
+            &mut mapa,
+        );
 
     let mut player =
         Player::new(
@@ -149,9 +178,10 @@ fn main() {
             ALTO_VENTANA,
         );
 
-    framebuffer.set_background_color(
-        Color::BLACK,
-    );
+    framebuffer
+        .set_background_color(
+            Color::BLACK,
+        );
 
     let (
         mut ventana,
@@ -324,6 +354,36 @@ fn main() {
                 "No se pudo cargar zombie3.png",
             );
 
+    let zombie_v21 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV21.png",
+            )
+            .expect(
+                "No se pudo cargar zombieV21.png",
+            );
+
+    let zombie_v22 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV22.png",
+            )
+            .expect(
+                "No se pudo cargar zombieV22.png",
+            );
+
+    let zombie_v23 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombiev23.png",
+            )
+            .expect(
+                "No se pudo cargar zombiev23.png",
+            );
+
     let mut wall_image =
         Image::load_image(
             "assets/textures/wall.png",
@@ -370,7 +430,7 @@ fn main() {
                 framebuffer.image(),
             )
             .expect(
-                "No se pudo crear la textura del framebuffer",
+                "No se pudo crear framebuffer",
             );
 
     while !ventana.window_should_close() {
@@ -408,20 +468,20 @@ fn main() {
                 recargando =
                     false;
 
-                let balas_faltantes =
+                let faltantes =
                     8
                         - balas_cargador;
 
-                let cantidad_recargar =
-                    balas_faltantes.min(
+                let cantidad =
+                    faltantes.min(
                         balas_reserva,
                     );
 
                 balas_cargador +=
-                    cantidad_recargar;
+                    cantidad;
 
                 balas_reserva -=
-                    cantidad_recargar;
+                    cantidad;
 
                 mensaje =
                     "Arma recargada"
@@ -452,10 +512,12 @@ fn main() {
             vida_jugador > 0
                 && arma_equipada
                     == ArmaActual::Hacha
-                && tiempo_hachazo <= 0.0
+                && tiempo_hachazo
+                    <= 0.0
                 && ventana
                     .is_mouse_button_down(
-                        MouseButton::MOUSE_BUTTON_RIGHT,
+                        MouseButton::
+                            MOUSE_BUTTON_RIGHT,
                     );
 
         if vida_jugador > 0 {
@@ -475,7 +537,16 @@ fn main() {
                 if !estaba_persiguiendo
                     && zombie.persiguiendo
                 {
-                    sonidos.zombie();
+                    match zombie.tipo {
+                        TipoZombie::Normal => {
+                            sonidos.zombie();
+                        }
+
+                        TipoZombie::Medio => {
+                            sonidos
+                                .zombie_medio();
+                        }
+                    }
                 }
 
                 if dano > 0 {
@@ -497,13 +568,14 @@ fn main() {
                     vida_jugador -=
                         dano_final;
 
-                    if vida_jugador < 0 {
-                        vida_jugador =
-                            0;
-                    }
+                    vida_jugador =
+                        vida_jugador.max(
+                            0,
+                        );
 
                     if bloqueo_valido {
-                        sonidos.bloqueo_hacha();
+                        sonidos
+                            .bloqueo_hacha();
 
                         mensaje =
                             format!(
@@ -515,28 +587,55 @@ fn main() {
 
                         mensaje =
                             format!(
-                                "Un zombie te hizo {} de dano",
+                                "Zombie te hizo {} de dano",
                                 dano_final,
                             );
                     }
 
-                    damage_effect.activar();
+                    damage_effect
+                        .activar();
                 }
             }
         }
 
-        let hay_zombie_persiguiendo =
+        let hay_normal =
             zombies
                 .iter()
-                .any(|zombie| {
-                    zombie.vivo
-                        && zombie.persiguiendo
-                });
+                .any(
+                    |zombie| {
+                        zombie.vivo
+                            && zombie
+                                .persiguiendo
+                            && zombie.tipo
+                                == TipoZombie::Normal
+                    },
+                );
 
-        if !hay_zombie_persiguiendo
+        let hay_medio =
+            zombies
+                .iter()
+                .any(
+                    |zombie| {
+                        zombie.vivo
+                            && zombie
+                                .persiguiendo
+                            && zombie.tipo
+                                == TipoZombie::Medio
+                    },
+                );
+
+        if !hay_normal
             || vida_jugador <= 0
         {
-            sonidos.detener_zombie();
+            sonidos
+                .detener_zombie();
+        }
+
+        if !hay_medio
+            || vida_jugador <= 0
+        {
+            sonidos
+                .detener_zombie_medio();
         }
 
         let resultado_recoger =
@@ -549,7 +648,9 @@ fn main() {
             );
 
         match resultado_recoger {
-            InteractionResult::LlaveRecogida => {
+            InteractionResult::
+                LlaveRecogida =>
+            {
                 sonidos.llave();
 
                 mensaje =
@@ -557,10 +658,13 @@ fn main() {
                         .to_string();
             }
 
-            InteractionResult::MunicionRecogida(
-                cantidad,
-            ) => {
-                sonidos.recoger_municion();
+            InteractionResult::
+                MunicionRecogida(
+                    cantidad,
+                ) =>
+            {
+                sonidos
+                    .recoger_municion();
 
                 balas_reserva +=
                     cantidad;
@@ -572,18 +676,19 @@ fn main() {
                     );
             }
 
-            InteractionResult::CuracionRecogida(
-                cantidad,
-            ) => {
+            InteractionResult::
+                CuracionRecogida(
+                    cantidad,
+                ) =>
+            {
                 sonidos.curacion();
 
-                vida_jugador +=
-                    cantidad;
-
-                if vida_jugador > 100 {
-                    vida_jugador =
-                        100;
-                }
+                vida_jugador =
+                    (
+                        vida_jugador
+                            + cantidad
+                    )
+                        .min(100);
 
                 mensaje =
                     format!(
@@ -632,17 +737,16 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_E,
         ) {
-            let resultado =
-                interactuar(
-                    &mut mapa,
-                    &player,
-                    &camera,
-                    &mut inventory,
-                    &mut puzzle,
-                );
-
-            match resultado {
-                InteractionResult::PuertaAbierta => {
+            match interactuar(
+                &mut mapa,
+                &player,
+                &camera,
+                &mut inventory,
+                &mut puzzle,
+            ) {
+                InteractionResult::
+                    PuertaAbierta =>
+                {
                     sonidos.puerta();
 
                     mensaje =
@@ -650,7 +754,9 @@ fn main() {
                             .to_string();
                 }
 
-                InteractionResult::PuertaCerrada => {
+                InteractionResult::
+                    PuertaCerrada =>
+                {
                     mensaje =
                         "La puerta esta cerrada"
                             .to_string();
@@ -666,11 +772,13 @@ fn main() {
                 && !recargando
                 && ventana
                     .is_mouse_button_down(
-                        MouseButton::MOUSE_BUTTON_RIGHT,
+                        MouseButton::
+                            MOUSE_BUTTON_RIGHT,
                     );
 
         if ventana.is_mouse_button_pressed(
-            MouseButton::MOUSE_BUTTON_LEFT,
+            MouseButton::
+                MOUSE_BUTTON_LEFT,
         ) {
             ventana.disable_cursor();
 
@@ -678,21 +786,24 @@ fn main() {
                 match arma_equipada {
                     ArmaActual::Pistola => {
                         if !recargando {
-                            if balas_cargador > 0 {
+                            if balas_cargador
+                                > 0
+                            {
                                 tiempo_disparo =
                                     0.12;
 
                                 balas_cargador -=
                                     1;
 
-                                sonidos.disparo();
+                                sonidos
+                                    .disparo();
 
                                 let vivos_antes =
                                     zombies
                                         .iter()
                                         .filter(
-                                            |zombie| {
-                                                zombie.vivo
+                                            |z| {
+                                                z.vivo
                                             },
                                         )
                                         .count();
@@ -709,8 +820,8 @@ fn main() {
                                     zombies
                                         .iter()
                                         .filter(
-                                            |zombie| {
-                                                zombie.vivo
+                                            |z| {
+                                                z.vivo
                                             },
                                         )
                                         .count();
@@ -733,7 +844,7 @@ fn main() {
                                             vida_restante,
                                         } => {
                                             format!(
-                                                "Le diste al zombie. Vida: {}",
+                                                "Impacto. Vida zombie: {}",
                                                 vida_restante,
                                             )
                                         }
@@ -743,7 +854,9 @@ fn main() {
                                                 .to_string()
                                         }
 
-                                        ShotResult::KillConLlave => {
+                                        ShotResult::
+                                            KillConLlave =>
+                                        {
                                             "Zombie eliminado. Dejo una llave"
                                                 .to_string()
                                         }
@@ -752,20 +865,24 @@ fn main() {
                                 sonidos
                                     .sin_municion();
 
-                                mensaje =
-                                    if balas_reserva > 0 {
+                                if balas_reserva
+                                    > 0
+                                {
+                                    mensaje =
                                         "Cargador vacio. Presiona R"
-                                            .to_string()
-                                    } else {
+                                            .to_string();
+                                } else {
+                                    mensaje =
                                         "Sin municion"
-                                            .to_string()
-                                    };
+                                            .to_string();
+                                }
                             }
                         }
                     }
 
                     ArmaActual::Hacha => {
-                        if tiempo_hachazo <= 0.0
+                        if tiempo_hachazo
+                            <= 0.0
                             && !bloqueando
                         {
                             tiempo_hachazo =
@@ -777,8 +894,8 @@ fn main() {
                                 zombies
                                     .iter()
                                     .filter(
-                                        |zombie| {
-                                            zombie.vivo
+                                        |z| {
+                                            z.vivo
                                         },
                                     )
                                     .count();
@@ -795,8 +912,8 @@ fn main() {
                                 zombies
                                     .iter()
                                     .filter(
-                                        |zombie| {
-                                            zombie.vivo
+                                        |z| {
+                                            z.vivo
                                         },
                                     )
                                     .count();
@@ -829,7 +946,9 @@ fn main() {
                                             .to_string()
                                     }
 
-                                    ShotResult::KillConLlave => {
+                                    ShotResult::
+                                        KillConLlave =>
+                                    {
                                         "Zombie eliminado. Dejo una llave"
                                             .to_string()
                                     }
@@ -852,7 +971,9 @@ fn main() {
                     mensaje =
                         "El cargador ya esta lleno"
                             .to_string();
-                } else if balas_reserva <= 0 {
+                } else if balas_reserva
+                    <= 0
+                {
                     mensaje =
                         "No tienes balas de reserva"
                             .to_string();
@@ -878,37 +999,19 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F5,
         ) {
-            sonidos.detener_zombie();
+            sonidos
+                .detener_zombie();
+
+            sonidos
+                .detener_zombie_medio();
 
             mapa =
                 Map::new();
 
-            let posiciones_zombies =
-                mapa.extraer_zombies();
-
             zombies =
-                posiciones_zombies
-                    .into_iter()
-                    .map(
-                        |(
-                            x,
-                            y,
-                            tiene_llave,
-                        )| {
-                            if tiene_llave {
-                                Zombie::new_con_llave(
-                                    x,
-                                    y,
-                                )
-                            } else {
-                                Zombie::new(
-                                    x,
-                                    y,
-                                )
-                            }
-                        },
-                    )
-                    .collect::<Vec<Zombie>>();
+                crear_zombies(
+                    &mut mapa,
+                );
 
             player =
                 Player::new(
@@ -959,10 +1062,14 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F11,
         ) {
-            if ventana.is_window_maximized() {
-                ventana.restore_window();
+            if ventana
+                .is_window_maximized()
+            {
+                ventana
+                    .restore_window();
             } else {
-                ventana.maximize_window();
+                ventana
+                    .maximize_window();
             }
         }
 
@@ -1000,11 +1107,13 @@ fn main() {
             );
 
         let pantalla_ancho =
-            ventana.get_screen_width()
+            ventana
+                .get_screen_width()
                 as f32;
 
         let pantalla_alto =
-            ventana.get_screen_height()
+            ventana
+                .get_screen_height()
                 as f32;
 
         let escala_x =
@@ -1055,7 +1164,9 @@ fn main() {
                         } else {
                             &pistol_r
                         }
-                    } else if tiempo_disparo > 0.0 {
+                    } else if tiempo_disparo
+                        > 0.0
+                    {
                         &pistol3
                     } else if apuntando {
                         &pistol2
@@ -1067,7 +1178,9 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         &axe3
-                    } else if tiempo_hachazo > 0.0 {
+                    } else if tiempo_hachazo
+                        > 0.0
+                    {
                         &axe2
                     } else {
                         &axe1
@@ -1080,7 +1193,9 @@ fn main() {
                 ArmaActual::Pistola => {
                     if recargando {
                         0.32
-                    } else if tiempo_disparo > 0.0 {
+                    } else if tiempo_disparo
+                        > 0.0
+                    {
                         0.40
                     } else if apuntando {
                         0.42
@@ -1092,7 +1207,9 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         0.50
-                    } else if tiempo_hachazo > 0.0 {
+                    } else if tiempo_hachazo
+                        > 0.0
+                    {
                         0.42
                     } else {
                         0.40
@@ -1117,11 +1234,11 @@ fn main() {
         let retroceso =
             if arma_equipada
                 == ArmaActual::Pistola
-                && tiempo_disparo > 0.0
+                && tiempo_disparo
+                    > 0.0
                 && !recargando
             {
-                8.0
-                    * escala
+                8.0 * escala
             } else {
                 0.0
             };
@@ -1150,6 +1267,7 @@ fn main() {
 
         dibujo.draw_texture_pro(
             &textura_framebuffer,
+
             Rectangle::new(
                 0.0,
                 0.0,
@@ -1158,16 +1276,19 @@ fn main() {
                 ALTO_VENTANA
                     as f32,
             ),
+
             Rectangle::new(
                 offset_x,
                 offset_y,
                 ancho_render,
                 alto_render,
             ),
+
             Vector2::new(
                 0.0,
                 0.0,
             ),
+
             0.0,
             Color::WHITE,
         );
@@ -1211,9 +1332,15 @@ fn main() {
             &player,
             &camera,
             &zombies,
+
             &zombie1,
             &zombie2,
             &zombie3,
+
+            &zombie_v21,
+            &zombie_v22,
+            &zombie_v23,
+
             offset_x,
             offset_y,
             escala,
@@ -1221,33 +1348,36 @@ fn main() {
 
         dibujo.draw_texture_ex(
             textura_arma,
+
             Vector2::new(
                 arma_x,
                 arma_y,
             ),
+
             0.0,
             escala_arma,
             Color::WHITE,
         );
 
         if apuntando {
-            let mira_x =
-                offset_x
-                    + ancho_render
-                        / 2.0;
-
-            let mira_y =
-                offset_y
-                    + alto_render
-                        / 2.0;
-
             dibujo.draw_circle(
-                mira_x as i32,
-                mira_y as i32,
+                (
+                    offset_x
+                        + ancho_render
+                            / 2.0
+                ) as i32,
+
+                (
+                    offset_y
+                        + alto_render
+                            / 2.0
+                ) as i32,
+
                 3.0
                     * escala.max(
                         1.0,
                     ),
+
                 Color::RED,
             );
         }

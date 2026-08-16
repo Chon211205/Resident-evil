@@ -2,19 +2,27 @@ use crate::map::Map;
 use crate::player::Player;
 use crate::raycaster::lanzar_rayo;
 
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
+pub enum TipoZombie {
+    Normal,
+    Medio,
+}
+
 pub struct Zombie {
     pub x: f32,
     pub y: f32,
-
     pub vida: i32,
     pub velocidad: f32,
     pub vivo: bool,
-
     pub persiguiendo: bool,
     pub tiempo_animacion: f32,
-
     pub puede_dropear_llave: bool,
-
+    pub tipo: TipoZombie,
     tiempo_ultimo_ataque: f32,
 }
 
@@ -32,6 +40,7 @@ impl Zombie {
             persiguiendo: false,
             tiempo_animacion: 0.0,
             puede_dropear_llave: false,
+            tipo: TipoZombie::Normal,
             tiempo_ultimo_ataque: 0.0,
         }
     }
@@ -49,7 +58,49 @@ impl Zombie {
             persiguiendo: false,
             tiempo_animacion: 0.0,
             puede_dropear_llave: true,
+            tipo: TipoZombie::Normal,
             tiempo_ultimo_ataque: 0.0,
+        }
+    }
+
+    pub fn new_medio(
+        x: f32,
+        y: f32,
+    ) -> Self {
+        Self {
+            x,
+            y,
+            vida: 175,
+            velocidad: 27.0,
+            vivo: true,
+            persiguiendo: false,
+            tiempo_animacion: 0.0,
+            puede_dropear_llave: false,
+            tipo: TipoZombie::Medio,
+            tiempo_ultimo_ataque: 0.0,
+        }
+    }
+
+    pub fn recibir_dano(
+        &mut self,
+        cantidad: i32,
+    ) {
+        if !self.vivo {
+            return;
+        }
+
+        self.vida -=
+            cantidad;
+
+        if self.vida <= 0 {
+            self.vida =
+                0;
+
+            self.vivo =
+                false;
+
+            self.persiguiendo =
+                false;
         }
     }
 
@@ -60,7 +111,6 @@ impl Zombie {
         delta_time: f32,
     ) -> i32 {
         if !self.vivo {
-            self.persiguiendo = false;
             return 0;
         }
 
@@ -74,99 +124,138 @@ impl Zombie {
             player.y - self.y;
 
         let distancia =
-            (dx * dx + dy * dy).sqrt();
+            (
+                dx * dx
+                    + dy * dy
+            )
+                .sqrt();
 
-        let distancia_deteccion =
-            250.0;
+        let rango_deteccion =
+            match self.tipo {
+                TipoZombie::Normal => {
+                    250.0
+                }
+
+                TipoZombie::Medio => {
+                    320.0
+                }
+            };
 
         let distancia_ataque =
-            22.0;
+            match self.tipo {
+                TipoZombie::Normal => {
+                    22.0
+                }
 
-        if distancia > distancia_deteccion {
-            self.persiguiendo = false;
-            self.tiempo_animacion = 0.0;
+                TipoZombie::Medio => {
+                    24.0
+                }
+            };
 
+        if distancia
+            <= rango_deteccion
+            && self
+                .tiene_linea_vision(
+                    player,
+                    mapa,
+                    distancia,
+                )
+        {
+            self.persiguiendo =
+                true;
+        }
+
+        if !self.persiguiendo {
             return 0;
         }
 
-        if !self.puede_ver_jugador(
-            player,
-            mapa,
-            distancia,
-        ) {
-            self.persiguiendo = false;
-            self.tiempo_animacion = 0.0;
+        if distancia
+            > distancia_ataque
+        {
+            if distancia > 0.001 {
+                let direccion_x =
+                    dx / distancia;
 
-            return 0;
-        }
+                let direccion_y =
+                    dy / distancia;
 
-        self.persiguiendo = true;
+                let movimiento =
+                    self.velocidad
+                        * delta_time;
 
-        self.tiempo_animacion +=
-            delta_time;
+                let nuevo_x =
+                    self.x
+                        + direccion_x
+                            * movimiento;
 
-        if distancia <= distancia_ataque {
-            if self.tiempo_ultimo_ataque >= 1.0 {
-                self.tiempo_ultimo_ataque =
-                    0.0;
+                let nuevo_y =
+                    self.y
+                        + direccion_y
+                            * movimiento;
 
-                return 10;
+                if !mapa.es_pared(
+                    nuevo_x,
+                    self.y,
+                ) {
+                    self.x =
+                        nuevo_x;
+                }
+
+                if !mapa.es_pared(
+                    self.x,
+                    nuevo_y,
+                ) {
+                    self.y =
+                        nuevo_y;
+                }
             }
 
+            self.tiempo_animacion +=
+                delta_time;
+
             return 0;
         }
 
-        if distancia <= 0.001 {
-            return 0;
-        }
+        if self.tiempo_ultimo_ataque
+            >= 1.0
+        {
+            self.tiempo_ultimo_ataque =
+                0.0;
 
-        let dir_x =
-            dx / distancia;
+            return match self.tipo {
+                TipoZombie::Normal => {
+                    10
+                }
 
-        let dir_y =
-            dy / distancia;
-
-        let nuevo_x =
-            self.x
-                + dir_x
-                    * self.velocidad
-                    * delta_time;
-
-        let nuevo_y =
-            self.y
-                + dir_y
-                    * self.velocidad
-                    * delta_time;
-
-        if !mapa.es_pared(
-            nuevo_x,
-            self.y,
-        ) {
-            self.x =
-                nuevo_x;
-        }
-
-        if !mapa.es_pared(
-            self.x,
-            nuevo_y,
-        ) {
-            self.y =
-                nuevo_y;
+                TipoZombie::Medio => {
+                    15
+                }
+            };
         }
 
         0
     }
 
-    fn puede_ver_jugador(
+    fn tiene_linea_vision(
         &self,
         player: &Player,
         mapa: &Map,
         distancia_jugador: f32,
     ) -> bool {
+        if distancia_jugador
+            <= 0.001
+        {
+            return true;
+        }
+
         let angulo =
-            (player.y - self.y)
+            (
+                player.y
+                    - self.y
+            )
                 .atan2(
-                    player.x - self.x,
+                    player.x
+                        - self.x,
                 );
 
         let hit =
@@ -178,23 +267,7 @@ impl Zombie {
             );
 
         hit.distancia
-            >= distancia_jugador - 5.0
-    }
-
-    pub fn recibir_dano(
-        &mut self,
-        dano: i32,
-    ) {
-        if !self.vivo {
-            return;
-        }
-
-        self.vida -= dano;
-
-        if self.vida <= 0 {
-            self.vida = 0;
-            self.vivo = false;
-            self.persiguiendo = false;
-        }
+            >= distancia_jugador
+                - 4.0
     }
 }

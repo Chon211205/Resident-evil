@@ -1,16 +1,40 @@
 use crate::camera::Camera;
-use crate::map::{Map, TAMANO_CELDA};
+use crate::map::{
+    Map,
+    TAMANO_CELDA,
+};
 use crate::player::Player;
 use crate::raycaster::{
     lanzar_rayo,
     ALTO_VENTANA,
     ANCHO_VENTANA,
-    FOV,
 };
-use crate::zombie::Zombie;
+use crate::zombie::{
+    TipoZombie,
+    Zombie,
+};
 
 use raylib::prelude::*;
 use std::f32::consts::PI;
+
+const FOV: f32 =
+    PI / 3.0;
+
+fn normalizar_angulo(
+    mut angulo: f32,
+) -> f32 {
+    while angulo > PI {
+        angulo -=
+            2.0 * PI;
+    }
+
+    while angulo < -PI {
+        angulo +=
+            2.0 * PI;
+    }
+
+    angulo
+}
 
 pub fn render_zombies(
     dibujo: &mut RaylibDrawHandle,
@@ -18,206 +42,285 @@ pub fn render_zombies(
     player: &Player,
     camera: &Camera,
     zombies: &[Zombie],
-    zombie_idle: &Texture2D,
-    zombie_run1: &Texture2D,
-    zombie_run2: &Texture2D,
+
+    zombie1: &Texture2D,
+    zombie2: &Texture2D,
+    zombie3: &Texture2D,
+
+    zombie_v21: &Texture2D,
+    zombie_v22: &Texture2D,
+    zombie_v23: &Texture2D,
+
     offset_x: f32,
     offset_y: f32,
-    escala_pantalla: f32,
+    escala: f32,
 ) {
-    for zombie in zombies {
-        if !zombie.vivo {
+    let mut orden: Vec<usize> =
+        zombies
+            .iter()
+            .enumerate()
+            .filter(
+                |(_, zombie)| {
+                    zombie.vivo
+                },
+            )
+            .map(
+                |(indice, _)| {
+                    indice
+                },
+            )
+            .collect();
+
+    orden.sort_by(
+        |a, b| {
+            let za =
+                &zombies[*a];
+
+            let zb =
+                &zombies[*b];
+
+            let da =
+                (
+                    za.x - player.x
+                )
+                    .powi(2)
+                    + (
+                        za.y - player.y
+                    )
+                        .powi(2);
+
+            let db =
+                (
+                    zb.x - player.x
+                )
+                    .powi(2)
+                    + (
+                        zb.y - player.y
+                    )
+                        .powi(2);
+
+            db.partial_cmp(&da)
+                .unwrap_or(
+                    std::cmp::Ordering::Equal,
+                )
+        },
+    );
+
+    for indice in orden {
+        let zombie =
+            &zombies[indice];
+
+        let dx =
+            zombie.x - player.x;
+
+        let dy =
+            zombie.y - player.y;
+
+        let distancia =
+            (
+                dx * dx
+                    + dy * dy
+            )
+                .sqrt();
+
+        if distancia
+            <= 1.0
+        {
             continue;
         }
 
-        let textura_actual =
-            obtener_textura_zombie(
-                zombie,
-                zombie_idle,
-                zombie_run1,
-                zombie_run2,
+        let angulo_zombie =
+            dy.atan2(dx);
+
+        let diferencia =
+            normalizar_angulo(
+                angulo_zombie
+                    - camera.angle,
             );
 
-        render_zombie(
-            dibujo,
-            mapa,
-            player,
-            camera,
-            zombie,
-            textura_actual,
-            offset_x,
-            offset_y,
-            escala_pantalla,
+        if diferencia.abs()
+            > FOV / 2.0
+                + 0.25
+        {
+            continue;
+        }
+
+        let hit_pared =
+            lanzar_rayo(
+                mapa,
+                player.x,
+                player.y,
+                angulo_zombie,
+            );
+
+        if hit_pared.distancia
+            < distancia - 4.0
+        {
+            continue;
+        }
+
+        let distancia_corregida =
+            (
+                distancia
+                    * diferencia.cos()
+            )
+                .max(1.0);
+
+        let plano_proyeccion =
+            (
+                ANCHO_VENTANA as f32
+                    / 2.0
+            )
+                / (
+                    FOV / 2.0
+                )
+                    .tan();
+
+        let screen_x =
+            ANCHO_VENTANA as f32
+                / 2.0
+                + diferencia.tan()
+                    * plano_proyeccion;
+
+        let textura =
+            match zombie.tipo {
+                TipoZombie::Normal => {
+                    if zombie.persiguiendo {
+                        let frame =
+                            (
+                                zombie
+                                    .tiempo_animacion
+                                    * 6.0
+                            ) as i32
+                                % 2;
+
+                        if frame == 0 {
+                            zombie2
+                        } else {
+                            zombie3
+                        }
+                    } else {
+                        zombie1
+                    }
+                }
+
+                TipoZombie::Medio => {
+                    if zombie.persiguiendo {
+                        let frame =
+                            (
+                                zombie
+                                    .tiempo_animacion
+                                    * 6.0
+                            ) as i32
+                                % 2;
+
+                        if frame == 0 {
+                            zombie_v22
+                        } else {
+                            zombie_v23
+                        }
+                    } else {
+                        zombie_v21
+                    }
+                }
+            };
+
+        let factor_tamano =
+            match zombie.tipo {
+                TipoZombie::Normal => {
+                    0.80
+                }
+
+                TipoZombie::Medio => {
+                    0.95
+                }
+            };
+
+        let altura_mundo =
+            TAMANO_CELDA
+                * factor_tamano;
+
+        let altura_sprite =
+            altura_mundo
+                / distancia_corregida
+                * plano_proyeccion;
+
+        if altura_sprite
+            <= 1.0
+        {
+            continue;
+        }
+
+        let proporcion =
+            textura.width() as f32
+                / textura.height()
+                    as f32;
+
+        let ancho_sprite =
+            altura_sprite
+                * proporcion;
+
+        let centro_y =
+            ALTO_VENTANA as f32
+                / 2.0
+                + camera.vertical_offset as f32;
+
+        let suelo =
+            centro_y
+                + (
+                    TAMANO_CELDA
+                        / 2.0
+                )
+                    / distancia_corregida
+                    * plano_proyeccion;
+
+        let x =
+            offset_x
+                + (
+                    screen_x
+                        - ancho_sprite
+                            / 2.0
+                )
+                    * escala;
+
+        let y =
+            offset_y
+                + (
+                    suelo
+                        - altura_sprite
+                )
+                    * escala;
+
+        let ancho_final =
+            ancho_sprite
+                * escala;
+
+        let alto_final =
+            altura_sprite
+                * escala;
+
+        dibujo.draw_texture_pro(
+            textura,
+            Rectangle::new(
+                0.0,
+                0.0,
+                textura.width()
+                    as f32,
+                textura.height()
+                    as f32,
+            ),
+            Rectangle::new(
+                x,
+                y,
+                ancho_final,
+                alto_final,
+            ),
+            Vector2::new(
+                0.0,
+                0.0,
+            ),
+            0.0,
+            Color::WHITE,
         );
     }
-}
-
-fn obtener_textura_zombie<'a>(
-    zombie: &Zombie,
-    zombie_idle: &'a Texture2D,
-    zombie_run1: &'a Texture2D,
-    zombie_run2: &'a Texture2D,
-) -> &'a Texture2D {
-    if !zombie.persiguiendo {
-        return zombie_idle;
-    }
-
-    let velocidad_animacion =
-        6.0;
-
-    let frame =
-        (
-            zombie.tiempo_animacion
-                * velocidad_animacion
-        ) as i32
-            % 2;
-
-    if frame == 0 {
-        zombie_run1
-    } else {
-        zombie_run2
-    }
-}
-
-fn render_zombie(
-    dibujo: &mut RaylibDrawHandle,
-    mapa: &Map,
-    player: &Player,
-    camera: &Camera,
-    zombie: &Zombie,
-    zombie_texture: &Texture2D,
-    offset_x: f32,
-    offset_y: f32,
-    escala_pantalla: f32,
-) {
-    let dx =
-        zombie.x - player.x;
-
-    let dy =
-        zombie.y - player.y;
-
-    let distancia =
-        (dx * dx + dy * dy)
-            .sqrt();
-
-    if distancia < 1.0 {
-        return;
-    }
-
-    let angulo_zombie =
-        dy.atan2(dx);
-
-    let mut diferencia =
-        angulo_zombie
-            - camera.angle;
-
-    while diferencia > PI {
-        diferencia -=
-            2.0 * PI;
-    }
-
-    while diferencia < -PI {
-        diferencia +=
-            2.0 * PI;
-    }
-
-    // Fuera del campo visual.
-    if diferencia.abs()
-        > FOV / 2.0
-    {
-        return;
-    }
-
-    // Evita ver zombies
-    // a través de paredes.
-    let hit =
-        lanzar_rayo(
-            mapa,
-            player.x,
-            player.y,
-            angulo_zombie,
-        );
-
-    if hit.distancia
-        < distancia - 5.0
-    {
-        return;
-    }
-
-    let distancia_plano =
-        (ANCHO_VENTANA as f32 / 2.0)
-            / (FOV / 2.0).tan();
-
-    let pantalla_x =
-        ANCHO_VENTANA as f32 / 2.0
-            + diferencia.tan()
-                * distancia_plano;
-
-    let distancia_corregida =
-        distancia
-            * diferencia.cos();
-
-    let distancia_segura =
-        distancia_corregida
-            .max(0.001);
-
-    // Altura de una celda
-    // proyectada a esta distancia.
-    let altura_celda_proyectada =
-        TAMANO_CELDA
-            * distancia_plano
-            / distancia_segura;
-
-    // Tamaño del zombie.
-    // Si lo querés más grande o pequeño,
-    // cambiá este número.
-    let alto_sprite =
-        altura_celda_proyectada
-            * 0.65;
-
-    let escala_sprite =
-        alto_sprite
-            / zombie_texture.height()
-                as f32;
-
-    let ancho_sprite =
-        zombie_texture.width()
-            as f32
-            * escala_sprite;
-
-    // Posición del piso
-    // según la distancia.
-    let suelo_pantalla =
-        ALTO_VENTANA as f32
-            / 2.0
-            + camera.vertical_offset
-                as f32
-            + altura_celda_proyectada
-                / 2.0;
-
-    let x =
-        offset_x
-            + (
-                pantalla_x
-                    - ancho_sprite / 2.0
-            ) * escala_pantalla;
-
-    let y =
-        offset_y
-            + (
-                suelo_pantalla
-                    - alto_sprite
-            ) * escala_pantalla;
-
-    dibujo.draw_texture_ex(
-        zombie_texture,
-        Vector2::new(
-            x,
-            y,
-        ),
-        0.0,
-        escala_sprite
-            * escala_pantalla,
-        Color::WHITE,
-    );
 }

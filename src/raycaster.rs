@@ -7,7 +7,6 @@ use crate::map::{
 use crate::player::Player;
 use crate::texture_data::TextureData;
 
-use raylib::prelude::*;
 
 use std::f32::consts::PI;
 

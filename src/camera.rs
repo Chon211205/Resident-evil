@@ -1,5 +1,4 @@
 use raylib::prelude::*;
-use std::f32::consts::PI;
 
 pub struct Camera {
     pub angle: f32,

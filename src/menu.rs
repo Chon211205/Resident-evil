@@ -1,38 +1,45 @@
 use raylib::prelude::*;
 
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EstadoJuego {
     Menu,
+    SeleccionNivel,
     Jugando,
     Controles,
 }
 
-#[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AccionMenu {
     Ninguna,
     Jugar,
+    SeleccionarNivel,
     Controles,
     Salir,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum NivelSeleccionado {
+    Mansion,
+    Laboratorio,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum AccionSeleccionNivel {
+    Ninguna,
+    Elegir(NivelSeleccionado),
+    Volver,
+}
+
 pub struct Menu {
-    opcion: usize,
+    opcion_menu: usize,
+    opcion_nivel: usize,
 }
 
 impl Menu {
     pub fn new() -> Self {
         Self {
-            opcion: 0,
+            opcion_menu: 0,
+            opcion_nivel: 0,
         }
     }
 
@@ -40,61 +47,157 @@ impl Menu {
         &mut self,
         rl: &RaylibHandle,
     ) -> AccionMenu {
-        if rl.is_key_pressed(
-            KeyboardKey::KEY_DOWN,
-        ) {
-            self.opcion =
-                (self.opcion + 1) % 3;
-        }
+        const TOTAL_OPCIONES: usize = 4;
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_UP,
         ) {
-            if self.opcion == 0 {
-                self.opcion = 2;
+            if self.opcion_menu == 0 {
+                self.opcion_menu =
+                    TOTAL_OPCIONES - 1;
             } else {
-                self.opcion -= 1;
+                self.opcion_menu -= 1;
             }
         }
 
-        if !rl.is_key_pressed(
-            KeyboardKey::KEY_ENTER,
+        if rl.is_key_pressed(
+            KeyboardKey::KEY_DOWN,
         ) {
-            return AccionMenu::Ninguna;
+            self.opcion_menu =
+                (
+                    self.opcion_menu + 1
+                ) % TOTAL_OPCIONES;
         }
 
-        match self.opcion {
-            0 => AccionMenu::Jugar,
-            1 => AccionMenu::Controles,
-            2 => AccionMenu::Salir,
-            _ => AccionMenu::Ninguna,
+        if rl.is_key_pressed(
+            KeyboardKey::KEY_ENTER,
+        ) {
+            return match self.opcion_menu {
+                0 => AccionMenu::Jugar,
+
+                1 => {
+                    AccionMenu::SeleccionarNivel
+                }
+
+                2 => {
+                    AccionMenu::Controles
+                }
+
+                3 => {
+                    AccionMenu::Salir
+                }
+
+                _ => {
+                    AccionMenu::Ninguna
+                }
+            };
         }
+
+        AccionMenu::Ninguna
+    }
+
+    pub fn update_seleccion_nivel(
+        &mut self,
+        rl: &RaylibHandle,
+    ) -> AccionSeleccionNivel {
+        const TOTAL_NIVELES: usize = 2;
+
+        if rl.is_key_pressed(
+            KeyboardKey::KEY_UP,
+        ) {
+            if self.opcion_nivel == 0 {
+                self.opcion_nivel =
+                    TOTAL_NIVELES - 1;
+            } else {
+                self.opcion_nivel -= 1;
+            }
+        }
+
+        if rl.is_key_pressed(
+            KeyboardKey::KEY_DOWN,
+        ) {
+            self.opcion_nivel =
+                (
+                    self.opcion_nivel + 1
+                ) % TOTAL_NIVELES;
+        }
+
+        if rl.is_key_pressed(
+            KeyboardKey::KEY_ENTER,
+        ) {
+            return match self.opcion_nivel {
+                0 => {
+                    AccionSeleccionNivel::Elegir(
+                        NivelSeleccionado::Mansion,
+                    )
+                }
+
+                1 => {
+                    AccionSeleccionNivel::Elegir(
+                        NivelSeleccionado::Laboratorio,
+                    )
+                }
+
+                _ => {
+                    AccionSeleccionNivel::Ninguna
+                }
+            };
+        }
+
+        if rl.is_key_pressed(
+            KeyboardKey::KEY_BACKSPACE,
+        ) {
+            return AccionSeleccionNivel::Volver;
+        }
+
+        AccionSeleccionNivel::Ninguna
     }
 
     pub fn render_menu(
         &self,
         d: &mut RaylibDrawHandle,
     ) {
-        let ancho =
+        let sw =
             d.get_screen_width();
 
-        let alto =
+        let sh =
             d.get_screen_height();
 
         d.clear_background(
             Color::new(
-                7,
-                7,
-                9,
+                5,
+                5,
+                8,
                 255,
             ),
         );
 
-        dibujar_fondo(
-            d,
-            ancho,
-            alto,
-        );
+        for y in 0..sh {
+            let factor =
+                y as f32
+                    / sh.max(1) as f32;
+
+            let intensidad =
+                (
+                    16.0
+                        * (
+                            1.0 - factor
+                        )
+                ) as u8;
+
+            d.draw_line(
+                0,
+                y,
+                sw,
+                y,
+                Color::new(
+                    intensidad,
+                    0,
+                    0,
+                    255,
+                ),
+            );
+        }
 
         let titulo =
             "NIGHTMARE";
@@ -102,119 +205,292 @@ impl Menu {
         let subtitulo =
             "SURVIVAL";
 
-        let titulo_size =
-            72;
+        let titulo_tamano =
+            64;
 
-        let ancho_titulo =
+        let subtitulo_tamano =
+            26;
+
+        let titulo_ancho =
             d.measure_text(
                 titulo,
-                titulo_size,
+                titulo_tamano,
+            );
+
+        let subtitulo_ancho =
+            d.measure_text(
+                subtitulo,
+                subtitulo_tamano,
             );
 
         d.draw_text(
             titulo,
-            ancho / 2
-                - ancho_titulo / 2,
-            alto / 2
-                - 220,
-            titulo_size,
-            Color::new(
-                170,
-                20,
-                20,
-                255,
-            ),
+            sw / 2
+                - titulo_ancho / 2,
+            sh / 2
+                - 230,
+            titulo_tamano,
+            Color::RED,
         );
-
-        let ancho_subtitulo =
-            d.measure_text(
-                subtitulo,
-                28,
-            );
 
         d.draw_text(
             subtitulo,
-            ancho / 2
-                - ancho_subtitulo / 2,
-            alto / 2
-                - 145,
-            28,
-            Color::GRAY,
+            sw / 2
+                - subtitulo_ancho / 2,
+            sh / 2
+                - 160,
+            subtitulo_tamano,
+            Color::LIGHTGRAY,
         );
 
         let opciones = [
             "JUGAR",
+            "SELECCIONAR NIVEL",
             "CONTROLES",
             "SALIR",
         ];
 
         for (
-            i,
+            indice,
             texto,
         ) in opciones
             .iter()
             .enumerate()
         {
             let seleccionado =
-                i == self.opcion;
+                indice == self.opcion_menu;
+
+            let tamano =
+                if seleccionado {
+                    32
+                } else {
+                    27
+                };
 
             let color =
                 if seleccionado {
-                    Color::RED
+                    Color::GOLD
                 } else {
-                    Color::LIGHTGRAY
+                    Color::WHITE
                 };
 
-            let size =
+            let prefijo =
                 if seleccionado {
-                    36
+                    "> "
                 } else {
-                    30
+                    "  "
                 };
 
-            let texto_final =
-                if seleccionado {
-                    format!(
-                        "> {} <",
-                        texto,
-                    )
-                } else {
-                    texto.to_string()
-                };
-
-            let ancho_texto =
-                d.measure_text(
-                    &texto_final,
-                    size,
+            let opcion =
+                format!(
+                    "{}{}",
+                    prefijo,
+                    texto,
                 );
 
+            let ancho =
+                d.measure_text(
+                    &opcion,
+                    tamano,
+                );
+
+            let y =
+                sh / 2
+                    - 55
+                    + indice as i32
+                        * 55;
+
             d.draw_text(
-                &texto_final,
-                ancho / 2
-                    - ancho_texto / 2,
-                alto / 2
-                    + i as i32 * 58,
-                size,
+                &opcion,
+                sw / 2
+                    - ancho / 2,
+                y,
+                tamano,
                 color,
             );
         }
 
-        let instrucciones =
-            "FLECHAS PARA MOVER - ENTER PARA SELECCIONAR";
+        let ayuda =
+            "FLECHAS - MOVER   ENTER - SELECCIONAR";
 
-        let ancho_instrucciones =
+        let ayuda_ancho =
             d.measure_text(
-                instrucciones,
-                16,
+                ayuda,
+                18,
             );
 
         d.draw_text(
-            instrucciones,
-            ancho / 2
-                - ancho_instrucciones / 2,
-            alto - 45,
-            16,
-            Color::DARKGRAY,
+            ayuda,
+            sw / 2
+                - ayuda_ancho / 2,
+            sh - 55,
+            18,
+            Color::GRAY,
+        );
+    }
+
+    pub fn render_seleccion_nivel(
+        &self,
+        d: &mut RaylibDrawHandle,
+    ) {
+        let sw =
+            d.get_screen_width();
+
+        let sh =
+            d.get_screen_height();
+
+        d.clear_background(
+            Color::new(
+                5,
+                5,
+                8,
+                255,
+            ),
+        );
+
+        for y in 0..sh {
+            let factor =
+                y as f32
+                    / sh.max(1) as f32;
+
+            let intensidad =
+                (
+                    18.0
+                        * (
+                            1.0 - factor
+                        )
+                ) as u8;
+
+            d.draw_line(
+                0,
+                y,
+                sw,
+                y,
+                Color::new(
+                    0,
+                    intensidad / 2,
+                    intensidad,
+                    255,
+                ),
+            );
+        }
+
+        let titulo =
+            "SELECCIONAR NIVEL";
+
+        let titulo_ancho =
+            d.measure_text(
+                titulo,
+                48,
+            );
+
+        d.draw_text(
+            titulo,
+            sw / 2
+                - titulo_ancho / 2,
+            sh / 2
+                - 200,
+            48,
+            Color::WHITE,
+        );
+
+        let niveles = [
+            (
+                "MANSION",
+                "Sobrevive dentro de la mansion",
+            ),
+            (
+                "LABORATORIO",
+                "Sobrevive dentro del laboratorio",
+            ),
+        ];
+
+        for (
+            indice,
+            (
+                nombre,
+                descripcion,
+            ),
+        ) in niveles
+            .iter()
+            .enumerate()
+        {
+            let seleccionado =
+                indice == self.opcion_nivel;
+
+            let y =
+                sh / 2
+                    - 70
+                    + indice as i32
+                        * 120;
+
+            let color =
+                if seleccionado {
+                    Color::GOLD
+                } else {
+                    Color::WHITE
+                };
+
+            let texto =
+                if seleccionado {
+                    format!(
+                        "> {}",
+                        nombre,
+                    )
+                } else {
+                    format!(
+                        "  {}",
+                        nombre,
+                    )
+                };
+
+            let ancho =
+                d.measure_text(
+                    &texto,
+                    32,
+                );
+
+            d.draw_text(
+                &texto,
+                sw / 2
+                    - ancho / 2,
+                y,
+                32,
+                color,
+            );
+
+            let descripcion_ancho =
+                d.measure_text(
+                    descripcion,
+                    18,
+                );
+
+            d.draw_text(
+                descripcion,
+                sw / 2
+                    - descripcion_ancho / 2,
+                y + 42,
+                18,
+                Color::GRAY,
+            );
+        }
+
+        let volver =
+            "BACKSPACE - VOLVER";
+
+        let volver_ancho =
+            d.measure_text(
+                volver,
+                18,
+            );
+
+        d.draw_text(
+            volver,
+            sw / 2
+                - volver_ancho / 2,
+            sh - 60,
+            18,
+            Color::GRAY,
         );
     }
 
@@ -222,69 +498,55 @@ impl Menu {
         &self,
         d: &mut RaylibDrawHandle,
     ) {
-        let ancho =
+        let sw =
             d.get_screen_width();
 
-        let alto =
+        let sh =
             d.get_screen_height();
 
         d.clear_background(
             Color::new(
-                7,
-                7,
-                9,
+                5,
+                5,
+                8,
                 255,
             ),
-        );
-
-        dibujar_fondo(
-            d,
-            ancho,
-            alto,
         );
 
         let titulo =
             "CONTROLES";
 
-        let ancho_titulo =
+        let titulo_ancho =
             d.measure_text(
                 titulo,
-                50,
+                48,
             );
 
         d.draw_text(
             titulo,
-            ancho / 2
-                - ancho_titulo / 2,
-            55,
-            50,
+            sw / 2
+                - titulo_ancho / 2,
+            60,
+            48,
             Color::RED,
         );
 
         let controles = [
             (
-                "WASD",
+                "W A S D",
                 "Movimiento",
             ),
             (
                 "MOUSE",
-                "Mover camara",
+                "Camara",
             ),
             (
-                "CLICK IZQ.",
-                "Disparar / Hachazo",
-            ),
-            (
-                "CLICK DER.",
+                "CLICK DERECHO",
                 "Apuntar / Bloquear",
             ),
             (
-                "R",
-                "Recargar",
-            ),
-            (
-                "E",
-                "Interactuar",
+                "CLICK IZQUIERDO",
+                "Disparar / Atacar",
             ),
             (
                 "1",
@@ -295,6 +557,18 @@ impl Menu {
                 "Hacha",
             ),
             (
+                "R",
+                "Recargar",
+            ),
+            (
+                "E",
+                "Interactuar",
+            ),
+            (
+                "TAB",
+                "Liberar cursor",
+            ),
+            (
                 "F5",
                 "Reiniciar partida",
             ),
@@ -303,17 +577,16 @@ impl Menu {
                 "Pantalla completa",
             ),
             (
-                "TAB",
-                "Liberar cursor",
-            ),
-            (
                 "BACKSPACE",
                 "Volver al menu",
             ),
         ];
 
+        let inicio_y =
+            145;
+
         for (
-            i,
+            indice,
             (
                 tecla,
                 accion,
@@ -323,80 +596,45 @@ impl Menu {
             .enumerate()
         {
             let y =
-                140
-                    + i as i32 * 34;
+                inicio_y
+                    + indice as i32
+                        * 34;
 
             d.draw_text(
                 tecla,
-                ancho / 2
-                    - 240,
+                sw / 2
+                    - 260,
                 y,
-                21,
-                Color::WHITE,
+                20,
+                Color::GOLD,
             );
 
             d.draw_text(
                 accion,
-                ancho / 2
-                    + 20,
+                sw / 2
+                    - 20,
                 y,
-                21,
-                Color::GRAY,
+                20,
+                Color::LIGHTGRAY,
             );
         }
 
-        let texto =
+        let volver =
             "BACKSPACE - VOLVER";
 
-        let ancho_texto =
+        let volver_ancho =
             d.measure_text(
-                texto,
-                20,
+                volver,
+                18,
             );
 
         d.draw_text(
-            texto,
-            ancho / 2
-                - ancho_texto / 2,
-            alto - 45,
-            20,
-            Color::RED,
-        );
-    }
-}
-
-fn dibujar_fondo(
-    d: &mut RaylibDrawHandle,
-    ancho: i32,
-    alto: i32,
-) {
-    for y in 0..alto {
-        let porcentaje =
-            y as f32
-                / alto.max(1)
-                    as f32;
-
-        let gris =
-            (
-                18.0
-                    * (
-                        1.0
-                            - porcentaje
-                    )
-            )
-                as u8;
-
-        d.draw_line(
-            0,
-            y,
-            ancho,
-            y,
-            Color::new(
-                gris,
-                gris,
-                gris,
-                255,
-            ),
+            volver,
+            sw / 2
+                - volver_ancho / 2,
+            sh - 45,
+            18,
+            Color::GRAY,
         );
     }
 }

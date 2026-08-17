@@ -1,5 +1,3 @@
-use std::fs;
-
 pub const TAMANO_CELDA: f32 = 25.0;
 
 #[derive(Clone, Copy)]
@@ -17,74 +15,49 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new(
-        nivel: i32,
-    ) -> Self {
-        let contenido =
-            match nivel {
-                1 => {
-                    include_str!(
-                        "../mapa_nivel1.txt"
-                    )
-                }
+    pub fn new(nivel: i32) -> Self {
+        let contenido = match nivel {
+            1 => include_str!("../mapa_nivel1.txt"),
+            2 => include_str!("../mapa_nivel2.txt"),
+            3 => include_str!("../lab.txt"),
+            _ => include_str!("../mapa_nivel1.txt"),
+        };
 
-                2 => {
-                    include_str!(
-                        "../mapa_nivel2.txt"
-                    )
-                }
+        Self::desde_texto(contenido)
+    }
 
-                _ => {
-                    include_str!(
-                        "../mapa_nivel1.txt"
-                    )
-                }
-            };
+    fn desde_texto(contenido: &str) -> Self {
+        let lineas: Vec<String> = contenido
+            .lines()
+            .map(|linea| {
+                linea
+                    .trim_end_matches('\r')
+                    .to_string()
+            })
+            .collect();
 
-        let lineas: Vec<&str> =
-            contenido
-                .lines()
-                .map(|linea| {
-                    linea.trim_end_matches(
-                        '\r',
-                    )
-                })
-                .collect();
+        let alto = lineas.len();
 
-        let alto =
-            lineas.len();
-
-        let ancho =
-            lineas
-                .iter()
-                .map(|linea| {
-                    linea
-                        .chars()
-                        .count()
-                })
-                .max()
-                .unwrap_or(0);
+        let ancho = lineas
+            .iter()
+            .map(|linea| {
+                linea.chars().count()
+            })
+            .max()
+            .unwrap_or(0);
 
         let mut celdas =
-            Vec::with_capacity(
-                alto,
-            );
+            Vec::with_capacity(alto);
 
         for linea in lineas {
             let mut fila: Vec<char> =
-                linea
-                    .chars()
-                    .collect();
+                linea.chars().collect();
 
-            while fila.len()
-                < ancho
-            {
+            while fila.len() < ancho {
                 fila.push('#');
             }
 
-            celdas.push(
-                fila,
-            );
+            celdas.push(fila);
         }
 
         Self {
@@ -94,15 +67,11 @@ impl Map {
         }
     }
 
-    pub fn ancho(
-        &self,
-    ) -> usize {
+    pub fn ancho(&self) -> usize {
         self.ancho
     }
 
-    pub fn alto(
-        &self,
-    ) -> usize {
+    pub fn alto(&self) -> usize {
         self.alto
     }
 
@@ -111,45 +80,49 @@ impl Map {
         fila: i32,
         columna: i32,
     ) -> char {
-        if fila < 0
-            || columna < 0
-            || fila
-                >= self.alto
-                    as i32
-            || columna
-                >= self.ancho
-                    as i32
+        if fila < 0 || columna < 0 {
+            return '#';
+        }
+
+        let fila =
+            fila as usize;
+
+        let columna =
+            columna as usize;
+
+        if fila >= self.alto
+            || columna >= self.ancho
         {
             return '#';
         }
 
-        self.celdas
-            [fila as usize]
-            [columna as usize]
+        self.celdas[fila][columna]
     }
 
     pub fn cambiar_celda(
         &mut self,
         fila: i32,
         columna: i32,
-        valor: char,
+        nueva: char,
     ) {
-        if fila < 0
-            || columna < 0
-            || fila
-                >= self.alto
-                    as i32
-            || columna
-                >= self.ancho
-                    as i32
+        if fila < 0 || columna < 0 {
+            return;
+        }
+
+        let fila =
+            fila as usize;
+
+        let columna =
+            columna as usize;
+
+        if fila >= self.alto
+            || columna >= self.ancho
         {
             return;
         }
 
-        self.celdas
-            [fila as usize]
-            [columna as usize] =
-            valor;
+        self.celdas[fila][columna] =
+            nueva;
     }
 
     pub fn es_bloque_solido(
@@ -157,11 +130,14 @@ impl Map {
         fila: i32,
         columna: i32,
     ) -> bool {
-        matches!(
+        let celda =
             self.celda(
                 fila,
                 columna,
-            ),
+            );
+
+        matches!(
+            celda,
             '#'
                 | 'D'
                 | 'W'
@@ -177,16 +153,14 @@ impl Map {
     ) -> bool {
         let columna =
             (
-                x
-                    / TAMANO_CELDA
+                x / TAMANO_CELDA
             )
                 .floor()
                 as i32;
 
         let fila =
             (
-                y
-                    / TAMANO_CELDA
+                y / TAMANO_CELDA
             )
                 .floor()
                 as i32;
@@ -202,227 +176,22 @@ impl Map {
     ) -> Option<(f32, f32)> {
         for fila in 0..self.alto {
             for columna in 0..self.ancho {
-                if self.celdas
-                    [fila]
-                    [columna]
+                if self.celdas[fila][columna]
                     == 'P'
                 {
                     let x =
                         columna as f32
                             * TAMANO_CELDA
-                            + TAMANO_CELDA
-                                / 2.0;
+                            + TAMANO_CELDA / 2.0;
 
                     let y =
                         fila as f32
                             * TAMANO_CELDA
-                            + TAMANO_CELDA
-                                / 2.0;
+                            + TAMANO_CELDA / 2.0;
 
-                    return Some(
-                        (
-                            x,
-                            y,
-                        ),
-                    );
+                    return Some((x, y));
                 }
             }
-        }
-
-        None
-    }
-
-    pub fn buscar_portales(
-        &self,
-        simbolo: char,
-    ) -> Vec<(i32, i32)> {
-        let mut portales =
-            Vec::new();
-
-        for fila in 0..self.alto {
-            for columna in 0..self.ancho {
-                if self.celdas
-                    [fila]
-                    [columna]
-                    == simbolo
-                {
-                    portales.push(
-                        (
-                            fila as i32,
-                            columna as i32,
-                        ),
-                    );
-                }
-            }
-        }
-
-        portales.sort_by_key(
-            |(_, columna)| {
-                *columna
-            },
-        );
-
-        portales
-    }
-
-    pub fn indice_portal_en(
-        &self,
-        simbolo: char,
-        fila_objetivo: i32,
-        columna_objetivo: i32,
-    ) -> Option<usize> {
-        let portales =
-            self.buscar_portales(
-                simbolo,
-            );
-
-        for (
-            indice,
-            (
-                fila,
-                columna,
-            ),
-        ) in portales
-            .iter()
-            .enumerate()
-        {
-            if *fila
-                == fila_objetivo
-                && *columna
-                    == columna_objetivo
-            {
-                return Some(
-                    indice,
-                );
-            }
-        }
-
-        None
-    }
-
-    pub fn posicion_portal(
-        &self,
-        simbolo: char,
-        indice: usize,
-    ) -> Option<(f32, f32)> {
-        let portales =
-            self.buscar_portales(
-                simbolo,
-            );
-
-        let (
-            fila,
-            columna,
-        ) =
-            *portales.get(
-                indice,
-            )?;
-
-        let x =
-            columna as f32
-                * TAMANO_CELDA
-                + TAMANO_CELDA
-                    / 2.0;
-
-        let y =
-            fila as f32
-                * TAMANO_CELDA
-                + TAMANO_CELDA
-                    / 2.0;
-
-        Some(
-            (
-                x,
-                y,
-            ),
-        )
-    }
-
-    pub fn posicion_entrada_portal(
-        &self,
-        simbolo: char,
-        indice: usize,
-    ) -> Option<(f32, f32)> {
-        let portales =
-            self.buscar_portales(
-                simbolo,
-            );
-
-        let (
-            fila,
-            columna,
-        ) =
-            *portales.get(
-                indice,
-            )?;
-
-        let vecinos = [
-            (
-                fila + 1,
-                columna,
-            ),
-            (
-                fila - 1,
-                columna,
-            ),
-            (
-                fila,
-                columna + 1,
-            ),
-            (
-                fila,
-                columna - 1,
-            ),
-        ];
-
-        for (
-            fila_vecina,
-            columna_vecina,
-        ) in vecinos
-        {
-            let celda =
-                self.celda(
-                    fila_vecina,
-                    columna_vecina,
-                );
-
-            if !matches!(
-                celda,
-                ' '
-                    | 'C'
-                    | 'P'
-                    | 'O'
-            ) {
-                continue;
-            }
-
-            if self.es_bloque_solido(
-                fila_vecina,
-                columna_vecina,
-            ) {
-                continue;
-            }
-
-            let x =
-                columna_vecina
-                    as f32
-                    * TAMANO_CELDA
-                    + TAMANO_CELDA
-                        / 2.0;
-
-            let y =
-                fila_vecina
-                    as f32
-                    * TAMANO_CELDA
-                    + TAMANO_CELDA
-                        / 2.0;
-
-            return Some(
-                (
-                    x,
-                    y,
-                ),
-            );
         }
 
         None
@@ -440,13 +209,8 @@ impl Map {
 
         for fila in 0..self.alto {
             for columna in 0..self.ancho {
-                let celda =
-                    self.celdas
-                        [fila]
-                        [columna];
-
                 let tipo =
-                    match celda {
+                    match self.celdas[fila][columna] {
                         'Z' => {
                             Some(
                                 TipoSpawnZombie::Normal,
@@ -474,69 +238,220 @@ impl Map {
                         _ => None,
                     };
 
-                let Some(tipo) =
-                    tipo
-                else {
-                    continue;
-                };
+                if let Some(tipo) = tipo {
+                    let x =
+                        columna as f32
+                            * TAMANO_CELDA
+                            + TAMANO_CELDA / 2.0;
 
-                let x =
-                    columna as f32
-                        * TAMANO_CELDA
-                        + TAMANO_CELDA
-                            / 2.0;
+                    let y =
+                        fila as f32
+                            * TAMANO_CELDA
+                            + TAMANO_CELDA / 2.0;
 
-                let y =
-                    fila as f32
-                        * TAMANO_CELDA
-                        + TAMANO_CELDA
-                            / 2.0;
-
-                zombies.push(
-                    (
+                    zombies.push((
                         x,
                         y,
                         tipo,
-                    ),
-                );
+                    ));
 
-                self.celdas
-                    [fila]
-                    [columna] =
-                    ' ';
+                    self.celdas[fila][columna] =
+                        ' ';
+                }
             }
         }
 
         zombies
     }
 
+    pub fn buscar_portales(
+        &self,
+        simbolo: char,
+    ) -> Vec<(usize, usize)> {
+        let mut portales =
+            Vec::new();
+
+        for fila in 0..self.alto {
+            for columna in 0..self.ancho {
+                if self.celdas[fila][columna]
+                    == simbolo
+                {
+                    portales.push((
+                        fila,
+                        columna,
+                    ));
+                }
+            }
+        }
+
+        portales.sort_by_key(
+            |&(_, columna)| {
+                columna
+            },
+        );
+
+        portales
+    }
+
+    pub fn indice_portal_en(
+        &self,
+        simbolo: char,
+        fila: i32,
+        columna: i32,
+    ) -> Option<usize> {
+        if fila < 0
+            || columna < 0
+        {
+            return None;
+        }
+
+        let fila =
+            fila as usize;
+
+        let columna =
+            columna as usize;
+
+        let portales =
+            self.buscar_portales(
+                simbolo,
+            );
+
+        portales
+            .iter()
+            .position(
+                |&(
+                    portal_fila,
+                    portal_columna,
+                )| {
+                    portal_fila == fila
+                        && portal_columna
+                            == columna
+                },
+            )
+    }
+
+    pub fn posicion_portal(
+        &self,
+        simbolo: char,
+        indice: usize,
+    ) -> Option<(f32, f32)> {
+        let portales =
+            self.buscar_portales(
+                simbolo,
+            );
+
+        let &(
+            fila,
+            columna,
+        ) =
+            portales.get(indice)?;
+
+        let x =
+            columna as f32
+                * TAMANO_CELDA
+                + TAMANO_CELDA / 2.0;
+
+        let y =
+            fila as f32
+                * TAMANO_CELDA
+                + TAMANO_CELDA / 2.0;
+
+        Some((x, y))
+    }
+
+    pub fn posicion_entrada_portal(
+        &self,
+        simbolo: char,
+        indice: usize,
+    ) -> Option<(f32, f32)> {
+        let portales =
+            self.buscar_portales(
+                simbolo,
+            );
+
+        let &(
+            fila,
+            columna,
+        ) =
+            portales.get(indice)?;
+
+        let vecinos = [
+            (
+                fila as i32,
+                columna as i32 - 1,
+            ),
+            (
+                fila as i32,
+                columna as i32 + 1,
+            ),
+            (
+                fila as i32 - 1,
+                columna as i32,
+            ),
+            (
+                fila as i32 + 1,
+                columna as i32,
+            ),
+        ];
+
+        for (
+            vecino_fila,
+            vecino_columna,
+        ) in vecinos
+        {
+            let celda =
+                self.celda(
+                    vecino_fila,
+                    vecino_columna,
+                );
+
+            if matches!(
+                celda,
+                ' '
+                    | 'C'
+                    | 'P'
+                    | 'O'
+            ) {
+                let x =
+                    vecino_columna as f32
+                        * TAMANO_CELDA
+                        + TAMANO_CELDA / 2.0;
+
+                let y =
+                    vecino_fila as f32
+                        * TAMANO_CELDA
+                        + TAMANO_CELDA / 2.0;
+
+                return Some((x, y));
+            }
+        }
+
+        None
+    }
+
     pub fn guardar_txt(
         &self,
         ruta: &str,
-    ) {
-        let contenido =
-            self.celdas
-                .iter()
-                .map(|fila| {
-                    fila
-                        .iter()
-                        .collect::<String>()
-                })
-                .collect::<Vec<String>>()
-                .join(
-                    "\n",
-                );
+    ) -> std::io::Result<()> {
+        use std::fs::File;
+        use std::io::Write;
 
-        if let Err(error) =
-            fs::write(
-                ruta,
-                contenido,
-            )
-        {
-            eprintln!(
-                "Error guardando mapa: {}",
-                error,
-            );
+        let mut archivo =
+            File::create(ruta)?;
+
+        for fila in &self.celdas {
+            let linea: String =
+                fila
+                    .iter()
+                    .collect();
+
+            writeln!(
+                archivo,
+                "{}",
+                linea,
+            )?;
         }
+
+        Ok(())
     }
 }

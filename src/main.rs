@@ -128,11 +128,8 @@ fn calcular_distancia(
     x2: f32,
     y2: f32,
 ) -> f32 {
-    let dx =
-        x2 - x1;
-
-    let dy =
-        y2 - y1;
+    let dx = x2 - x1;
+    let dy = y2 - y1;
 
     (
         dx * dx
@@ -461,8 +458,7 @@ fn generar_horda(
 fn detener_sonidos_zombies(
     sonidos: &AudioManager<'_>,
 ) {
-    sonidos
-        .detener_zombie();
+    sonidos.detener_zombie();
 
     sonidos
         .detener_zombie_medio();
@@ -631,16 +627,13 @@ fn main() {
             )
             .build();
 
-    ventana
-        .toggle_fullscreen();
+    ventana.toggle_fullscreen();
 
-    ventana
-        .set_target_fps(
-            60,
-        );
+    ventana.set_target_fps(
+        60,
+    );
 
-    ventana
-        .disable_cursor();
+    ventana.disable_cursor();
 
     let audio =
         RaylibAudio::
@@ -856,6 +849,12 @@ fn main() {
         )
         .unwrap();
 
+    let mut roof_image =
+        Image::load_image(
+            "assets/textures/roof.png",
+        )
+        .unwrap();
+
     let textura_pared =
         TextureData::from_image(
             &mut wall_image,
@@ -891,6 +890,11 @@ fn main() {
             &mut floor2_image,
         );
 
+    let textura_techo =
+        TextureData::from_image(
+            &mut roof_image,
+        );
+
     let mut textura_framebuffer =
         ventana
             .load_texture_from_image(
@@ -906,9 +910,7 @@ fn main() {
             ventana
                 .get_frame_time();
 
-        if tiempo_cambio_nivel
-            > 0.0
-        {
+        if tiempo_cambio_nivel > 0.0 {
             tiempo_cambio_nivel -=
                 delta_time;
 
@@ -947,9 +949,7 @@ fn main() {
             tiempo_recarga -=
                 delta_time;
 
-            if tiempo_recarga
-                <= 0.0
-            {
+            if tiempo_recarga <= 0.0 {
                 recargando =
                     false;
 
@@ -977,10 +977,9 @@ fn main() {
             }
         }
 
-        damage_effect
-            .update(
-                delta_time,
-            );
+        damage_effect.update(
+            delta_time,
+        );
 
         if vida_jugador > 0 {
             camera.update(
@@ -1029,22 +1028,16 @@ fn main() {
                         .persiguiendo
                 {
                     match zombie.tipo {
-                        TipoZombie::
-                            Normal =>
-                        {
+                        TipoZombie::Normal => {
                             sonidos.zombie();
                         }
 
-                        TipoZombie::
-                            Medio =>
-                        {
+                        TipoZombie::Medio => {
                             sonidos
                                 .zombie_medio();
                         }
 
-                        TipoZombie::
-                            Fuerte =>
-                        {
+                        TipoZombie::Fuerte => {
                             sonidos
                                 .zombie_fuerte();
                         }
@@ -1105,11 +1098,9 @@ fn main() {
                 .any(
                     |zombie| {
                         zombie.vivo
-                            && zombie
-                                .persiguiendo
+                            && zombie.persiguiendo
                             && zombie.tipo
-                                == TipoZombie::
-                                    Normal
+                                == TipoZombie::Normal
                     },
                 );
 
@@ -1119,11 +1110,9 @@ fn main() {
                 .any(
                     |zombie| {
                         zombie.vivo
-                            && zombie
-                                .persiguiendo
+                            && zombie.persiguiendo
                             && zombie.tipo
-                                == TipoZombie::
-                                    Medio
+                                == TipoZombie::Medio
                     },
                 );
 
@@ -1133,11 +1122,9 @@ fn main() {
                 .any(
                     |zombie| {
                         zombie.vivo
-                            && zombie
-                                .persiguiendo
+                            && zombie.persiguiendo
                             && zombie.tipo
-                                == TipoZombie::
-                                    Fuerte
+                                == TipoZombie::Fuerte
                     },
                 );
 
@@ -1236,8 +1223,7 @@ fn main() {
                 )
             {
                 arma_equipada =
-                    ArmaActual::
-                        Pistola;
+                    ArmaActual::Pistola;
 
                 tiempo_hachazo =
                     0.0;
@@ -1254,8 +1240,7 @@ fn main() {
                 )
             {
                 arma_equipada =
-                    ArmaActual::
-                        Hacha;
+                    ArmaActual::Hacha;
 
                 recargando =
                     false;
@@ -1307,10 +1292,8 @@ fn main() {
                             indice,
                         ) =>
                     {
-                        if nivel_actual
-                            == 1
-                            && tiempo_cambio_nivel
-                                <= 0.0
+                        if nivel_actual == 1
+                            && tiempo_cambio_nivel <= 0.0
                         {
                             detener_sonidos_zombies(
                                 &sonidos,
@@ -1359,10 +1342,8 @@ fn main() {
                             indice,
                         ) =>
                     {
-                        if nivel_actual
-                            == 2
-                            && tiempo_cambio_nivel
-                                <= 0.0
+                        if nivel_actual == 2
+                            && tiempo_cambio_nivel <= 0.0
                         {
                             detener_sonidos_zombies(
                                 &sonidos,
@@ -1414,8 +1395,7 @@ fn main() {
         let apuntando =
             vida_jugador > 0
                 && arma_equipada
-                    == ArmaActual::
-                        Pistola
+                    == ArmaActual::Pistola
                 && !recargando
                 && ventana
                     .is_mouse_button_down(
@@ -1433,9 +1413,7 @@ fn main() {
             match arma_equipada {
                 ArmaActual::Pistola => {
                     if !recargando {
-                        if balas_cargador
-                            > 0
-                        {
+                        if balas_cargador > 0 {
                             balas_cargador -=
                                 1;
 
@@ -1488,18 +1466,14 @@ fn main() {
 
                             mensaje =
                                 match resultado {
-                                    ShotResult::
-                                        Miss =>
-                                    {
+                                    ShotResult::Miss => {
                                         "Disparo fallido"
                                             .to_string()
                                     }
 
-                                    ShotResult::
-                                        Hit {
-                                            vida_restante,
-                                        } =>
-                                    {
+                                    ShotResult::Hit {
+                                        vida_restante,
+                                    } => {
                                         format!(
                                             "Impacto - {} HP",
                                             vida_restante,
@@ -1517,9 +1491,7 @@ fn main() {
                                         )
                                     }
 
-                                    ShotResult::
-                                        Kill =>
-                                    {
+                                    ShotResult::Kill => {
                                         format!(
                                             "BAJAS: {}",
                                             enemigos_matados,
@@ -1565,8 +1537,7 @@ fn main() {
                 }
 
                 ArmaActual::Hacha => {
-                    if tiempo_hachazo
-                        <= 0.0
+                    if tiempo_hachazo <= 0.0
                         && !bloqueando
                     {
                         tiempo_hachazo =
@@ -1618,27 +1589,21 @@ fn main() {
 
                         mensaje =
                             match resultado {
-                                ShotResult::
-                                    Miss =>
-                                {
+                                ShotResult::Miss => {
                                     "Hachazo fallido"
                                         .to_string()
                                 }
 
-                                ShotResult::
-                                    Hit {
-                                        vida_restante,
-                                    } =>
-                                {
+                                ShotResult::Hit {
+                                    vida_restante,
+                                } => {
                                     format!(
                                         "Golpe - {} HP",
                                         vida_restante,
                                     )
                                 }
 
-                                ShotResult::
-                                    Kill =>
-                                {
+                                ShotResult::Kill => {
                                     format!(
                                         "BAJAS: {}",
                                         enemigos_matados,
@@ -1723,17 +1688,14 @@ fn main() {
                         KEY_R,
                 )
             && arma_equipada
-                == ArmaActual::
-                    Pistola
+                == ArmaActual::Pistola
             && !recargando
         {
             if balas_cargador == 8 {
                 mensaje =
                     "Cargador lleno"
                         .to_string();
-            } else if balas_reserva
-                <= 0
-            {
+            } else if balas_reserva <= 0 {
                 mensaje =
                     "Sin balas de reserva"
                         .to_string();
@@ -1805,8 +1767,7 @@ fn main() {
                 DamageEffect::new();
 
             arma_equipada =
-                ArmaActual::
-                    Pistola;
+                ArmaActual::Pistola;
 
             vida_jugador =
                 100;
@@ -1833,8 +1794,7 @@ fn main() {
                 "NIVEL 1"
                     .to_string();
 
-            ventana
-                .disable_cursor();
+            ventana.disable_cursor();
         }
 
         if ventana
@@ -1874,6 +1834,8 @@ fn main() {
 
             &textura_suelo,
             &textura_suelo2,
+
+            &textura_techo,
         );
 
         render_minimap(
@@ -1946,9 +1908,7 @@ fn main() {
                         } else {
                             &pistol_r
                         }
-                    } else if tiempo_disparo
-                        > 0.0
-                    {
+                    } else if tiempo_disparo > 0.0 {
                         &pistol3
                     } else if apuntando {
                         &pistol2
@@ -1960,9 +1920,7 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         &axe3
-                    } else if tiempo_hachazo
-                        > 0.0
-                    {
+                    } else if tiempo_hachazo > 0.0 {
                         &axe2
                     } else {
                         &axe1
@@ -1975,9 +1933,7 @@ fn main() {
                 ArmaActual::Pistola => {
                     if recargando {
                         0.28
-                    } else if tiempo_disparo
-                        > 0.0
-                    {
+                    } else if tiempo_disparo > 0.0 {
                         0.34
                     } else if apuntando {
                         0.36
@@ -1989,9 +1945,7 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         0.42
-                    } else if tiempo_hachazo
-                        > 0.0
-                    {
+                    } else if tiempo_hachazo > 0.0 {
                         0.37
                     } else {
                         0.34
@@ -2017,14 +1971,11 @@ fn main() {
 
         let retroceso =
             if arma_equipada
-                == ArmaActual::
-                    Pistola
-                && tiempo_disparo
-                    > 0.0
+                == ArmaActual::Pistola
+                && tiempo_disparo > 0.0
                 && !recargando
             {
-                8.0
-                    * escala
+                8.0 * escala
             } else {
                 0.0
             };
@@ -2197,11 +2148,8 @@ fn main() {
 
                 dibujo
                     .draw_circle(
-                        mira_x
-                            as i32,
-
-                        mira_y
-                            as i32,
+                        mira_x as i32,
+                        mira_y as i32,
 
                         3.0
                             * escala

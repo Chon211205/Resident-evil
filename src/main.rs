@@ -7,6 +7,7 @@ mod interaction;
 mod inventory;
 mod map;
 mod map_renderer;
+mod menu;
 mod player;
 mod puzzle;
 mod raycaster;
@@ -39,6 +40,13 @@ use map::{
 };
 
 use map_renderer::render_minimap;
+
+use menu::{
+    AccionMenu,
+    EstadoJuego,
+    Menu,
+};
+
 use player::Player;
 use puzzle::Puzzle;
 
@@ -77,48 +85,28 @@ const DISTANCIA_MIN_SPAWN: f32 = 120.0;
 const DISTANCIA_MAX_SPAWN: f32 = 380.0;
 const DISTANCIA_ENTRE_ZOMBIES: f32 = 35.0;
 
-fn crear_zombies(
-    mapa: &mut Map,
-) -> Vec<Zombie> {
+fn crear_zombies(mapa: &mut Map) -> Vec<Zombie> {
     mapa.extraer_zombies()
         .into_iter()
-        .map(
-            |(
-                x,
-                y,
-                tipo,
-            )| {
-                match tipo {
-                    TipoSpawnZombie::Normal => {
-                        Zombie::new(
-                            x,
-                            y,
-                        )
-                    }
-
-                    TipoSpawnZombie::ConLlave => {
-                        Zombie::new_con_llave(
-                            x,
-                            y,
-                        )
-                    }
-
-                    TipoSpawnZombie::Medio => {
-                        Zombie::new_medio(
-                            x,
-                            y,
-                        )
-                    }
-
-                    TipoSpawnZombie::Fuerte => {
-                        Zombie::new_fuerte(
-                            x,
-                            y,
-                        )
-                    }
+        .map(|(x, y, tipo)| {
+            match tipo {
+                TipoSpawnZombie::Normal => {
+                    Zombie::new(x, y)
                 }
-            },
-        )
+
+                TipoSpawnZombie::ConLlave => {
+                    Zombie::new_con_llave(x, y)
+                }
+
+                TipoSpawnZombie::Medio => {
+                    Zombie::new_medio(x, y)
+                }
+
+                TipoSpawnZombie::Fuerte => {
+                    Zombie::new_fuerte(x, y)
+                }
+            }
+        })
         .collect()
 }
 
@@ -131,34 +119,19 @@ fn calcular_distancia(
     let dx = x2 - x1;
     let dy = y2 - y1;
 
-    (
-        dx * dx
-            + dy * dy
-    )
-        .sqrt()
+    (dx * dx + dy * dy).sqrt()
 }
 
 fn max_zombies_para_horda(
     numero_horda: i32,
 ) -> usize {
     let extra =
-        (
-            numero_horda
-                / 5
-        )
-            .max(
-                0,
-            )
+        (numero_horda / 5)
+            .max(0)
             as usize
             * 2;
 
-    (
-        18
-            + extra
-    )
-        .min(
-            30,
-        )
+    (18 + extra).min(30)
 }
 
 fn cantidad_horda(
@@ -171,22 +144,13 @@ fn cantidad_horda(
         4 => 13,
         5 => 14,
 
-        _ => {
-            (
-                14
-                    + (
-                        numero_horda
-                            - 5
-                    )
-                        .max(
-                            0,
-                        )
-                        as usize
-            )
-                .min(
-                    18,
-                )
-        }
+        _ => (
+            14
+                + (numero_horda - 5)
+                    .max(0)
+                    as usize
+        )
+            .min(18),
     }
 }
 
@@ -223,10 +187,7 @@ fn buscar_spawn_horda(
 
         if !matches!(
             celda,
-            ' '
-                | 'C'
-                | 'P'
-                | 'O'
+            ' ' | 'C' | 'P' | 'O'
         ) {
             continue;
         }
@@ -234,14 +195,12 @@ fn buscar_spawn_horda(
         let x =
             columna as f32
                 * TAMANO_CELDA
-                + TAMANO_CELDA
-                    / 2.0;
+                + TAMANO_CELDA / 2.0;
 
         let y =
             fila as f32
                 * TAMANO_CELDA
-                + TAMANO_CELDA
-                    / 2.0;
+                + TAMANO_CELDA / 2.0;
 
         let distancia =
             calcular_distancia(
@@ -266,33 +225,23 @@ fn buscar_spawn_horda(
         let ocupado =
             zombies
                 .iter()
-                .filter(
-                    |zombie| {
-                        zombie.vivo
-                    },
-                )
-                .any(
-                    |zombie| {
-                        calcular_distancia(
-                            zombie.x,
-                            zombie.y,
-                            x,
-                            y,
-                        )
-                            < DISTANCIA_ENTRE_ZOMBIES
-                    },
-                );
+                .filter(|zombie| {
+                    zombie.vivo
+                })
+                .any(|zombie| {
+                    calcular_distancia(
+                        zombie.x,
+                        zombie.y,
+                        x,
+                        y,
+                    ) < DISTANCIA_ENTRE_ZOMBIES
+                });
 
         if ocupado {
             continue;
         }
 
-        return Some(
-            (
-                x,
-                y,
-            ),
-        );
+        return Some((x, y));
     }
 
     None
@@ -306,47 +255,29 @@ fn crear_zombie_horda(
 ) -> Zombie {
     match numero_horda {
         1 => {
-            Zombie::new(
-                x,
-                y,
-            )
+            Zombie::new(x, y)
         }
 
         2 => {
             if indice % 4 == 0 {
-                Zombie::new_medio(
-                    x,
-                    y,
-                )
+                Zombie::new_medio(x, y)
             } else {
-                Zombie::new(
-                    x,
-                    y,
-                )
+                Zombie::new(x, y)
             }
         }
 
         3 | 4 => {
             match indice % 6 {
                 0 => {
-                    Zombie::new_fuerte(
-                        x,
-                        y,
-                    )
+                    Zombie::new_fuerte(x, y)
                 }
 
                 1 | 2 => {
-                    Zombie::new_medio(
-                        x,
-                        y,
-                    )
+                    Zombie::new_medio(x, y)
                 }
 
                 _ => {
-                    Zombie::new(
-                        x,
-                        y,
-                    )
+                    Zombie::new(x, y)
                 }
             }
         }
@@ -354,24 +285,15 @@ fn crear_zombie_horda(
         _ => {
             match indice % 5 {
                 0 | 1 => {
-                    Zombie::new_fuerte(
-                        x,
-                        y,
-                    )
+                    Zombie::new_fuerte(x, y)
                 }
 
                 2 | 3 => {
-                    Zombie::new_medio(
-                        x,
-                        y,
-                    )
+                    Zombie::new_medio(x, y)
                 }
 
                 _ => {
-                    Zombie::new(
-                        x,
-                        y,
-                    )
+                    Zombie::new(x, y)
                 }
             }
         }
@@ -387,11 +309,9 @@ fn generar_horda(
     let vivos =
         zombies
             .iter()
-            .filter(
-                |zombie| {
-                    zombie.vivo
-                },
-            )
+            .filter(|zombie| {
+                zombie.vivo
+            })
             .count();
 
     let maximo =
@@ -418,12 +338,7 @@ fn generar_horda(
         0;
 
     for indice in 0..cantidad {
-        let Some(
-            (
-                x,
-                y,
-            ),
-        ) =
+        let Some((x, y)) =
             buscar_spawn_horda(
                 mapa,
                 player,
@@ -448,8 +363,7 @@ fn generar_horda(
             zombie,
         );
 
-        generados +=
-            1;
+        generados += 1;
     }
 
     generados
@@ -493,22 +407,14 @@ fn cambiar_nivel(
             mapa,
         );
 
-    if let Some(
-        (
-            x,
-            y,
-        ),
-    ) =
+    if let Some((x, y)) =
         mapa.posicion_entrada_portal(
             portal_destino,
             indice_portal,
         )
     {
-        player.x =
-            x;
-
-        player.y =
-            y;
+        player.x = x;
+        player.y = y;
     }
 
     *camera =
@@ -522,6 +428,12 @@ fn cambiar_nivel(
 }
 
 fn main() {
+    let mut estado_juego =
+        EstadoJuego::Menu;
+
+    let mut menu =
+        Menu::new();
+
     let mut nivel_actual =
         1;
 
@@ -568,8 +480,7 @@ fn main() {
         ArmaActual::Pistola;
 
     let mut mensaje =
-        "NIVEL 1"
-            .to_string();
+        "NIVEL 1".to_string();
 
     let mut vida_jugador =
         100;
@@ -627,13 +538,16 @@ fn main() {
             )
             .build();
 
-    ventana.toggle_fullscreen();
+    ventana
+        .toggle_fullscreen();
 
-    ventana.set_target_fps(
-        60,
-    );
+    ventana
+        .set_target_fps(
+            60,
+        );
 
-    ventana.disable_cursor();
+    ventana
+        .enable_cursor();
 
     let audio =
         RaylibAudio::
@@ -646,6 +560,10 @@ fn main() {
         AudioManager::new(
             &audio,
         );
+
+    // =========================================================
+    // ARMAS
+    // =========================================================
 
     let pistol1 =
         ventana
@@ -711,6 +629,10 @@ fn main() {
             )
             .unwrap();
 
+    // =========================================================
+    // ITEMS
+    // =========================================================
+
     let key_texture =
         ventana
             .load_texture(
@@ -734,6 +656,10 @@ fn main() {
                 "assets/textures/heal.png",
             )
             .unwrap();
+
+    // =========================================================
+    // ZOMBIES
+    // =========================================================
 
     let zombie1 =
         ventana
@@ -806,6 +732,10 @@ fn main() {
                 "assets/textures/zombieV33.png",
             )
             .unwrap();
+
+    // =========================================================
+    // TEXTURAS MAPA
+    // =========================================================
 
     let mut wall_image =
         Image::load_image(
@@ -903,6 +833,10 @@ fn main() {
             )
             .unwrap();
 
+    // =========================================================
+    // LOOP
+    // =========================================================
+
     while !ventana
         .window_should_close()
     {
@@ -910,15 +844,119 @@ fn main() {
             ventana
                 .get_frame_time();
 
+        // =====================================================
+        // ESTADOS DEL JUEGO
+        // =====================================================
+
+        match estado_juego {
+            EstadoJuego::Menu => {
+                ventana
+                    .enable_cursor();
+
+                match menu.update(
+                    &ventana,
+                ) {
+                    AccionMenu::Jugar => {
+                        estado_juego =
+                            EstadoJuego::Jugando;
+
+                        ventana
+                            .disable_cursor();
+                    }
+
+                    AccionMenu::Controles => {
+                        estado_juego =
+                            EstadoJuego::Controles;
+                    }
+
+                    AccionMenu::Salir => {
+                        break;
+                    }
+
+                    AccionMenu::Ninguna => {}
+                }
+
+                let mut dibujo =
+                    ventana
+                        .begin_drawing(
+                            &thread,
+                        );
+
+                menu.render_menu(
+                    &mut dibujo,
+                );
+
+                continue;
+            }
+
+            EstadoJuego::Controles => {
+                ventana
+                    .enable_cursor();
+
+                // =============================================
+                // BACKSPACE -> VOLVER AL MENÚ
+                // =============================================
+
+                if ventana
+                    .is_key_pressed(
+                        KeyboardKey::
+                            KEY_BACKSPACE,
+                    )
+                {
+                    estado_juego =
+                        EstadoJuego::Menu;
+                }
+
+                let mut dibujo =
+                    ventana
+                        .begin_drawing(
+                            &thread,
+                        );
+
+                menu.render_controles(
+                    &mut dibujo,
+                );
+
+                continue;
+            }
+
+            EstadoJuego::Jugando => {}
+        }
+
+        // =====================================================
+        // BACKSPACE -> VOLVER AL MENÚ DESDE EL JUEGO
+        // =====================================================
+
+        if ventana
+            .is_key_pressed(
+                KeyboardKey::
+                    KEY_BACKSPACE,
+            )
+        {
+            detener_sonidos_zombies(
+                &sonidos,
+            );
+
+            estado_juego =
+                EstadoJuego::Menu;
+
+            ventana
+                .enable_cursor();
+
+            continue;
+        }
+
+        // =====================================================
+        // TIMERS
+        // =====================================================
+
         if tiempo_cambio_nivel > 0.0 {
             tiempo_cambio_nivel -=
                 delta_time;
 
             tiempo_cambio_nivel =
                 tiempo_cambio_nivel
-                    .max(
-                        0.0,
-                    );
+                    .max(0.0);
         }
 
         if tiempo_disparo > 0.0 {
@@ -927,9 +965,7 @@ fn main() {
 
             tiempo_disparo =
                 tiempo_disparo
-                    .max(
-                        0.0,
-                    );
+                    .max(0.0);
         }
 
         if tiempo_hachazo > 0.0 {
@@ -938,10 +974,12 @@ fn main() {
 
             tiempo_hachazo =
                 tiempo_hachazo
-                    .max(
-                        0.0,
-                    );
+                    .max(0.0);
         }
+
+        // =====================================================
+        // RECARGA
+        // =====================================================
 
         if recargando
             && vida_jugador > 0
@@ -957,8 +995,7 @@ fn main() {
                     0.0;
 
                 let faltantes =
-                    8
-                        - balas_cargador;
+                    8 - balas_cargador;
 
                 let cantidad =
                     faltantes.min(
@@ -977,9 +1014,14 @@ fn main() {
             }
         }
 
-        damage_effect.update(
-            delta_time,
-        );
+        damage_effect
+            .update(
+                delta_time,
+            );
+
+        // =====================================================
+        // PLAYER
+        // =====================================================
 
         if vida_jugador > 0 {
             camera.update(
@@ -996,22 +1038,27 @@ fn main() {
             );
         }
 
+        // =====================================================
+        // BLOQUEO
+        // =====================================================
+
         let bloqueando =
             vida_jugador > 0
                 && arma_equipada
                     == ArmaActual::Hacha
-                && tiempo_hachazo
-                    <= 0.0
+                && tiempo_hachazo <= 0.0
                 && ventana
                     .is_mouse_button_down(
                         MouseButton::
                             MOUSE_BUTTON_RIGHT,
                     );
 
+        // =====================================================
+        // ZOMBIES
+        // =====================================================
+
         if vida_jugador > 0 {
-            for zombie
-                in &mut zombies
-            {
+            for zombie in &mut zombies {
                 let estaba_persiguiendo =
                     zombie
                         .persiguiendo;
@@ -1065,9 +1112,7 @@ fn main() {
 
                     vida_jugador =
                         vida_jugador
-                            .max(
-                                0,
-                            );
+                            .max(0);
 
                     if bloqueo_valido {
                         sonidos
@@ -1077,7 +1122,8 @@ fn main() {
                             "Ataque bloqueado"
                                 .to_string();
                     } else {
-                        sonidos.dano();
+                        sonidos
+                            .dano();
 
                         mensaje =
                             format!(
@@ -1092,41 +1138,42 @@ fn main() {
             }
         }
 
+        // =====================================================
+        // SONIDOS
+        // =====================================================
+
         let hay_normal =
             zombies
                 .iter()
-                .any(
-                    |zombie| {
-                        zombie.vivo
-                            && zombie.persiguiendo
-                            && zombie.tipo
-                                == TipoZombie::Normal
-                    },
-                );
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie
+                            .persiguiendo
+                        && zombie.tipo
+                            == TipoZombie::Normal
+                });
 
         let hay_medio =
             zombies
                 .iter()
-                .any(
-                    |zombie| {
-                        zombie.vivo
-                            && zombie.persiguiendo
-                            && zombie.tipo
-                                == TipoZombie::Medio
-                    },
-                );
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie
+                            .persiguiendo
+                        && zombie.tipo
+                            == TipoZombie::Medio
+                });
 
         let hay_fuerte =
             zombies
                 .iter()
-                .any(
-                    |zombie| {
-                        zombie.vivo
-                            && zombie.persiguiendo
-                            && zombie.tipo
-                                == TipoZombie::Fuerte
-                    },
-                );
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie
+                            .persiguiendo
+                        && zombie.tipo
+                            == TipoZombie::Fuerte
+                });
 
         if !hay_normal
             || vida_jugador <= 0
@@ -1148,6 +1195,10 @@ fn main() {
             sonidos
                 .detener_zombie_fuerte();
         }
+
+        // =====================================================
+        // OBJETOS
+        // =====================================================
 
         if vida_jugador > 0 {
             let resultado =
@@ -1193,16 +1244,15 @@ fn main() {
                         cantidad,
                     ) =>
                 {
-                    sonidos.curacion();
+                    sonidos
+                        .curacion();
 
                     vida_jugador =
                         (
                             vida_jugador
                                 + cantidad
                         )
-                            .min(
-                                100,
-                            );
+                            .min(100);
 
                     mensaje =
                         format!(
@@ -1215,11 +1265,14 @@ fn main() {
             }
         }
 
+        // =====================================================
+        // CAMBIO DE ARMA
+        // =====================================================
+
         if vida_jugador > 0 {
             if ventana
                 .is_key_pressed(
-                    KeyboardKey::
-                        KEY_ONE,
+                    KeyboardKey::KEY_ONE,
                 )
             {
                 arma_equipada =
@@ -1235,8 +1288,7 @@ fn main() {
 
             if ventana
                 .is_key_pressed(
-                    KeyboardKey::
-                        KEY_TWO,
+                    KeyboardKey::KEY_TWO,
                 )
             {
                 arma_equipada =
@@ -1256,10 +1308,13 @@ fn main() {
                         .to_string();
             }
 
+            // =================================================
+            // E - INTERACTUAR
+            // =================================================
+
             if ventana
                 .is_key_pressed(
-                    KeyboardKey::
-                        KEY_E,
+                    KeyboardKey::KEY_E,
                 )
             {
                 match interactuar(
@@ -1293,7 +1348,8 @@ fn main() {
                         ) =>
                     {
                         if nivel_actual == 1
-                            && tiempo_cambio_nivel <= 0.0
+                            && tiempo_cambio_nivel
+                                <= 0.0
                         {
                             detener_sonidos_zombies(
                                 &sonidos,
@@ -1343,7 +1399,8 @@ fn main() {
                         ) =>
                     {
                         if nivel_actual == 2
-                            && tiempo_cambio_nivel <= 0.0
+                            && tiempo_cambio_nivel
+                                <= 0.0
                         {
                             detener_sonidos_zombies(
                                 &sonidos,
@@ -1392,6 +1449,10 @@ fn main() {
             }
         }
 
+        // =====================================================
+        // APUNTAR
+        // =====================================================
+
         let apuntando =
             vida_jugador > 0
                 && arma_equipada
@@ -1402,6 +1463,10 @@ fn main() {
                         MouseButton::
                             MOUSE_BUTTON_RIGHT,
                     );
+
+        // =====================================================
+        // ATAQUES
+        // =====================================================
 
         if vida_jugador > 0
             && ventana
@@ -1425,11 +1490,9 @@ fn main() {
                             let vivos_antes =
                                 zombies
                                     .iter()
-                                    .filter(
-                                        |zombie| {
-                                            zombie.vivo
-                                        },
-                                    )
+                                    .filter(|z| {
+                                        z.vivo
+                                    })
                                     .count();
 
                             let resultado =
@@ -1443,11 +1506,9 @@ fn main() {
                             let vivos_despues =
                                 zombies
                                     .iter()
-                                    .filter(
-                                        |zombie| {
-                                            zombie.vivo
-                                        },
-                                    )
+                                    .filter(|z| {
+                                        z.vivo
+                                    })
                                     .count();
 
                             if vivos_despues
@@ -1548,11 +1609,9 @@ fn main() {
                         let vivos_antes =
                             zombies
                                 .iter()
-                                .filter(
-                                    |zombie| {
-                                        zombie.vivo
-                                    },
-                                )
+                                .filter(|z| {
+                                    z.vivo
+                                })
                                 .count();
 
                         let resultado =
@@ -1566,11 +1625,9 @@ fn main() {
                         let vivos_despues =
                             zombies
                                 .iter()
-                                .filter(
-                                    |zombie| {
-                                        zombie.vivo
-                                    },
-                                )
+                                .filter(|z| {
+                                    z.vivo
+                                })
                                 .count();
 
                         if vivos_despues
@@ -1621,8 +1678,8 @@ fn main() {
 
                                 ShotResult::
                                     HeadshotHit {
-                                        vida_restante,
-                                    } =>
+                                            vida_restante,
+                                        } =>
                                 {
                                     format!(
                                         "Golpe - {} HP",
@@ -1653,6 +1710,10 @@ fn main() {
             }
         }
 
+        // =====================================================
+        // HORDAS
+        // =====================================================
+
         while vida_jugador > 0
             && enemigos_matados
                 >= siguiente_horda
@@ -1674,18 +1735,19 @@ fn main() {
                     );
             }
 
-            numero_horda +=
-                1;
+            numero_horda += 1;
 
-            siguiente_horda +=
-                6;
+            siguiente_horda += 6;
         }
+
+        // =====================================================
+        // RECARGAR
+        // =====================================================
 
         if vida_jugador > 0
             && ventana
                 .is_key_pressed(
-                    KeyboardKey::
-                        KEY_R,
+                    KeyboardKey::KEY_R,
                 )
             && arma_equipada
                 == ArmaActual::Pistola
@@ -1714,10 +1776,13 @@ fn main() {
             }
         }
 
+        // =====================================================
+        // F5 - REINICIAR
+        // =====================================================
+
         if ventana
             .is_key_pressed(
-                KeyboardKey::
-                    KEY_F5,
+                KeyboardKey::KEY_F5,
             )
         {
             detener_sonidos_zombies(
@@ -1794,28 +1859,39 @@ fn main() {
                 "NIVEL 1"
                     .to_string();
 
-            ventana.disable_cursor();
+            ventana
+                .disable_cursor();
         }
+
+        // =====================================================
+        // FULLSCREEN
+        // =====================================================
 
         if ventana
             .is_key_pressed(
-                KeyboardKey::
-                    KEY_F11,
+                KeyboardKey::KEY_F11,
             )
         {
             ventana
                 .toggle_fullscreen();
         }
 
+        // =====================================================
+        // LIBERAR CURSOR
+        // =====================================================
+
         if ventana
             .is_key_pressed(
-                KeyboardKey::
-                    KEY_TAB,
+                KeyboardKey::KEY_TAB,
             )
         {
             ventana
                 .enable_cursor();
         }
+
+        // =====================================================
+        // RENDER 3D
+        // =====================================================
 
         framebuffer.clear();
 
@@ -1850,6 +1926,10 @@ fn main() {
                 framebuffer.pixels(),
             )
             .unwrap();
+
+        // =====================================================
+        // VIEWPORT
+        // =====================================================
 
         let pantalla_ancho =
             ventana
@@ -1896,6 +1976,10 @@ fn main() {
                     - alto_render
             )
                 / 2.0;
+
+        // =====================================================
+        // ARMA
+        // =====================================================
 
         let textura_arma =
             match arma_equipada {
@@ -1982,16 +2066,18 @@ fn main() {
 
         let arma_x =
             offset_x
-                + ancho_render
-                    / 2.0
-                - arma_ancho
-                    / 2.0;
+                + ancho_render / 2.0
+                - arma_ancho / 2.0;
 
         let arma_y =
             offset_y
                 + alto_render
                 - arma_alto
                 - retroceso;
+
+        // =====================================================
+        // DRAW
+        // =====================================================
 
         let mut dibujo =
             ventana
@@ -2011,10 +2097,8 @@ fn main() {
                 Rectangle::new(
                     0.0,
                     0.0,
-                    ANCHO_VENTANA
-                        as f32,
-                    ALTO_VENTANA
-                        as f32,
+                    ANCHO_VENTANA as f32,
+                    ALTO_VENTANA as f32,
                 ),
 
                 Rectangle::new(
@@ -2037,26 +2121,20 @@ fn main() {
         unsafe {
             raylib::ffi::
                 BeginScissorMode(
-                    offset_x
-                        .round()
+                    offset_x.round()
                         as i32,
 
-                    offset_y
-                        .round()
+                    offset_y.round()
                         as i32,
 
                     ancho_render
                         .round()
-                        .max(
-                            1.0,
-                        )
+                        .max(1.0)
                         as i32,
 
                     alto_render
                         .round()
-                        .max(
-                            1.0,
-                        )
+                        .max(1.0)
                         as i32,
                 );
         }
@@ -2138,13 +2216,11 @@ fn main() {
             if apuntando {
                 let mira_x =
                     offset_x
-                        + ancho_render
-                            / 2.0;
+                        + ancho_render / 2.0;
 
                 let mira_y =
                     offset_y
-                        + alto_render
-                            / 2.0;
+                        + alto_render / 2.0;
 
                 dibujo
                     .draw_circle(
@@ -2152,10 +2228,7 @@ fn main() {
                         mira_y as i32,
 
                         3.0
-                            * escala
-                                .max(
-                                    1.0,
-                                ),
+                            * escala.max(1.0),
 
                         Color::RED,
                     );
@@ -2166,6 +2239,10 @@ fn main() {
             raylib::ffi::
                 EndScissorMode();
         }
+
+        // =====================================================
+        // HUD
+        // =====================================================
 
         render_hud(
             &mut dibujo,
@@ -2184,11 +2261,9 @@ fn main() {
         let vivos =
             zombies
                 .iter()
-                .filter(
-                    |zombie| {
-                        zombie.vivo
-                    },
-                )
+                .filter(|zombie| {
+                    zombie.vivo
+                })
                 .count();
 
         let texto_arcade =
@@ -2207,14 +2282,12 @@ fn main() {
                 (
                     offset_x
                         + 15.0
-                )
-                    as i32,
+                ) as i32,
 
                 (
                     offset_y
                         + 115.0
-                )
-                    as i32,
+                ) as i32,
 
                 18,
 
@@ -2225,6 +2298,10 @@ fn main() {
             .render(
                 &mut dibujo,
             );
+
+        // =====================================================
+        // GAME OVER
+        // =====================================================
 
         if vida_jugador <= 0 {
             let sw =
@@ -2263,6 +2340,9 @@ fn main() {
             let reiniciar =
                 "F5 - JUGAR DE NUEVO";
 
+            let menu_texto =
+                "BACKSPACE - MENU PRINCIPAL";
+
             let ancho_titulo =
                 dibujo
                     .measure_text(
@@ -2284,15 +2364,21 @@ fn main() {
                         22,
                     );
 
+            let ancho_menu =
+                dibujo
+                    .measure_text(
+                        menu_texto,
+                        20,
+                    );
+
             dibujo.draw_text(
                 titulo,
 
                 sw / 2
-                    - ancho_titulo
-                        / 2,
+                    - ancho_titulo / 2,
 
                 sh / 2
-                    - 100,
+                    - 110,
 
                 64,
 
@@ -2303,10 +2389,10 @@ fn main() {
                 &stats,
 
                 sw / 2
-                    - ancho_stats
-                        / 2,
+                    - ancho_stats / 2,
 
-                sh / 2,
+                sh / 2
+                    - 10,
 
                 26,
 
@@ -2317,15 +2403,28 @@ fn main() {
                 reiniciar,
 
                 sw / 2
-                    - ancho_reiniciar
-                        / 2,
+                    - ancho_reiniciar / 2,
 
                 sh / 2
-                    + 60,
+                    + 50,
 
                 22,
 
                 Color::LIGHTGRAY,
+            );
+
+            dibujo.draw_text(
+                menu_texto,
+
+                sw / 2
+                    - ancho_menu / 2,
+
+                sh / 2
+                    + 85,
+
+                20,
+
+                Color::GRAY,
             );
         }
     }

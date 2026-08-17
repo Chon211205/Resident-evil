@@ -35,6 +35,7 @@ use inventory::Inventory;
 use map::{
     Map,
     TipoSpawnZombie,
+    TAMANO_CELDA,
 };
 
 use map_renderer::render_minimap;
@@ -69,46 +70,387 @@ use zombie::{
 
 use zombie_renderer::render_zombies;
 
+use rand::Rng;
+
 use raylib::audio::RaylibAudio;
 use raylib::prelude::*;
+
+const MAX_ZOMBIES_VIVOS: usize =
+    18;
+
+const DISTANCIA_MIN_SPAWN: f32 =
+    120.0;
+
+const DISTANCIA_MAX_SPAWN: f32 =
+    380.0;
+
+const DISTANCIA_ENTRE_ZOMBIES: f32 =
+    35.0;
 
 fn crear_zombies(
     mapa: &mut Map,
 ) -> Vec<Zombie> {
     mapa.extraer_zombies()
         .into_iter()
-        .map(|(x, y, tipo)| {
-            match tipo {
-                TipoSpawnZombie::Normal => {
-                    Zombie::new(
+        .map(
+            |(
+                x,
+                y,
+                tipo,
+            )| {
+                match tipo {
+                    TipoSpawnZombie::Normal => {
+                        Zombie::new(
+                            x,
+                            y,
+                        )
+                    }
+
+                    TipoSpawnZombie::ConLlave => {
+                        Zombie::new_con_llave(
+                            x,
+                            y,
+                        )
+                    }
+
+                    TipoSpawnZombie::Medio => {
+                        Zombie::new_medio(
+                            x,
+                            y,
+                        )
+                    }
+
+                    TipoSpawnZombie::Fuerte => {
+                        Zombie::new_fuerte(
+                            x,
+                            y,
+                        )
+                    }
+                }
+            },
+        )
+        .collect()
+}
+
+fn calcular_distancia(
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+) -> f32 {
+    let dx =
+        x2 - x1;
+
+    let dy =
+        y2 - y1;
+
+    (
+        dx * dx
+            + dy * dy
+    )
+        .sqrt()
+}
+
+fn buscar_spawn_horda(
+    mapa: &Map,
+    player: &Player,
+    zombies: &[Zombie],
+) -> Option<(
+    f32,
+    f32,
+)> {
+    if mapa.ancho() <= 2
+        || mapa.alto() <= 2
+    {
+        return None;
+    }
+
+    let mut rng =
+        rand::thread_rng();
+
+    for _ in 0..500 {
+        let columna =
+            rng.gen_range(
+                1..mapa.ancho() - 1,
+            );
+
+        let fila =
+            rng.gen_range(
+                1..mapa.alto() - 1,
+            );
+
+        let celda =
+            mapa.celda(
+                fila as i32,
+                columna as i32,
+            );
+
+        if !matches!(
+            celda,
+            ' ' | 'C'
+        ) {
+            continue;
+        }
+
+        let x =
+            columna as f32
+                * TAMANO_CELDA
+                + TAMANO_CELDA
+                    / 2.0;
+
+        let y =
+            fila as f32
+                * TAMANO_CELDA
+                + TAMANO_CELDA
+                    / 2.0;
+
+        let distancia_jugador =
+            calcular_distancia(
+                player.x,
+                player.y,
+                x,
+                y,
+            );
+
+        if distancia_jugador
+            < DISTANCIA_MIN_SPAWN
+        {
+            continue;
+        }
+
+        if distancia_jugador
+            > DISTANCIA_MAX_SPAWN
+        {
+            continue;
+        }
+
+        if mapa.es_pared(
+            x,
+            y,
+        ) {
+            continue;
+        }
+
+        let ocupado =
+            zombies
+                .iter()
+                .filter(
+                    |zombie| {
+                        zombie.vivo
+                    },
+                )
+                .any(
+                    |zombie| {
+                        calcular_distancia(
+                            zombie.x,
+                            zombie.y,
+                            x,
+                            y,
+                        )
+                            < DISTANCIA_ENTRE_ZOMBIES
+                    },
+                );
+
+        if ocupado {
+            continue;
+        }
+
+        return Some(
+            (
+                x,
+                y,
+            ),
+        );
+    }
+
+    None
+}
+
+fn cantidad_horda(
+    numero_horda: i32,
+) -> usize {
+    match numero_horda {
+        1 => 7,
+        2 => 9,
+        3 => 11,
+        4 => 13,
+
+        _ => 14,
+    }
+}
+
+fn crear_zombie_horda(
+    numero_horda: i32,
+    indice: usize,
+    x: f32,
+    y: f32,
+) -> Zombie {
+    match numero_horda {
+        1 => {
+            Zombie::new(
+                x,
+                y,
+            )
+        }
+
+        2 => {
+            if indice % 4 == 0 {
+                Zombie::new_medio(
+                    x,
+                    y,
+                )
+            } else {
+                Zombie::new(
+                    x,
+                    y,
+                )
+            }
+        }
+
+        3 => {
+            match indice % 6 {
+                0 => {
+                    Zombie::new_fuerte(
                         x,
                         y,
                     )
                 }
 
-                TipoSpawnZombie::ConLlave => {
-                    Zombie::new_con_llave(
-                        x,
-                        y,
-                    )
-                }
-
-                TipoSpawnZombie::Medio => {
+                1 | 2 => {
                     Zombie::new_medio(
                         x,
                         y,
                     )
                 }
 
-                TipoSpawnZombie::Fuerte => {
-                    Zombie::new_fuerte(
+                _ => {
+                    Zombie::new(
                         x,
                         y,
                     )
                 }
             }
-        })
-        .collect()
+        }
+
+        _ => {
+            match indice % 5 {
+                0 => {
+                    Zombie::new_fuerte(
+                        x,
+                        y,
+                    )
+                }
+
+                1 | 2 => {
+                    Zombie::new_medio(
+                        x,
+                        y,
+                    )
+                }
+
+                _ => {
+                    Zombie::new(
+                        x,
+                        y,
+                    )
+                }
+            }
+        }
+    }
+}
+
+fn generar_horda(
+    zombies: &mut Vec<Zombie>,
+    mapa: &Map,
+    player: &Player,
+    numero_horda: i32,
+) -> usize {
+    let vivos =
+        zombies
+            .iter()
+            .filter(
+                |zombie| {
+                    zombie.vivo
+                },
+            )
+            .count();
+
+    if vivos
+        >= MAX_ZOMBIES_VIVOS
+    {
+        return 0;
+    }
+
+    let cantidad_deseada =
+        cantidad_horda(
+            numero_horda,
+        );
+
+    let disponibles =
+        MAX_ZOMBIES_VIVOS
+            .saturating_sub(
+                vivos,
+            );
+
+    let cantidad =
+        cantidad_deseada
+            .min(
+                disponibles,
+            );
+
+    let mut generados =
+        0;
+
+    for indice in 0..cantidad {
+        let spawn =
+            buscar_spawn_horda(
+                mapa,
+                player,
+                zombies,
+            );
+
+        let Some(
+            (
+                x,
+                y,
+            ),
+        ) = spawn
+        else {
+            continue;
+        };
+
+        let mut zombie =
+            crear_zombie_horda(
+                numero_horda,
+                indice,
+                x,
+                y,
+            );
+
+        zombie.persiguiendo =
+            true;
+
+        zombies.push(
+            zombie,
+        );
+
+        generados +=
+            1;
+    }
+
+    generados
+}
+
+fn detener_sonidos_zombies(
+    sonidos: &AudioManager,
+) {
+    sonidos.detener_zombie();
+
+    sonidos
+        .detener_zombie_medio();
+
+    sonidos
+        .detener_zombie_fuerte();
 }
 
 fn main() {
@@ -117,6 +459,15 @@ fn main() {
 
     let mut juego_completado =
         false;
+
+    let mut enemigos_matados =
+        0_i32;
+
+    let mut numero_horda =
+        1_i32;
+
+    let mut siguiente_horda =
+        4_i32;
 
     let mut mapa =
         Map::new(
@@ -190,23 +541,25 @@ fn main() {
             ALTO_VENTANA,
         );
 
-    framebuffer.set_background_color(
-        Color::BLACK,
-    );
+    framebuffer
+        .set_background_color(
+            Color::BLACK,
+        );
 
     let (
         mut ventana,
         thread,
-    ) = raylib::init()
-        .size(
-            ANCHO_VENTANA,
-            ALTO_VENTANA,
-        )
-        .resizable()
-        .title(
-            "Survival Horror Raycasting",
-        )
-        .build();
+    ) =
+        raylib::init()
+            .size(
+                ANCHO_VENTANA,
+                ALTO_VENTANA,
+            )
+            .resizable()
+            .title(
+                "Survival Horror Raycasting",
+            )
+            .build();
 
     ventana.toggle_fullscreen();
 
@@ -511,9 +864,10 @@ fn main() {
                 delta_time;
 
             tiempo_disparo =
-                tiempo_disparo.max(
-                    0.0,
-                );
+                tiempo_disparo
+                    .max(
+                        0.0,
+                    );
         }
 
         if tiempo_hachazo > 0.0 {
@@ -521,9 +875,10 @@ fn main() {
                 delta_time;
 
             tiempo_hachazo =
-                tiempo_hachazo.max(
-                    0.0,
-                );
+                tiempo_hachazo
+                    .max(
+                        0.0,
+                    );
         }
 
         if recargando
@@ -545,9 +900,10 @@ fn main() {
                         - balas_cargador;
 
                 let cantidad =
-                    faltantes.min(
-                        balas_reserva,
-                    );
+                    faltantes
+                        .min(
+                            balas_reserva,
+                        );
 
                 balas_cargador +=
                     cantidad;
@@ -598,9 +954,7 @@ fn main() {
         if vida_jugador > 0
             && !juego_completado
         {
-            for zombie
-                in &mut zombies
-            {
+            for zombie in &mut zombies {
                 let estaba_persiguiendo =
                     zombie.persiguiendo;
 
@@ -661,7 +1015,7 @@ fn main() {
 
                         mensaje =
                             format!(
-                                "Bloqueaste el ataque. Dano: {}",
+                                "Bloqueaste. Dano: {}",
                                 dano_final,
                             );
                     } else {
@@ -680,7 +1034,8 @@ fn main() {
                         }
                     }
 
-                    damage_effect.activar();
+                    damage_effect
+                        .activar();
                 }
             }
         }
@@ -688,38 +1043,45 @@ fn main() {
         let hay_normal =
             zombies
                 .iter()
-                .any(|zombie| {
-                    zombie.vivo
-                        && zombie.persiguiendo
-                        && zombie.tipo
-                            == TipoZombie::Normal
-                });
+                .any(
+                    |zombie| {
+                        zombie.vivo
+                            && zombie.persiguiendo
+                            && zombie.tipo
+                                == TipoZombie::Normal
+                    },
+                );
 
         let hay_medio =
             zombies
                 .iter()
-                .any(|zombie| {
-                    zombie.vivo
-                        && zombie.persiguiendo
-                        && zombie.tipo
-                            == TipoZombie::Medio
-                });
+                .any(
+                    |zombie| {
+                        zombie.vivo
+                            && zombie.persiguiendo
+                            && zombie.tipo
+                                == TipoZombie::Medio
+                    },
+                );
 
         let hay_fuerte =
             zombies
                 .iter()
-                .any(|zombie| {
-                    zombie.vivo
-                        && zombie.persiguiendo
-                        && zombie.tipo
-                            == TipoZombie::Fuerte
-                });
+                .any(
+                    |zombie| {
+                        zombie.vivo
+                            && zombie.persiguiendo
+                            && zombie.tipo
+                                == TipoZombie::Fuerte
+                    },
+                );
 
         if !hay_normal
             || vida_jugador <= 0
             || juego_completado
         {
-            sonidos.detener_zombie();
+            sonidos
+                .detener_zombie();
         }
 
         if !hay_medio
@@ -797,14 +1159,9 @@ fn main() {
                 }
 
                 InteractionResult::SalidaNivel => {
-                    sonidos
-                        .detener_zombie();
-
-                    sonidos
-                        .detener_zombie_medio();
-
-                    sonidos
-                        .detener_zombie_fuerte();
+                    detener_sonidos_zombies(
+                        &sonidos,
+                    );
 
                     if nivel_actual == 1 {
                         nivel_actual =
@@ -847,8 +1204,11 @@ fn main() {
                             0.0;
 
                         mensaje =
-                            "NIVEL 2 - LABORATORIO SUBTERRANEO"
-                                .to_string();
+                            format!(
+                                "NIVEL 2 - HORDA {} - BAJAS {}",
+                                numero_horda,
+                                enemigos_matados,
+                            );
                     } else {
                         juego_completado =
                             true;
@@ -865,9 +1225,15 @@ fn main() {
                         tiempo_hachazo =
                             0.0;
 
+                        detener_sonidos_zombies(
+                            &sonidos,
+                        );
+
                         mensaje =
-                            "Has completado el juego"
-                                .to_string();
+                            format!(
+                                "MISION COMPLETA - {} BAJAS",
+                                enemigos_matados,
+                            );
                     }
                 }
 
@@ -1006,6 +1372,14 @@ fn main() {
                             if vivos_despues
                                 < vivos_antes
                             {
+                                let bajas =
+                                    vivos_antes
+                                        - vivos_despues;
+
+                                enemigos_matados +=
+                                    bajas
+                                        as i32;
+
                                 sonidos
                                     .zombie_muere();
                             }
@@ -1027,13 +1401,17 @@ fn main() {
                                     }
 
                                     ShotResult::Kill => {
-                                        "Zombie eliminado"
-                                            .to_string()
+                                        format!(
+                                            "Zombie eliminado - BAJAS {}",
+                                            enemigos_matados,
+                                        )
                                     }
 
                                     ShotResult::KillConLlave => {
-                                        "Zombie eliminado. Dejo una llave"
-                                            .to_string()
+                                        format!(
+                                            "Zombie eliminado - BAJAS {} - DEJO LLAVE",
+                                            enemigos_matados,
+                                        )
                                     }
                                 };
                         } else {
@@ -1054,8 +1432,7 @@ fn main() {
                 }
 
                 ArmaActual::Hacha => {
-                    if tiempo_hachazo
-                        <= 0.0
+                    if tiempo_hachazo <= 0.0
                         && !bloqueando
                     {
                         tiempo_hachazo =
@@ -1094,6 +1471,14 @@ fn main() {
                         if vivos_despues
                             < vivos_antes
                         {
+                            let bajas =
+                                vivos_antes
+                                    - vivos_despues;
+
+                            enemigos_matados +=
+                                bajas
+                                    as i32;
+
                             sonidos
                                 .zombie_muere();
                         }
@@ -1109,23 +1494,73 @@ fn main() {
                                     vida_restante,
                                 } => {
                                     format!(
-                                        "Golpeaste al zombie. Vida: {}",
+                                        "Golpe. Vida zombie: {}",
                                         vida_restante,
                                     )
                                 }
 
                                 ShotResult::Kill => {
-                                    "Zombie eliminado con el hacha"
-                                        .to_string()
+                                    format!(
+                                        "Zombie eliminado - BAJAS {}",
+                                        enemigos_matados,
+                                    )
                                 }
 
                                 ShotResult::KillConLlave => {
-                                    "Zombie eliminado. Dejo una llave"
-                                        .to_string()
+                                    format!(
+                                        "Zombie eliminado - BAJAS {} - DEJO LLAVE",
+                                        enemigos_matados,
+                                    )
                                 }
                             };
                     }
                 }
+            }
+        }
+
+        if vida_jugador > 0
+            && !juego_completado
+        {
+            while enemigos_matados
+                >= siguiente_horda
+            {
+                let horda_actual =
+                    numero_horda;
+
+                let generados =
+                    generar_horda(
+                        &mut zombies,
+                        &mapa,
+                        &player,
+                        horda_actual,
+                    );
+
+                if generados > 0 {
+                    mensaje =
+                        format!(
+                            "HORDA {} - {} ENEMIGOS",
+                            horda_actual,
+                            generados,
+                        );
+
+                    sonidos.zombie();
+
+                    if horda_actual >= 2 {
+                        sonidos
+                            .zombie_medio();
+                    }
+
+                    if horda_actual >= 3 {
+                        sonidos
+                            .zombie_fuerte();
+                    }
+                }
+
+                numero_horda +=
+                    1;
+
+                siguiente_horda +=
+                    6;
             }
         }
 
@@ -1167,20 +1602,24 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F5,
         ) {
-            sonidos
-                .detener_zombie();
-
-            sonidos
-                .detener_zombie_medio();
-
-            sonidos
-                .detener_zombie_fuerte();
+            detener_sonidos_zombies(
+                &sonidos,
+            );
 
             nivel_actual =
                 1;
 
             juego_completado =
                 false;
+
+            enemigos_matados =
+                0;
+
+            numero_horda =
+                1;
+
+            siguiente_horda =
+                4;
 
             mapa =
                 Map::new(
@@ -1320,13 +1759,15 @@ fn main() {
             (
                 pantalla_ancho
                     - ancho_render
-            ) / 2.0;
+            )
+                / 2.0;
 
         let offset_y =
             (
                 pantalla_alto
                     - alto_render
-            ) / 2.0;
+            )
+                / 2.0;
 
         let textura_arma =
             match arma_equipada {
@@ -1389,12 +1830,14 @@ fn main() {
                 * escala;
 
         let arma_ancho =
-            textura_arma.width()
+            textura_arma
+                .width()
                 as f32
                 * escala_arma;
 
         let arma_alto =
-            textura_arma.height()
+            textura_arma
+                .height()
                 as f32
                 * escala_arma;
 
@@ -1623,6 +2066,66 @@ fn main() {
             escala,
         );
 
+        let vivos_actuales =
+            zombies
+                .iter()
+                .filter(
+                    |zombie| {
+                        zombie.vivo
+                    },
+                )
+                .count();
+
+        let escala_ui =
+            escala.clamp(
+                1.0,
+                1.25,
+            );
+
+        let stats_size =
+            (
+                16.0
+                    * escala_ui
+            )
+                as i32;
+
+        let stats =
+            format!(
+                "BAJAS: {}  |  HORDA: {}  |  ENEMIGOS: {}",
+                enemigos_matados,
+                numero_horda,
+                vivos_actuales,
+            );
+
+        let stats_width =
+            dibujo.measure_text(
+                &stats,
+                stats_size,
+            );
+
+        dibujo.draw_text(
+            &stats,
+
+            (
+                offset_x
+                    + ancho_render
+                    / 2.0
+                    - stats_width
+                        as f32
+                        / 2.0
+            ) as i32,
+
+            (
+                offset_y
+                    + 12.0
+                        * escala_ui
+            ) as i32,
+
+            stats_size,
+
+            Color::LIGHTGRAY,
+        );
+
         damage_effect.render(
             &mut dibujo,
         );
@@ -1646,12 +2149,19 @@ fn main() {
                     0,
                     0,
                     0,
-                    210,
+                    215,
                 ),
             );
 
             let titulo =
                 "GAME OVER";
+
+            let stats =
+                format!(
+                    "BAJAS: {}   HORDA ALCANZADA: {}",
+                    enemigos_matados,
+                    numero_horda,
+                );
 
             let reiniciar =
                 "F5 - REINICIAR";
@@ -1659,20 +2169,11 @@ fn main() {
             let tamano_titulo =
                 64;
 
-            let tamano_opcion =
+            let tamano_stats =
                 24;
 
-            let ancho_titulo =
-                dibujo.measure_text(
-                    titulo,
-                    tamano_titulo,
-                );
-
-            let ancho_reiniciar =
-                dibujo.measure_text(
-                    reiniciar,
-                    tamano_opcion,
-                );
+            let tamano_opcion =
+                22;
 
             let centro_x =
                 screen_width
@@ -1682,6 +2183,24 @@ fn main() {
                 screen_height
                     / 2;
 
+            let ancho_titulo =
+                dibujo.measure_text(
+                    titulo,
+                    tamano_titulo,
+                );
+
+            let ancho_stats =
+                dibujo.measure_text(
+                    &stats,
+                    tamano_stats,
+                );
+
+            let ancho_reiniciar =
+                dibujo.measure_text(
+                    reiniciar,
+                    tamano_opcion,
+                );
+
             dibujo.draw_text(
                 titulo,
 
@@ -1690,11 +2209,25 @@ fn main() {
                         / 2,
 
                 centro_y
-                    - 80,
+                    - 110,
 
                 tamano_titulo,
 
                 Color::RED,
+            );
+
+            dibujo.draw_text(
+                &stats,
+
+                centro_x
+                    - ancho_stats
+                        / 2,
+
+                centro_y,
+
+                tamano_stats,
+
+                Color::LIGHTGRAY,
             );
 
             dibujo.draw_text(
@@ -1705,7 +2238,7 @@ fn main() {
                         / 2,
 
                 centro_y
-                    + 30,
+                    + 65,
 
                 tamano_opcion,
 
@@ -1742,8 +2275,12 @@ fn main() {
             let subtitulo =
                 "ESCAPASTE DEL LABORATORIO";
 
-            let nivel =
-                "NIVEL 2 COMPLETADO";
+            let stats =
+                format!(
+                    "BAJAS: {}   HORDAS: {}",
+                    enemigos_matados,
+                    numero_horda,
+                );
 
             let reiniciar =
                 "F5 - JUGAR DE NUEVO";
@@ -1753,6 +2290,9 @@ fn main() {
 
             let tamano_subtitulo =
                 24;
+
+            let tamano_stats =
+                22;
 
             let tamano_opcion =
                 20;
@@ -1777,10 +2317,10 @@ fn main() {
                     tamano_subtitulo,
                 );
 
-            let ancho_nivel =
+            let ancho_stats =
                 dibujo.measure_text(
-                    nivel,
-                    tamano_opcion,
+                    &stats,
+                    tamano_stats,
                 );
 
             let ancho_reiniciar =
@@ -1797,7 +2337,7 @@ fn main() {
                         / 2,
 
                 centro_y
-                    - 120,
+                    - 125,
 
                 tamano_titulo,
 
@@ -1812,7 +2352,7 @@ fn main() {
                         / 2,
 
                 centro_y
-                    - 30,
+                    - 35,
 
                 tamano_subtitulo,
 
@@ -1820,16 +2360,16 @@ fn main() {
             );
 
             dibujo.draw_text(
-                nivel,
+                &stats,
 
                 centro_x
-                    - ancho_nivel
+                    - ancho_stats
                         / 2,
 
                 centro_y
                     + 15,
 
-                tamano_opcion,
+                tamano_stats,
 
                 Color::LIGHTGRAY,
             );
@@ -1842,7 +2382,7 @@ fn main() {
                         / 2,
 
                 centro_y
-                    + 75,
+                    + 80,
 
                 tamano_opcion,
 

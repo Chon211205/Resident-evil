@@ -1,4 +1,7 @@
-use crate::map::Map;
+use crate::map::{
+    Map,
+    TAMANO_CELDA,
+};
 
 use raylib::prelude::*;
 
@@ -33,10 +36,9 @@ impl Player {
                 )
             } else {
                 (
-                    crate::map::TAMANO_CELDA
+                    TAMANO_CELDA
                         * 1.5,
-
-                    crate::map::TAMANO_CELDA
+                    TAMANO_CELDA
                         * 1.5,
                 )
             };

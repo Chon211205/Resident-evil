@@ -63,7 +63,9 @@ impl Map {
                         .count()
                 })
                 .max()
-                .unwrap_or(0);
+                .unwrap_or(
+                    0,
+                );
 
         let mut celdas =
             Vec::with_capacity(
@@ -280,9 +282,7 @@ impl Map {
                             )
                         }
 
-                        _ => {
-                            None
-                        }
+                        _ => None,
                     };
 
                 let Some(tipo) =

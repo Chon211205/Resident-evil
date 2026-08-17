@@ -4035,6 +4035,54 @@ fn main() {
                 .enable_cursor();
         }
 
+        if vida_jugador <= 0
+            && objetivo_completado
+            && nivel_seleccionado
+                == NivelSeleccionado::Mansion
+            && ventana.is_key_pressed(
+                KeyboardKey::KEY_ENTER,
+            )
+        {
+            nivel_seleccionado =
+                NivelSeleccionado::Laboratorio;
+
+            nivel_actual = cargar_partida(
+                nivel_seleccionado,
+                &mut mapa,
+                &mut zombies,
+                &mut lickers,
+                &mut tyrant,
+                &mut nemesis,
+                &mut misiles_nemesis,
+                &mut player,
+                &mut camera,
+                &mut inventory,
+                &mut puzzle,
+                &mut damage_effect,
+            );
+
+            vida_jugador = 100;
+            balas_cargador = 8;
+            balas_reserva = 24;
+            municion_lanzallamas = 100;
+            arma_equipada = ArmaActual::Pistola;
+            enemigos_matados = 0;
+            bajas_normal = 0;
+            bajas_medio = 0;
+            bajas_fuerte = 0;
+            objetivo_completado = false;
+            antivirus_recogido = false;
+            pantalla_great = false;
+            numero_horda = 1;
+            siguiente_horda = 4;
+            recargando = false;
+            mensaje = "LABORATORIO".to_string();
+
+            sonidos.iniciar_musica();
+            ventana.disable_cursor();
+            continue;
+        }
+
         framebuffer.clear();
 
         let es_laboratorio =
@@ -4709,7 +4757,11 @@ fn main() {
                 );
 
             let titulo =
-                "GAME OVER";
+                if objetivo_completado {
+                    "MISION CUMPLIDA"
+                } else {
+                    "GAME OVER"
+                };
 
             let stats =
                 format!(
@@ -4720,21 +4772,34 @@ fn main() {
                 );
 
             let objetivo =
-                format!(
-                    "N {}/{}   M {}/{}   F {}/{}",
-                    bajas_normal
-                        .min(META_NORMAL),
-                    META_NORMAL,
-                    bajas_medio
-                        .min(META_MEDIO),
-                    META_MEDIO,
-                    bajas_fuerte
-                        .min(META_FUERTE),
-                    META_FUERTE,
-                );
+                if nivel_seleccionado
+                    == NivelSeleccionado::Laboratorio
+                    && objetivo_completado
+                {
+                    "ANTIVIRUS CONSEGUIDO".to_string()
+                } else {
+                    format!(
+                        "N {}/{}   M {}/{}   F {}/{}",
+                        bajas_normal.min(META_NORMAL),
+                        META_NORMAL,
+                        bajas_medio.min(META_MEDIO),
+                        META_MEDIO,
+                        bajas_fuerte.min(META_FUERTE),
+                        META_FUERTE,
+                    )
+                };
 
             let reiniciar =
-                "F5 - JUGAR DE NUEVO";
+                if objetivo_completado
+                    && nivel_seleccionado
+                        == NivelSeleccionado::Mansion
+                {
+                    "ENTER - SIGUIENTE NIVEL | F5 - JUGAR DE NUEVO"
+                } else if objetivo_completado {
+                    "ULTIMO NIVEL COMPLETADO | F5 - JUGAR DE NUEVO"
+                } else {
+                    "F5 - JUGAR DE NUEVO"
+                };
 
             let menu_texto =
                 "BACKSPACE - MENU PRINCIPAL";

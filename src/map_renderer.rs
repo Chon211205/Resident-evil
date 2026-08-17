@@ -16,8 +16,8 @@ fn pintar_rectangulo(
     alto: i32,
     color: Color,
 ) {
-    for py in y..(y + alto) {
-        for px in x..(x + ancho) {
+    for py in y..y + alto {
+        for px in x..x + ancho {
             framebuffer.point_color(
                 px,
                 py,
@@ -35,7 +35,7 @@ fn pintar_borde_rectangulo(
     alto: i32,
     color: Color,
 ) {
-    for px in x..(x + ancho) {
+    for px in x..x + ancho {
         framebuffer.point_color(
             px,
             y,
@@ -49,7 +49,7 @@ fn pintar_borde_rectangulo(
         );
     }
 
-    for py in y..(y + alto) {
+    for py in y..y + alto {
         framebuffer.point_color(
             x,
             py,
@@ -170,14 +170,8 @@ pub fn render_minimap(
     player: &Player,
     camera: &Camera,
 ) {
-    let mapa_ancho =
-        mapa.ancho();
-
-    let mapa_alto =
-        mapa.alto();
-
-    if mapa_ancho == 0
-        || mapa_alto == 0
+    if mapa.ancho() == 0
+        || mapa.alto() == 0
     {
         return;
     }
@@ -190,12 +184,12 @@ pub fn render_minimap(
 
     let escala_x =
         max_ancho
-            / mapa_ancho
+            / mapa.ancho()
                 as f32;
 
     let escala_y =
         max_alto
-            / mapa_alto
+            / mapa.alto()
                 as f32;
 
     let escala =
@@ -215,7 +209,7 @@ pub fn render_minimap(
 
     let ancho =
         (
-            mapa_ancho
+            mapa.ancho()
                 as f32
                 * escala
         )
@@ -224,7 +218,7 @@ pub fn render_minimap(
 
     let alto =
         (
-            mapa_alto
+            mapa.alto()
                 as f32
                 * escala
         )
@@ -249,8 +243,8 @@ pub fn render_minimap(
         Color::GRAY,
     );
 
-    for fila in 0..mapa_alto {
-        for columna in 0..mapa_ancho {
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
             let celda =
                 mapa.celda(
                     fila as i32,
@@ -313,6 +307,12 @@ pub fn render_minimap(
                         )
                     }
 
+                    'B' => {
+                        Some(
+                            Color::PURPLE,
+                        )
+                    }
+
                     _ => {
                         None
                     }
@@ -361,24 +361,22 @@ pub fn render_minimap(
         }
     }
 
-    let jugador_columna =
-        player.x
-            / TAMANO_CELDA;
-
-    let jugador_fila =
-        player.y
-            / TAMANO_CELDA;
-
     let jugador_x =
         origen_x
             as f32
-            + jugador_columna
+            + (
+                player.x
+                    / TAMANO_CELDA
+            )
                 * escala;
 
     let jugador_y =
         origen_y
             as f32
-            + jugador_fila
+            + (
+                player.y
+                    / TAMANO_CELDA
+            )
                 * escala;
 
     pintar_circulo(

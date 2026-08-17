@@ -1,22 +1,39 @@
 use crate::camera::Camera;
 use crate::inventory::Inventory;
-use crate::map::{Map, TAMANO_CELDA};
+use crate::map::{
+    Map,
+    TAMANO_CELDA,
+};
 use crate::player::Player;
 use crate::puzzle::Puzzle;
-use crate::raycaster::lanzar_rayo;
 use crate::zombie::Zombie;
 
-use rand::{thread_rng, Rng};
-use std::f32::consts::PI;
+use rand::Rng;
 
 pub enum InteractionResult {
     None,
+
     LlaveRecogida,
-    MunicionRecogida(i32),
-    CuracionRecogida(i32),
+
+    MunicionRecogida(
+        i32,
+    ),
+
+    CuracionRecogida(
+        i32,
+    ),
+
     PuertaAbierta,
+
     PuertaCerrada,
-    SalidaNivel,
+
+    SubirNivel(
+        usize,
+    ),
+
+    BajarNivel(
+        usize,
+    ),
 }
 
 pub enum ShotResult {
@@ -31,26 +48,12 @@ pub enum ShotResult {
     KillConLlave,
 }
 
-fn normalizar_angulo(
-    mut angulo: f32,
-) -> f32 {
-    while angulo > PI {
-        angulo -= 2.0 * PI;
-    }
-
-    while angulo < -PI {
-        angulo += 2.0 * PI;
-    }
-
-    angulo
-}
-
 pub fn recoger_objetos_cercanos(
     mapa: &mut Map,
     player: &Player,
     inventory: &mut Inventory,
     _puzzle: &mut Puzzle,
-    vida_actual: i32,
+    vida_jugador: i32,
 ) -> InteractionResult {
     let columna =
         (
@@ -82,9 +85,11 @@ pub fn recoger_objetos_cercanos(
                 ' ',
             );
 
-            inventory.recoger_llave();
+            inventory
+                .recoger_llave();
 
-            InteractionResult::LlaveRecogida
+            InteractionResult::
+                LlaveRecogida
         }
 
         'A' => {
@@ -94,33 +99,35 @@ pub fn recoger_objetos_cercanos(
                 ' ',
             );
 
-            InteractionResult::MunicionRecogida(
-                8,
-            )
+            InteractionResult::
+                MunicionRecogida(
+                    8,
+                )
         }
 
         'H' => {
-            if vida_actual >= 100 {
-                return InteractionResult::None;
+            if vida_jugador
+                >= 100
+            {
+                InteractionResult::
+                    None
+            } else {
+                mapa.cambiar_celda(
+                    fila,
+                    columna,
+                    ' ',
+                );
+
+                InteractionResult::
+                    CuracionRecogida(
+                        25,
+                    )
             }
-
-            mapa.cambiar_celda(
-                fila,
-                columna,
-                ' ',
-            );
-
-            InteractionResult::CuracionRecogida(
-                25,
-            )
-        }
-
-        'X' => {
-            InteractionResult::SalidaNivel
         }
 
         _ => {
-            InteractionResult::None
+            InteractionResult::
+                None
         }
     }
 }
@@ -133,28 +140,34 @@ pub fn interactuar(
     _puzzle: &mut Puzzle,
 ) -> InteractionResult {
     let distancias = [
-        15.0,
+        12.0,
+        16.0,
         20.0,
-        25.0,
-        30.0,
-        35.0,
+        24.0,
+        28.0,
+        32.0,
+        36.0,
         40.0,
     ];
 
     for distancia in distancias {
-        let objetivo_x =
+        let x =
             player.x
-                + camera.angle.cos()
+                + camera
+                    .angle
+                    .cos()
                     * distancia;
 
-        let objetivo_y =
+        let y =
             player.y
-                + camera.angle.sin()
+                + camera
+                    .angle
+                    .sin()
                     * distancia;
 
         let columna =
             (
-                objetivo_x
+                x
                     / TAMANO_CELDA
             )
                 .floor()
@@ -162,7 +175,7 @@ pub fn interactuar(
 
         let fila =
             (
-                objetivo_y
+                y
                     / TAMANO_CELDA
             )
                 .floor()
@@ -174,20 +187,68 @@ pub fn interactuar(
                 columna,
             );
 
-        if celda == 'D' {
-            if inventory.tiene_llave() {
-                mapa.cambiar_celda(
-                    fila,
-                    columna,
-                    'O',
-                );
+        match celda {
+            'D' => {
+                if inventory
+                    .tiene_llave()
+                {
+                    mapa.cambiar_celda(
+                        fila,
+                        columna,
+                        'O',
+                    );
 
-                inventory.usar_llave();
+                    inventory
+                        .usar_llave();
 
-                return InteractionResult::PuertaAbierta;
+                    return InteractionResult::
+                        PuertaAbierta;
+                }
+
+                return InteractionResult::
+                    PuertaCerrada;
             }
 
-            return InteractionResult::PuertaCerrada;
+            'X' => {
+                let indice =
+                    mapa.indice_portal_en(
+                        'X',
+                        fila,
+                        columna,
+                    )
+                    .unwrap_or(
+                        0,
+                    );
+
+                return InteractionResult::
+                    SubirNivel(
+                        indice,
+                    );
+            }
+
+            'B' => {
+                let indice =
+                    mapa.indice_portal_en(
+                        'B',
+                        fila,
+                        columna,
+                    )
+                    .unwrap_or(
+                        0,
+                    );
+
+                return InteractionResult::
+                    BajarNivel(
+                        indice,
+                    );
+            }
+
+            '#' | 'W' => {
+                return InteractionResult::
+                    None;
+            }
+
+            _ => {}
         }
     }
 
@@ -195,7 +256,7 @@ pub fn interactuar(
 }
 
 pub fn disparar(
-    zombies: &mut Vec<Zombie>,
+    zombies: &mut [Zombie],
     player: &Player,
     camera: &Camera,
     mapa: &mut Map,
@@ -203,12 +264,15 @@ pub fn disparar(
     const DANO: i32 =
         50;
 
-    const TOLERANCIA: f32 =
+    const TOLERANCIA_ANGULO: f32 =
         0.08;
 
-    let mut objetivo:
-        Option<(usize, f32)> =
+    let mut mejor_indice:
+        Option<usize> =
         None;
+
+    let mut mejor_distancia =
+        f32::MAX;
 
     for (
         indice,
@@ -236,89 +300,85 @@ pub fn disparar(
             )
                 .sqrt();
 
-        if distancia <= 0.001 {
-            continue;
-        }
-
         let angulo_zombie =
             dy.atan2(
                 dx,
             );
 
-        let diferencia =
-            normalizar_angulo(
-                angulo_zombie
-                    - camera.angle,
-            );
+        let mut diferencia =
+            angulo_zombie
+                - camera.angle;
+
+        while diferencia
+            > std::f32::consts::PI
+        {
+            diferencia -=
+                std::f32::consts::PI
+                    * 2.0;
+        }
+
+        while diferencia
+            < -std::f32::consts::PI
+        {
+            diferencia +=
+                std::f32::consts::PI
+                    * 2.0;
+        }
 
         if diferencia.abs()
-            > TOLERANCIA
+            > TOLERANCIA_ANGULO
         {
             continue;
         }
 
-        let impacto_pared =
-            lanzar_rayo(
-                mapa,
-                player.x,
-                player.y,
-                angulo_zombie,
-            );
-
-        if impacto_pared.distancia
-            < distancia - 4.0
-        {
+        if !hay_linea_vision(
+            mapa,
+            player.x,
+            player.y,
+            zombie.x,
+            zombie.y,
+        ) {
             continue;
         }
 
-        match objetivo {
-            Some((
-                _,
-                distancia_actual,
-            )) => {
-                if distancia
-                    < distancia_actual
-                {
-                    objetivo =
-                        Some((
-                            indice,
-                            distancia,
-                        ));
-                }
-            }
+        if distancia
+            < mejor_distancia
+        {
+            mejor_distancia =
+                distancia;
 
-            None => {
-                objetivo =
-                    Some((
-                        indice,
-                        distancia,
-                    ));
-            }
+            mejor_indice =
+                Some(
+                    indice,
+                );
         }
     }
 
-    let Some((
-        indice,
-        _,
-    )) = objetivo
+    let Some(indice) =
+        mejor_indice
     else {
-        return ShotResult::Miss;
+        return ShotResult::
+            Miss;
     };
 
-    zombies[indice]
-        .recibir_dano(
-            DANO,
-        );
+    let zombie =
+        &mut zombies[
+            indice
+        ];
 
-    if zombies[indice].vivo {
+    zombie.recibir_dano(
+        DANO,
+    );
+
+    if zombie.vivo {
         return ShotResult::Hit {
             vida_restante:
-                zombies[indice].vida,
+                zombie.vida,
         };
     }
 
     procesar_muerte_zombie(
-        &zombies[indice],
+        zombie,
         mapa,
     )
 }
@@ -352,23 +412,25 @@ pub fn procesar_muerte_zombie(
             'K',
         );
 
-        return ShotResult::KillConLlave;
+        return ShotResult::
+            KillConLlave;
     }
 
     let mut rng =
-        thread_rng();
+        rand::thread_rng();
 
-    let probabilidad:
-        f32 =
-        rng.gen();
+    let tirada =
+        rng.gen_range(
+            0..100,
+        );
 
-    if probabilidad < 0.35 {
+    if tirada < 35 {
         mapa.cambiar_celda(
             fila,
             columna,
             'H',
         );
-    } else if probabilidad < 0.70 {
+    } else if tirada < 70 {
         mapa.cambiar_celda(
             fila,
             columna,
@@ -377,4 +439,74 @@ pub fn procesar_muerte_zombie(
     }
 
     ShotResult::Kill
+}
+
+fn hay_linea_vision(
+    mapa: &Map,
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+) -> bool {
+    let dx =
+        x2 - x1;
+
+    let dy =
+        y2 - y1;
+
+    let distancia =
+        (
+            dx * dx
+                + dy * dy
+        )
+            .sqrt();
+
+    if distancia <= 0.001 {
+        return true;
+    }
+
+    let pasos =
+        (
+            distancia
+                / 4.0
+        )
+            .ceil()
+            as i32;
+
+    if pasos <= 0 {
+        return true;
+    }
+
+    let paso_x =
+        dx
+            / pasos
+                as f32;
+
+    let paso_y =
+        dy
+            / pasos
+                as f32;
+
+    let mut x =
+        x1;
+
+    let mut y =
+        y1;
+
+    for _ in 0..pasos {
+        x +=
+            paso_x;
+
+        y +=
+            paso_y;
+
+        if mapa.es_pared(
+            x,
+            y,
+        ) {
+            return false;
+        }
+    }
+
+    true
 }

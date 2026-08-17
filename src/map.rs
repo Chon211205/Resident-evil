@@ -63,9 +63,7 @@ impl Map {
                         .count()
                 })
                 .max()
-                .unwrap_or(
-                    0,
-                );
+                .unwrap_or(0);
 
         let mut celdas =
             Vec::with_capacity(
@@ -81,9 +79,7 @@ impl Map {
             while fila.len()
                 < ancho
             {
-                fila.push(
-                    '#',
-                );
+                fila.push('#');
             }
 
             celdas.push(
@@ -169,6 +165,8 @@ impl Map {
             '#'
                 | 'D'
                 | 'W'
+                | 'X'
+                | 'B'
         )
     }
 
@@ -201,10 +199,7 @@ impl Map {
 
     pub fn buscar_jugador(
         &self,
-    ) -> Option<(
-        f32,
-        f32,
-    )> {
+    ) -> Option<(f32, f32)> {
         for fila in 0..self.alto {
             for columna in 0..self.ancho {
                 if self.celdas
@@ -213,15 +208,13 @@ impl Map {
                     == 'P'
                 {
                     let x =
-                        columna
-                            as f32
+                        columna as f32
                             * TAMANO_CELDA
                             + TAMANO_CELDA
                                 / 2.0;
 
                     let y =
-                        fila
-                            as f32
+                        fila as f32
                             * TAMANO_CELDA
                             + TAMANO_CELDA
                                 / 2.0;
@@ -234,6 +227,202 @@ impl Map {
                     );
                 }
             }
+        }
+
+        None
+    }
+
+    pub fn buscar_portales(
+        &self,
+        simbolo: char,
+    ) -> Vec<(i32, i32)> {
+        let mut portales =
+            Vec::new();
+
+        for fila in 0..self.alto {
+            for columna in 0..self.ancho {
+                if self.celdas
+                    [fila]
+                    [columna]
+                    == simbolo
+                {
+                    portales.push(
+                        (
+                            fila as i32,
+                            columna as i32,
+                        ),
+                    );
+                }
+            }
+        }
+
+        portales.sort_by_key(
+            |(_, columna)| {
+                *columna
+            },
+        );
+
+        portales
+    }
+
+    pub fn indice_portal_en(
+        &self,
+        simbolo: char,
+        fila_objetivo: i32,
+        columna_objetivo: i32,
+    ) -> Option<usize> {
+        let portales =
+            self.buscar_portales(
+                simbolo,
+            );
+
+        for (
+            indice,
+            (
+                fila,
+                columna,
+            ),
+        ) in portales
+            .iter()
+            .enumerate()
+        {
+            if *fila
+                == fila_objetivo
+                && *columna
+                    == columna_objetivo
+            {
+                return Some(
+                    indice,
+                );
+            }
+        }
+
+        None
+    }
+
+    pub fn posicion_portal(
+        &self,
+        simbolo: char,
+        indice: usize,
+    ) -> Option<(f32, f32)> {
+        let portales =
+            self.buscar_portales(
+                simbolo,
+            );
+
+        let (
+            fila,
+            columna,
+        ) =
+            *portales.get(
+                indice,
+            )?;
+
+        let x =
+            columna as f32
+                * TAMANO_CELDA
+                + TAMANO_CELDA
+                    / 2.0;
+
+        let y =
+            fila as f32
+                * TAMANO_CELDA
+                + TAMANO_CELDA
+                    / 2.0;
+
+        Some(
+            (
+                x,
+                y,
+            ),
+        )
+    }
+
+    pub fn posicion_entrada_portal(
+        &self,
+        simbolo: char,
+        indice: usize,
+    ) -> Option<(f32, f32)> {
+        let portales =
+            self.buscar_portales(
+                simbolo,
+            );
+
+        let (
+            fila,
+            columna,
+        ) =
+            *portales.get(
+                indice,
+            )?;
+
+        let vecinos = [
+            (
+                fila + 1,
+                columna,
+            ),
+            (
+                fila - 1,
+                columna,
+            ),
+            (
+                fila,
+                columna + 1,
+            ),
+            (
+                fila,
+                columna - 1,
+            ),
+        ];
+
+        for (
+            fila_vecina,
+            columna_vecina,
+        ) in vecinos
+        {
+            let celda =
+                self.celda(
+                    fila_vecina,
+                    columna_vecina,
+                );
+
+            if !matches!(
+                celda,
+                ' '
+                    | 'C'
+                    | 'P'
+                    | 'O'
+            ) {
+                continue;
+            }
+
+            if self.es_bloque_solido(
+                fila_vecina,
+                columna_vecina,
+            ) {
+                continue;
+            }
+
+            let x =
+                columna_vecina
+                    as f32
+                    * TAMANO_CELDA
+                    + TAMANO_CELDA
+                        / 2.0;
+
+            let y =
+                fila_vecina
+                    as f32
+                    * TAMANO_CELDA
+                    + TAMANO_CELDA
+                        / 2.0;
+
+            return Some(
+                (
+                    x,
+                    y,
+                ),
+            );
         }
 
         None
@@ -292,15 +481,13 @@ impl Map {
                 };
 
                 let x =
-                    columna
-                        as f32
+                    columna as f32
                         * TAMANO_CELDA
                         + TAMANO_CELDA
                             / 2.0;
 
                 let y =
-                    fila
-                        as f32
+                    fila as f32
                         * TAMANO_CELDA
                         + TAMANO_CELDA
                             / 2.0;

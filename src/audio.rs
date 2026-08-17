@@ -25,6 +25,9 @@ pub struct AudioManager<'a> {
 
     tyrant: Sound<'a>,
 
+    licker: Sound<'a>,
+    lickerdie: Sound<'a>,
+
     mansion: Music<'a>,
 }
 
@@ -32,7 +35,7 @@ impl<'a> AudioManager<'a> {
     pub fn new(
         audio: &'a RaylibAudio,
     ) -> Self {
-        let mut mansion =
+        let mansion =
             audio
                 .new_music(
                     "assets/sounds/mansion.mp3",
@@ -42,7 +45,7 @@ impl<'a> AudioManager<'a> {
                 );
 
         mansion.set_volume(
-            1.00,
+            0.30,
         );
 
         Self {
@@ -164,6 +167,22 @@ impl<'a> AudioManager<'a> {
                 )
                 .expect(
                     "No se pudo cargar tyrant.mp3",
+                ),
+
+            licker: audio
+                .new_sound(
+                    "assets/sounds/licker.mp3",
+                )
+                .expect(
+                    "No se pudo cargar licker.mp3",
+                ),
+
+            lickerdie: audio
+                .new_sound(
+                    "assets/sounds/lickerdie.mp3",
+                )
+                .expect(
+                    "No se pudo cargar lickerdie.mp3",
                 ),
 
             mansion,
@@ -352,6 +371,32 @@ impl<'a> AudioManager<'a> {
         }
     }
 
+    pub fn licker(
+        &self,
+    ) {
+        if !self.licker
+            .is_playing()
+        {
+            self.licker.play();
+        }
+    }
+
+    pub fn detener_licker(
+        &self,
+    ) {
+        if self.licker
+            .is_playing()
+        {
+            self.licker.stop();
+        }
+    }
+
+    pub fn licker_muere(
+        &self,
+    ) {
+        self.lickerdie.play();
+    }
+
     pub fn detener_todos_enemigos(
         &self,
     ) {
@@ -359,5 +404,6 @@ impl<'a> AudioManager<'a> {
         self.detener_zombie_medio();
         self.detener_zombie_fuerte();
         self.detener_tyrant();
+        self.detener_licker();
     }
 }

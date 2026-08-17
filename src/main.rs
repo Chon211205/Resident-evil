@@ -5,6 +5,8 @@ mod framebuffer;
 mod hud;
 mod interaction;
 mod inventory;
+mod licker;
+mod licker_renderer;
 mod map;
 mod map_renderer;
 mod menu;
@@ -35,6 +37,13 @@ use interaction::{
 
 use inventory::Inventory;
 
+use licker::{
+    EstadoLicker,
+    Licker,
+};
+
+use licker_renderer::render_lickers;
+
 use map::{
     Map,
     TipoSpawnZombie,
@@ -55,6 +64,7 @@ use player::Player;
 use puzzle::Puzzle;
 
 use raycaster::{
+    lanzar_rayo,
     render_3d,
     ALTO_VENTANA,
     ANCHO_VENTANA,
@@ -96,6 +106,9 @@ const META_NORMAL: i32 = 20;
 const META_MEDIO: i32 = 15;
 const META_FUERTE: i32 = 5;
 
+const DANO_PISTOLA_LICKER: i32 = 50;
+const DANO_HACHA_LICKER: i32 = 75;
+
 fn crear_zombies(
     mapa: &mut Map,
 ) -> Vec<Zombie> {
@@ -108,19 +121,109 @@ fn crear_zombies(
                 }
 
                 TipoSpawnZombie::ConLlave => {
-                    Zombie::new_con_llave(x, y)
+                    Zombie::new_con_llave(
+                        x,
+                        y,
+                    )
                 }
 
                 TipoSpawnZombie::Medio => {
-                    Zombie::new_medio(x, y)
+                    Zombie::new_medio(
+                        x,
+                        y,
+                    )
                 }
 
                 TipoSpawnZombie::Fuerte => {
-                    Zombie::new_fuerte(x, y)
+                    Zombie::new_fuerte(
+                        x,
+                        y,
+                    )
                 }
             }
         })
         .collect()
+}
+
+fn crear_lickers(
+    mapa: &mut Map,
+) -> Vec<Licker> {
+    let mut lickers =
+        Vec::new();
+
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            if mapa.celda(
+                fila as i32,
+                columna as i32,
+            ) == 'R'
+            {
+                let x =
+                    columna as f32
+                        * TAMANO_CELDA
+                        + TAMANO_CELDA / 2.0;
+
+                let y =
+                    fila as f32
+                        * TAMANO_CELDA
+                        + TAMANO_CELDA / 2.0;
+
+                lickers.push(
+                    Licker::new(
+                        x,
+                        y,
+                    ),
+                );
+
+                mapa.cambiar_celda(
+                    fila as i32,
+                    columna as i32,
+                    ' ',
+                );
+            }
+        }
+    }
+
+    lickers
+}
+
+fn buscar_tyrant(
+    mapa: &mut Map,
+) -> Option<Tyrant> {
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            if mapa.celda(
+                fila as i32,
+                columna as i32,
+            ) == 'Y'
+            {
+                let x =
+                    columna as f32
+                        * TAMANO_CELDA
+                        + TAMANO_CELDA / 2.0;
+
+                let y =
+                    fila as f32
+                        * TAMANO_CELDA
+                        + TAMANO_CELDA / 2.0;
+
+                mapa.cambiar_celda(
+                    fila as i32,
+                    columna as i32,
+                    ' ',
+                );
+
+                return Some(
+                    Tyrant::new(
+                        x,
+                        y,
+                    ),
+                );
+            }
+        }
+    }
+
+    None
 }
 
 fn calcular_distancia(
@@ -129,10 +232,39 @@ fn calcular_distancia(
     x2: f32,
     y2: f32,
 ) -> f32 {
-    let dx = x2 - x1;
-    let dy = y2 - y1;
+    let dx =
+        x2 - x1;
 
-    (dx * dx + dy * dy).sqrt()
+    let dy =
+        y2 - y1;
+
+    (
+        dx * dx
+            + dy * dy
+    )
+        .sqrt()
+}
+
+fn normalizar_angulo(
+    mut angulo: f32,
+) -> f32 {
+    while angulo
+        > std::f32::consts::PI
+    {
+        angulo -=
+            std::f32::consts::PI
+                * 2.0;
+    }
+
+    while angulo
+        < -std::f32::consts::PI
+    {
+        angulo +=
+            std::f32::consts::PI
+                * 2.0;
+    }
+
+    angulo
 }
 
 fn contar_vivos_tipo(
@@ -177,20 +309,26 @@ fn actualizar_bajas_por_tipo(
 
     if normal_despues < normal_antes {
         *bajas_normal +=
-            (normal_antes - normal_despues)
-                as i32;
+            (
+                normal_antes
+                    - normal_despues
+            ) as i32;
     }
 
     if medio_despues < medio_antes {
         *bajas_medio +=
-            (medio_antes - medio_despues)
-                as i32;
+            (
+                medio_antes
+                    - medio_despues
+            ) as i32;
     }
 
     if fuerte_despues < fuerte_antes {
         *bajas_fuerte +=
-            (fuerte_antes - fuerte_despues)
-                as i32;
+            (
+                fuerte_antes
+                    - fuerte_despues
+            ) as i32;
     }
 }
 
@@ -208,12 +346,19 @@ fn max_zombies_para_horda(
     numero_horda: i32,
 ) -> usize {
     let extra =
-        (numero_horda / 5)
+        (
+            numero_horda
+                / 5
+        )
             .max(0)
             as usize
             * 2;
 
-    (18 + extra).min(30)
+    (
+        18
+            + extra
+    )
+        .min(30)
 }
 
 fn cantidad_horda(
@@ -229,7 +374,10 @@ fn cantidad_horda(
         _ => {
             (
                 14
-                    + (numero_horda - 5)
+                    + (
+                        numero_horda
+                            - 5
+                    )
                         .max(0)
                         as usize
             )
@@ -294,18 +442,24 @@ fn buscar_spawn_horda(
                 y,
             );
 
-        if distancia < DISTANCIA_MIN_SPAWN {
+        if distancia
+            < DISTANCIA_MIN_SPAWN
+        {
             continue;
         }
 
-        if distancia > DISTANCIA_MAX_SPAWN {
+        if distancia
+            > DISTANCIA_MAX_SPAWN
+        {
             continue;
         }
 
         let ocupado =
             zombies
                 .iter()
-                .filter(|zombie| zombie.vivo)
+                .filter(|z| {
+                    z.vivo
+                })
                 .any(|zombie| {
                     calcular_distancia(
                         zombie.x,
@@ -319,7 +473,12 @@ fn buscar_spawn_horda(
             continue;
         }
 
-        return Some((x, y));
+        return Some(
+            (
+                x,
+                y,
+            ),
+        );
     }
 
     None
@@ -332,39 +491,74 @@ fn crear_zombie_horda(
     y: f32,
 ) -> Zombie {
     match numero_horda {
-        1 => Zombie::new(x, y),
+        1 => {
+            Zombie::new(
+                x,
+                y,
+            )
+        }
 
         2 => {
             if indice % 4 == 0 {
-                Zombie::new_medio(x, y)
+                Zombie::new_medio(
+                    x,
+                    y,
+                )
             } else {
-                Zombie::new(x, y)
+                Zombie::new(
+                    x,
+                    y,
+                )
             }
         }
 
         3 | 4 => {
             match indice % 6 {
-                0 => Zombie::new_fuerte(x, y),
-
-                1 | 2 => {
-                    Zombie::new_medio(x, y)
+                0 => {
+                    Zombie::new_fuerte(
+                        x,
+                        y,
+                    )
                 }
 
-                _ => Zombie::new(x, y),
+                1 | 2 => {
+                    Zombie::new_medio(
+                        x,
+                        y,
+                    )
+                }
+
+                _ => {
+                    Zombie::new(
+                        x,
+                        y,
+                    )
+                }
             }
         }
 
         _ => {
             match indice % 5 {
                 0 | 1 => {
-                    Zombie::new_fuerte(x, y)
+                    Zombie::new_fuerte(
+                        x,
+                        y,
+                    )
                 }
 
                 2 | 3 => {
-                    Zombie::new_medio(x, y)
+                    Zombie::new_medio(
+                        x,
+                        y,
+                    )
                 }
 
-                _ => Zombie::new(x, y),
+                _ => {
+                    Zombie::new(
+                        x,
+                        y,
+                    )
+                }
             }
         }
     }
@@ -379,7 +573,9 @@ fn generar_horda(
     let vivos =
         zombies
             .iter()
-            .filter(|zombie| zombie.vivo)
+            .filter(|zombie| {
+                zombie.vivo
+            })
             .count();
 
     let maximo =
@@ -397,10 +593,13 @@ fn generar_horda(
         )
             .min(
                 maximo
-                    .saturating_sub(vivos),
+                    .saturating_sub(
+                        vivos,
+                    ),
             );
 
-    let mut generados = 0;
+    let mut generados =
+        0;
 
     for indice in 0..cantidad {
         let Some((x, y)) =
@@ -421,53 +620,329 @@ fn generar_horda(
                 y,
             );
 
-        zombie.persiguiendo = true;
+        zombie.persiguiendo =
+            true;
 
-        zombies.push(zombie);
+        zombies.push(
+            zombie,
+        );
 
-        generados += 1;
+        generados +=
+            1;
     }
 
     generados
 }
 
-fn buscar_tyrant(
-    mapa: &mut Map,
-) -> Option<Tyrant> {
-    for fila in 0..mapa.alto() {
-        for columna in 0..mapa.ancho() {
-            if mapa.celda(
-                fila as i32,
-                columna as i32,
-            ) == 'Y'
-            {
-                let x =
-                    columna as f32
-                        * TAMANO_CELDA
-                        + TAMANO_CELDA / 2.0;
+fn disparar_licker(
+    lickers: &mut [Licker],
+    player: &Player,
+    camera: &Camera,
+    mapa: &Map,
+) -> Option<bool> {
+    const TOLERANCIA_ANGULO: f32 =
+        0.10;
 
-                let y =
-                    fila as f32
-                        * TAMANO_CELDA
-                        + TAMANO_CELDA / 2.0;
+    let mut mejor_indice:
+        Option<usize> =
+        None;
 
-                mapa.cambiar_celda(
-                    fila as i32,
-                    columna as i32,
-                    ' ',
-                );
+    let mut mejor_distancia =
+        f32::MAX;
 
-                return Some(
-                    Tyrant::new(
-                        x,
-                        y,
-                    ),
-                );
-            }
+    for (
+        indice,
+        licker,
+    ) in lickers
+        .iter()
+        .enumerate()
+    {
+        if !licker.vivo {
+            continue;
+        }
+
+        let dx =
+            licker.x
+                - player.x;
+
+        let dy =
+            licker.y
+                - player.y;
+
+        let distancia =
+            (
+                dx * dx
+                    + dy * dy
+            )
+                .sqrt();
+
+        if distancia <= 0.001 {
+            continue;
+        }
+
+        let angulo =
+            dy.atan2(
+                dx,
+            );
+
+        let diferencia =
+            normalizar_angulo(
+                angulo
+                    - camera.angle,
+            );
+
+        if diferencia.abs()
+            > TOLERANCIA_ANGULO
+        {
+            continue;
+        }
+
+        let hit =
+            lanzar_rayo(
+                mapa,
+                player.x,
+                player.y,
+                angulo,
+            );
+
+        if hit.distancia
+            < distancia - 6.0
+        {
+            continue;
+        }
+
+        let distancia_corregida =
+            (
+                distancia
+                    * diferencia.cos()
+            )
+                .max(1.0);
+
+        let factor_tamano =
+            match licker.estado {
+                EstadoLicker::Suelo => {
+                    0.80
+                }
+
+                EstadoLicker::Trepando => {
+                    0.85
+                }
+
+                EstadoLicker::Pared => {
+                    0.85
+                }
+
+                EstadoLicker::Techo => {
+                    0.82
+                }
+
+                EstadoLicker::Cayendo => {
+                    0.90
+                }
+            };
+
+        let altura_sprite =
+            (
+                TAMANO_CELDA
+                    * ALTO_VENTANA
+                        as f32
+                    / distancia_corregida
+            )
+                * factor_tamano;
+
+        let altura_mundo =
+            TAMANO_CELDA
+                * licker.altura;
+
+        let desplazamiento =
+            altura_mundo
+                * ALTO_VENTANA
+                    as f32
+                / distancia_corregida;
+
+        let horizonte =
+            ALTO_VENTANA
+                as f32
+                / 2.0
+                + camera
+                    .vertical_offset
+                    as f32;
+
+        let parte_inferior =
+            horizonte
+                + altura_sprite
+                    * 0.50
+                - desplazamiento;
+
+        let parte_superior =
+            parte_inferior
+                - altura_sprite;
+
+        let mira_y =
+            ALTO_VENTANA
+                as f32
+                / 2.0;
+
+        if mira_y
+            < parte_superior
+            || mira_y
+                > parte_inferior
+        {
+            continue;
+        }
+
+        if distancia
+            < mejor_distancia
+        {
+            mejor_distancia =
+                distancia;
+
+            mejor_indice =
+                Some(indice);
         }
     }
 
-    None
+    let Some(indice) =
+        mejor_indice
+    else {
+        return None;
+    };
+
+    let estaba_vivo =
+        lickers[indice].vivo;
+
+    lickers[indice]
+        .recibir_dano(
+            DANO_PISTOLA_LICKER,
+        );
+
+    let murio =
+        estaba_vivo
+            && !lickers[indice].vivo;
+
+    Some(murio)
+}
+
+fn atacar_licker_hacha(
+    lickers: &mut [Licker],
+    player: &Player,
+    camera: &Camera,
+    mapa: &Map,
+) -> Option<bool> {
+    const DISTANCIA_HACHA: f32 =
+        45.0;
+
+    const TOLERANCIA: f32 =
+        0.45;
+
+    let mut mejor_indice:
+        Option<usize> =
+        None;
+
+    let mut mejor_distancia =
+        f32::MAX;
+
+    for (
+        indice,
+        licker,
+    ) in lickers
+        .iter()
+        .enumerate()
+    {
+        if !licker.vivo {
+            continue;
+        }
+
+        if !matches!(
+            licker.estado,
+            EstadoLicker::Suelo
+                | EstadoLicker::Cayendo
+        ) {
+            continue;
+        }
+
+        let dx =
+            licker.x
+                - player.x;
+
+        let dy =
+            licker.y
+                - player.y;
+
+        let distancia =
+            (
+                dx * dx
+                    + dy * dy
+            )
+                .sqrt();
+
+        if distancia
+            > DISTANCIA_HACHA
+        {
+            continue;
+        }
+
+        let angulo =
+            dy.atan2(
+                dx,
+            );
+
+        let diferencia =
+            normalizar_angulo(
+                angulo
+                    - camera.angle,
+            );
+
+        if diferencia.abs()
+            > TOLERANCIA
+        {
+            continue;
+        }
+
+        let hit =
+            lanzar_rayo(
+                mapa,
+                player.x,
+                player.y,
+                angulo,
+            );
+
+        if hit.distancia
+            < distancia - 4.0
+        {
+            continue;
+        }
+
+        if distancia
+            < mejor_distancia
+        {
+            mejor_distancia =
+                distancia;
+
+            mejor_indice =
+                Some(indice);
+        }
+    }
+
+    let Some(indice) =
+        mejor_indice
+    else {
+        return None;
+    };
+
+    let estaba_vivo =
+        lickers[indice].vivo;
+
+    lickers[indice]
+        .recibir_dano(
+            DANO_HACHA_LICKER,
+        );
+
+    let murio =
+        estaba_vivo
+            && !lickers[indice].vivo;
+
+    Some(murio)
 }
 
 fn detener_sonidos_enemigos(
@@ -477,6 +952,92 @@ fn detener_sonidos_enemigos(
     sonidos.detener_zombie_medio();
     sonidos.detener_zombie_fuerte();
     sonidos.detener_tyrant();
+    sonidos.detener_licker();
+}
+
+fn numero_mapa_inicial(
+    nivel: NivelSeleccionado,
+) -> i32 {
+    match nivel {
+        NivelSeleccionado::Mansion => {
+            1
+        }
+
+        NivelSeleccionado::Laboratorio => {
+            3
+        }
+    }
+}
+
+fn nombre_nivel(
+    nivel: NivelSeleccionado,
+) -> &'static str {
+    match nivel {
+        NivelSeleccionado::Mansion => {
+            "MANSION"
+        }
+
+        NivelSeleccionado::Laboratorio => {
+            "LABORATORIO"
+        }
+    }
+}
+
+fn cargar_partida(
+    nivel: NivelSeleccionado,
+    mapa: &mut Map,
+    zombies: &mut Vec<Zombie>,
+    lickers: &mut Vec<Licker>,
+    tyrant: &mut Option<Tyrant>,
+    player: &mut Player,
+    camera: &mut Camera,
+    inventory: &mut Inventory,
+    puzzle: &mut Puzzle,
+    damage_effect: &mut DamageEffect,
+) -> i32 {
+    let numero =
+        numero_mapa_inicial(
+            nivel,
+        );
+
+    *mapa =
+        Map::new(
+            numero,
+        );
+
+    *zombies =
+        crear_zombies(
+            mapa,
+        );
+
+    *lickers =
+        crear_lickers(
+            mapa,
+        );
+
+    *tyrant =
+        buscar_tyrant(
+            mapa,
+        );
+
+    *player =
+        Player::new(
+            mapa,
+        );
+
+    *camera =
+        Camera::new();
+
+    *inventory =
+        Inventory::new();
+
+    *puzzle =
+        Puzzle::new();
+
+    *damage_effect =
+        DamageEffect::new();
+
+    numero
 }
 
 fn cambiar_nivel_mansion(
@@ -485,6 +1046,7 @@ fn cambiar_nivel_mansion(
     indice_portal: usize,
     mapa: &mut Map,
     zombies: &mut Vec<Zombie>,
+    lickers: &mut Vec<Licker>,
     tyrant: &mut Option<Tyrant>,
     player: &mut Player,
     camera: &mut Camera,
@@ -498,6 +1060,11 @@ fn cambiar_nivel_mansion(
 
     *zombies =
         crear_zombies(
+            mapa,
+        );
+
+    *lickers =
+        crear_lickers(
             mapa,
         );
 
@@ -517,8 +1084,11 @@ fn cambiar_nivel_mansion(
             indice_portal,
         )
     {
-        player.x = x;
-        player.y = y;
+        player.x =
+            x;
+
+        player.y =
+            y;
     }
 
     *camera =
@@ -529,29 +1099,6 @@ fn cambiar_nivel_mansion(
 
     *damage_effect =
         DamageEffect::new();
-}
-
-fn numero_mapa_inicial(
-    nivel: NivelSeleccionado,
-) -> i32 {
-    match nivel {
-        NivelSeleccionado::Mansion => 1,
-        NivelSeleccionado::Laboratorio => 3,
-    }
-}
-
-fn nombre_nivel(
-    nivel: NivelSeleccionado,
-) -> &'static str {
-    match nivel {
-        NivelSeleccionado::Mansion => {
-            "MANSION"
-        }
-
-        NivelSeleccionado::Laboratorio => {
-            "LABORATORIO"
-        }
-    }
 }
 
 fn main() {
@@ -604,6 +1151,11 @@ fn main() {
             &mut mapa,
         );
 
+    let mut lickers =
+        crear_lickers(
+            &mut mapa,
+        );
+
     let mut tyrant =
         buscar_tyrant(
             &mut mapa,
@@ -630,7 +1182,8 @@ fn main() {
         ArmaActual::Pistola;
 
     let mut mensaje =
-        "MANSION".to_string();
+        "MANSION"
+            .to_string();
 
     let mut vida_jugador =
         100;
@@ -689,7 +1242,11 @@ fn main() {
             .build();
 
     ventana.toggle_fullscreen();
-    ventana.set_target_fps(60);
+
+    ventana.set_target_fps(
+        60,
+    );
+
     ventana.enable_cursor();
 
     let audio =
@@ -888,6 +1445,36 @@ fn main() {
             )
             .unwrap();
 
+    let licker1 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/licker1.png",
+            )
+            .expect(
+                "No se pudo cargar licker1.png",
+            );
+
+    let licker2 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/licker2.png",
+            )
+            .expect(
+                "No se pudo cargar licker2.png",
+            );
+
+    let licker3 =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/licker3.png",
+            )
+            .expect(
+                "No se pudo cargar licker3.png",
+            );
+
     let mut wall_image =
         Image::load_image(
             "assets/textures/wall.png",
@@ -984,15 +1571,19 @@ fn main() {
             )
             .unwrap();
 
-    while !ventana.window_should_close() {
+    while !ventana
+        .window_should_close()
+    {
         let delta_time =
-            ventana.get_frame_time();
+            ventana
+                .get_frame_time();
 
         if estado_juego
             == EstadoJuego::Jugando
             && vida_jugador > 0
         {
-            sonidos.actualizar_musica();
+            sonidos
+                .actualizar_musica();
         }
 
         match estado_juego {
@@ -1001,65 +1592,54 @@ fn main() {
                     &sonidos,
                 );
 
-                ventana.enable_cursor();
+                ventana
+                    .enable_cursor();
 
                 match menu.update(
                     &ventana,
                 ) {
                     AccionMenu::Jugar => {
                         nivel_seleccionado =
-                            NivelSeleccionado::Mansion;
+                            NivelSeleccionado::
+                                Mansion;
 
                         nivel_actual =
-                            numero_mapa_inicial(
+                            cargar_partida(
                                 nivel_seleccionado,
-                            );
-
-                        mapa =
-                            Map::new(
-                                nivel_actual,
-                            );
-
-                        zombies =
-                            crear_zombies(
                                 &mut mapa,
+                                &mut zombies,
+                                &mut lickers,
+                                &mut tyrant,
+                                &mut player,
+                                &mut camera,
+                                &mut inventory,
+                                &mut puzzle,
+                                &mut damage_effect,
                             );
 
-                        tyrant =
-                            buscar_tyrant(
-                                &mut mapa,
-                            );
+                        vida_jugador =
+                            100;
 
-                        player =
-                            Player::new(
-                                &mapa,
-                            );
+                        balas_cargador =
+                            8;
 
-                        camera =
-                            Camera::new();
-
-                        inventory =
-                            Inventory::new();
-
-                        puzzle =
-                            Puzzle::new();
-
-                        damage_effect =
-                            DamageEffect::new();
-
-                        vida_jugador = 100;
-
-                        balas_cargador = 8;
-                        balas_reserva = 24;
+                        balas_reserva =
+                            24;
 
                         arma_equipada =
                             ArmaActual::Pistola;
 
-                        enemigos_matados = 0;
+                        enemigos_matados =
+                            0;
 
-                        bajas_normal = 0;
-                        bajas_medio = 0;
-                        bajas_fuerte = 0;
+                        bajas_normal =
+                            0;
+
+                        bajas_medio =
+                            0;
+
+                        bajas_fuerte =
+                            0;
 
                         objetivo_completado =
                             false;
@@ -1067,24 +1647,34 @@ fn main() {
                         pantalla_great =
                             false;
 
-                        numero_horda = 1;
-                        siguiente_horda = 4;
+                        numero_horda =
+                            1;
 
-                        tiempo_disparo = 0.0;
-                        tiempo_hachazo = 0.0;
-                        tiempo_recarga = 0.0;
-                        tiempo_cambio_nivel = 0.0;
+                        siguiente_horda =
+                            4;
 
-                        recargando = false;
+                        tiempo_cambio_nivel =
+                            0.0;
+
+                        tiempo_disparo =
+                            0.0;
+
+                        tiempo_hachazo =
+                            0.0;
+
+                        tiempo_recarga =
+                            0.0;
+
+                        recargando =
+                            false;
 
                         mensaje =
-                            nombre_nivel(
-                                nivel_seleccionado,
-                            )
+                            "MANSION"
                                 .to_string();
 
                         estado_juego =
-                            EstadoJuego::Jugando;
+                            EstadoJuego::
+                                Jugando;
 
                         sonidos
                             .detener_musica();
@@ -1106,7 +1696,8 @@ fn main() {
 
                     AccionMenu::Controles => {
                         estado_juego =
-                            EstadoJuego::Controles;
+                            EstadoJuego::
+                                Controles;
                     }
 
                     AccionMenu::Salir => {
@@ -1120,9 +1711,10 @@ fn main() {
                 }
 
                 let mut dibujo =
-                    ventana.begin_drawing(
-                        &thread,
-                    );
+                    ventana
+                        .begin_drawing(
+                            &thread,
+                        );
 
                 menu.render_menu(
                     &mut dibujo,
@@ -1131,12 +1723,15 @@ fn main() {
                 continue;
             }
 
-            EstadoJuego::SeleccionNivel => {
+            EstadoJuego::
+                SeleccionNivel =>
+            {
                 detener_sonidos_enemigos(
                     &sonidos,
                 );
 
-                ventana.enable_cursor();
+                ventana
+                    .enable_cursor();
 
                 match menu
                     .update_seleccion_nivel(
@@ -1150,55 +1745,42 @@ fn main() {
                             nivel;
 
                         nivel_actual =
-                            numero_mapa_inicial(
+                            cargar_partida(
                                 nivel_seleccionado,
-                            );
-
-                        mapa =
-                            Map::new(
-                                nivel_actual,
-                            );
-
-                        zombies =
-                            crear_zombies(
                                 &mut mapa,
+                                &mut zombies,
+                                &mut lickers,
+                                &mut tyrant,
+                                &mut player,
+                                &mut camera,
+                                &mut inventory,
+                                &mut puzzle,
+                                &mut damage_effect,
                             );
 
-                        tyrant =
-                            buscar_tyrant(
-                                &mut mapa,
-                            );
+                        vida_jugador =
+                            100;
 
-                        player =
-                            Player::new(
-                                &mapa,
-                            );
+                        balas_cargador =
+                            8;
 
-                        camera =
-                            Camera::new();
-
-                        inventory =
-                            Inventory::new();
-
-                        puzzle =
-                            Puzzle::new();
-
-                        damage_effect =
-                            DamageEffect::new();
-
-                        vida_jugador = 100;
-
-                        balas_cargador = 8;
-                        balas_reserva = 24;
+                        balas_reserva =
+                            24;
 
                         arma_equipada =
                             ArmaActual::Pistola;
 
-                        enemigos_matados = 0;
+                        enemigos_matados =
+                            0;
 
-                        bajas_normal = 0;
-                        bajas_medio = 0;
-                        bajas_fuerte = 0;
+                        bajas_normal =
+                            0;
+
+                        bajas_medio =
+                            0;
+
+                        bajas_fuerte =
+                            0;
 
                         objetivo_completado =
                             false;
@@ -1206,15 +1788,26 @@ fn main() {
                         pantalla_great =
                             false;
 
-                        numero_horda = 1;
-                        siguiente_horda = 4;
+                        numero_horda =
+                            1;
 
-                        tiempo_disparo = 0.0;
-                        tiempo_hachazo = 0.0;
-                        tiempo_recarga = 0.0;
-                        tiempo_cambio_nivel = 0.0;
+                        siguiente_horda =
+                            4;
 
-                        recargando = false;
+                        tiempo_cambio_nivel =
+                            0.0;
+
+                        tiempo_disparo =
+                            0.0;
+
+                        tiempo_hachazo =
+                            0.0;
+
+                        tiempo_recarga =
+                            0.0;
+
+                        recargando =
+                            false;
 
                         mensaje =
                             nombre_nivel(
@@ -1229,24 +1822,30 @@ fn main() {
                             .iniciar_musica();
 
                         estado_juego =
-                            EstadoJuego::Jugando;
+                            EstadoJuego::
+                                Jugando;
 
                         ventana
                             .disable_cursor();
                     }
 
-                    AccionSeleccionNivel::Volver => {
+                    AccionSeleccionNivel::
+                        Volver =>
+                    {
                         estado_juego =
-                            EstadoJuego::Menu;
+                            EstadoJuego::
+                                Menu;
                     }
 
-                    AccionSeleccionNivel::Ninguna => {}
+                    AccionSeleccionNivel::
+                        Ninguna => {}
                 }
 
                 let mut dibujo =
-                    ventana.begin_drawing(
-                        &thread,
-                    );
+                    ventana
+                        .begin_drawing(
+                            &thread,
+                        );
 
                 menu.render_seleccion_nivel(
                     &mut dibujo,
@@ -1260,7 +1859,8 @@ fn main() {
                     &sonidos,
                 );
 
-                ventana.enable_cursor();
+                ventana
+                    .enable_cursor();
 
                 if ventana
                     .is_key_pressed(
@@ -1273,9 +1873,10 @@ fn main() {
                 }
 
                 let mut dibujo =
-                    ventana.begin_drawing(
-                        &thread,
-                    );
+                    ventana
+                        .begin_drawing(
+                            &thread,
+                        );
 
                 menu.render_controles(
                     &mut dibujo,
@@ -1292,9 +1893,11 @@ fn main() {
                 &sonidos,
             );
 
-            sonidos.actualizar_musica();
+            sonidos
+                .actualizar_musica();
 
-            ventana.enable_cursor();
+            ventana
+                .enable_cursor();
 
             if ventana
                 .is_key_pressed(
@@ -1336,24 +1939,28 @@ fn main() {
             }
 
             let mut dibujo =
-                ventana.begin_drawing(
-                    &thread,
+                ventana
+                    .begin_drawing(
+                        &thread,
+                    );
+
+            dibujo
+                .clear_background(
+                    Color::new(
+                        8,
+                        8,
+                        8,
+                        255,
+                    ),
                 );
 
-            dibujo.clear_background(
-                Color::new(
-                    8,
-                    8,
-                    8,
-                    255,
-                ),
-            );
-
             let sw =
-                dibujo.get_screen_width();
+                dibujo
+                    .get_screen_width();
 
             let sh =
-                dibujo.get_screen_height();
+                dibujo
+                    .get_screen_height();
 
             let titulo =
                 "GREAT!";
@@ -1364,27 +1971,30 @@ fn main() {
             let normal =
                 format!(
                     "ZOMBIES NORMALES: {}/{}",
-                    bajas_normal.min(
-                        META_NORMAL,
-                    ),
+                    bajas_normal
+                        .min(
+                            META_NORMAL,
+                        ),
                     META_NORMAL,
                 );
 
             let medio =
                 format!(
                     "ZOMBIES MEDIOS: {}/{}",
-                    bajas_medio.min(
-                        META_MEDIO,
-                    ),
+                    bajas_medio
+                        .min(
+                            META_MEDIO,
+                        ),
                     META_MEDIO,
                 );
 
             let fuerte =
                 format!(
                     "ZOMBIES FUERTES: {}/{}",
-                    bajas_fuerte.min(
-                        META_FUERTE,
-                    ),
+                    bajas_fuerte
+                        .min(
+                            META_FUERTE,
+                        ),
                     META_FUERTE,
                 );
 
@@ -1395,10 +2005,11 @@ fn main() {
                 "BACKSPACE - MENU PRINCIPAL";
 
             let titulo_w =
-                dibujo.measure_text(
-                    titulo,
-                    80,
-                );
+                dibujo
+                    .measure_text(
+                        titulo,
+                        80,
+                    );
 
             dibujo.draw_text(
                 titulo,
@@ -1411,10 +2022,11 @@ fn main() {
             );
 
             let sub_w =
-                dibujo.measure_text(
-                    subtitulo,
-                    28,
-                );
+                dibujo
+                    .measure_text(
+                        subtitulo,
+                        28,
+                    );
 
             dibujo.draw_text(
                 subtitulo,
@@ -1427,10 +2039,11 @@ fn main() {
             );
 
             let normal_w =
-                dibujo.measure_text(
-                    &normal,
-                    24,
-                );
+                dibujo
+                    .measure_text(
+                        &normal,
+                        24,
+                    );
 
             dibujo.draw_text(
                 &normal,
@@ -1443,10 +2056,11 @@ fn main() {
             );
 
             let medio_w =
-                dibujo.measure_text(
-                    &medio,
-                    24,
-                );
+                dibujo
+                    .measure_text(
+                        &medio,
+                        24,
+                    );
 
             dibujo.draw_text(
                 &medio,
@@ -1459,10 +2073,11 @@ fn main() {
             );
 
             let fuerte_w =
-                dibujo.measure_text(
-                    &fuerte,
-                    24,
-                );
+                dibujo
+                    .measure_text(
+                        &fuerte,
+                        24,
+                    );
 
             dibujo.draw_text(
                 &fuerte,
@@ -1475,10 +2090,11 @@ fn main() {
             );
 
             let arcade_w =
-                dibujo.measure_text(
-                    arcade,
-                    24,
-                );
+                dibujo
+                    .measure_text(
+                        arcade,
+                        24,
+                    );
 
             dibujo.draw_text(
                 arcade,
@@ -1491,10 +2107,11 @@ fn main() {
             );
 
             let volver_w =
-                dibujo.measure_text(
-                    volver,
-                    20,
-                );
+                dibujo
+                    .measure_text(
+                        volver,
+                        20,
+                    );
 
             dibujo.draw_text(
                 volver,
@@ -1525,7 +2142,8 @@ fn main() {
             estado_juego =
                 EstadoJuego::Menu;
 
-            ventana.enable_cursor();
+            ventana
+                .enable_cursor();
 
             continue;
         }
@@ -1558,16 +2176,21 @@ fn main() {
                 delta_time;
 
             if tiempo_recarga <= 0.0 {
-                recargando = false;
-                tiempo_recarga = 0.0;
+                recargando =
+                    false;
+
+                tiempo_recarga =
+                    0.0;
 
                 let faltantes =
-                    8 - balas_cargador;
+                    8
+                        - balas_cargador;
 
                 let cantidad =
-                    faltantes.min(
-                        balas_reserva,
-                    );
+                    faltantes
+                        .min(
+                            balas_reserva,
+                        );
 
                 balas_cargador +=
                     cantidad;
@@ -1581,9 +2204,10 @@ fn main() {
             }
         }
 
-        damage_effect.update(
-            delta_time,
-        );
+        damage_effect
+            .update(
+                delta_time,
+            );
 
         if vida_jugador > 0 {
             camera.update(
@@ -1604,7 +2228,8 @@ fn main() {
             vida_jugador > 0
                 && arma_equipada
                     == ArmaActual::Hacha
-                && tiempo_hachazo <= 0.0
+                && tiempo_hachazo
+                    <= 0.0
                 && ventana
                     .is_mouse_button_down(
                         MouseButton::
@@ -1612,7 +2237,9 @@ fn main() {
                     );
 
         if vida_jugador > 0 {
-            for zombie in &mut zombies {
+            for zombie
+                in &mut zombies
+            {
                 let dano =
                     zombie.update(
                         &player,
@@ -1640,7 +2267,8 @@ fn main() {
                         dano_final;
 
                     vida_jugador =
-                        vida_jugador.max(0);
+                        vida_jugador
+                            .max(0);
 
                     if bloqueo_valido {
                         sonidos
@@ -1650,7 +2278,8 @@ fn main() {
                             "Ataque bloqueado"
                                 .to_string();
                     } else {
-                        sonidos.dano();
+                        sonidos
+                            .dano();
 
                         mensaje =
                             format!(
@@ -1659,7 +2288,58 @@ fn main() {
                             );
                     }
 
-                    damage_effect.activar();
+                    damage_effect
+                        .activar();
+                }
+            }
+        }
+
+        if vida_jugador > 0 {
+            for licker
+                in &mut lickers
+            {
+                let dano =
+                    licker.update(
+                        &player,
+                        &mapa,
+                        delta_time,
+                    );
+
+                if dano > 0 {
+                    let dano_final =
+                        if bloqueando {
+                            5
+                        } else {
+                            dano
+                        };
+
+                    vida_jugador -=
+                        dano_final;
+
+                    vida_jugador =
+                        vida_jugador
+                            .max(0);
+
+                    if bloqueando {
+                        sonidos
+                            .bloqueo_hacha();
+
+                        mensaje =
+                            "Bloqueaste al LICKER"
+                                .to_string();
+                    } else {
+                        sonidos
+                            .dano();
+
+                        mensaje =
+                            format!(
+                                "LICKER -{} VIDA",
+                                dano_final,
+                            );
+                    }
+
+                    damage_effect
+                        .activar();
                 }
             }
         }
@@ -1697,15 +2377,18 @@ fn main() {
         if vida_jugador > 0
             && hay_normal
         {
-            sonidos.zombie();
+            sonidos
+                .zombie();
         } else {
-            sonidos.detener_zombie();
+            sonidos
+                .detener_zombie();
         }
 
         if vida_jugador > 0
             && hay_medio
         {
-            sonidos.zombie_medio();
+            sonidos
+                .zombie_medio();
         } else {
             sonidos
                 .detener_zombie_medio();
@@ -1714,10 +2397,34 @@ fn main() {
         if vida_jugador > 0
             && hay_fuerte
         {
-            sonidos.zombie_fuerte();
+            sonidos
+                .zombie_fuerte();
         } else {
             sonidos
                 .detener_zombie_fuerte();
+        }
+
+        let licker_cerca =
+            lickers
+                .iter()
+                .any(|licker| {
+                    licker.vivo
+                        && calcular_distancia(
+                            player.x,
+                            player.y,
+                            licker.x,
+                            licker.y,
+                        ) <= 450.0
+                });
+
+        if vida_jugador > 0
+            && licker_cerca
+        {
+            sonidos
+                .licker();
+        } else {
+            sonidos
+                .detener_licker();
         }
 
         if vida_jugador > 0 {
@@ -1734,8 +2441,11 @@ fn main() {
                         tyrant_actual.y,
                     );
 
-                if distancia_tyrant <= 450.0 {
-                    sonidos.tyrant();
+                if distancia_tyrant
+                    <= 450.0
+                {
+                    sonidos
+                        .tyrant();
                 } else {
                     sonidos
                         .detener_tyrant();
@@ -1760,7 +2470,8 @@ fn main() {
                         dano_final;
 
                     vida_jugador =
-                        vida_jugador.max(0);
+                        vida_jugador
+                            .max(0);
 
                     if bloqueando {
                         sonidos
@@ -1770,7 +2481,8 @@ fn main() {
                             "Bloqueaste al TYRANT"
                                 .to_string();
                     } else {
-                        sonidos.dano();
+                        sonidos
+                            .dano();
 
                         mensaje =
                             format!(
@@ -1779,13 +2491,16 @@ fn main() {
                             );
                     }
 
-                    damage_effect.activar();
+                    damage_effect
+                        .activar();
                 }
             } else {
-                sonidos.detener_tyrant();
+                sonidos
+                    .detener_tyrant();
             }
         } else {
-            sonidos.detener_tyrant();
+            sonidos
+                .detener_tyrant();
         }
 
         if vida_jugador > 0 {
@@ -1799,7 +2514,8 @@ fn main() {
                 InteractionResult::
                     LlaveRecogida =>
                 {
-                    sonidos.llave();
+                    sonidos
+                        .llave();
 
                     mensaje =
                         "Recogiste una llave"
@@ -1829,7 +2545,8 @@ fn main() {
                         cantidad,
                     ) =>
                 {
-                    sonidos.curacion();
+                    sonidos
+                        .curacion();
 
                     vida_jugador =
                         (
@@ -1858,7 +2575,8 @@ fn main() {
                 arma_equipada =
                     ArmaActual::Pistola;
 
-                tiempo_hachazo = 0.0;
+                tiempo_hachazo =
+                    0.0;
 
                 mensaje =
                     "Pistola equipada"
@@ -1873,9 +2591,14 @@ fn main() {
                 arma_equipada =
                     ArmaActual::Hacha;
 
-                recargando = false;
-                tiempo_recarga = 0.0;
-                tiempo_disparo = 0.0;
+                recargando =
+                    false;
+
+                tiempo_recarga =
+                    0.0;
+
+                tiempo_disparo =
+                    0.0;
 
                 mensaje =
                     "Hacha equipada"
@@ -1897,7 +2620,8 @@ fn main() {
                     InteractionResult::
                         PuertaAbierta =>
                     {
-                        sonidos.puerta();
+                        sonidos
+                            .puerta();
 
                         mensaje =
                             "Abriste la puerta"
@@ -1918,7 +2642,8 @@ fn main() {
                         if nivel_seleccionado
                             == NivelSeleccionado::
                                 Mansion
-                            && nivel_actual == 1
+                            && nivel_actual
+                                == 1
                             && tiempo_cambio_nivel
                                 <= 0.0
                         {
@@ -1926,7 +2651,8 @@ fn main() {
                                 &sonidos,
                             );
 
-                            nivel_actual = 2;
+                            nivel_actual =
+                                2;
 
                             cambiar_nivel_mansion(
                                 2,
@@ -1934,6 +2660,7 @@ fn main() {
                                 indice,
                                 &mut mapa,
                                 &mut zombies,
+                                &mut lickers,
                                 &mut tyrant,
                                 &mut player,
                                 &mut camera,
@@ -1944,10 +2671,17 @@ fn main() {
                             tiempo_cambio_nivel =
                                 1.0;
 
-                            tiempo_disparo = 0.0;
-                            tiempo_hachazo = 0.0;
-                            tiempo_recarga = 0.0;
-                            recargando = false;
+                            tiempo_disparo =
+                                0.0;
+
+                            tiempo_hachazo =
+                                0.0;
+
+                            tiempo_recarga =
+                                0.0;
+
+                            recargando =
+                                false;
 
                             mensaje =
                                 "MANSION - PISO 2"
@@ -1961,7 +2695,8 @@ fn main() {
                         if nivel_seleccionado
                             == NivelSeleccionado::
                                 Mansion
-                            && nivel_actual == 2
+                            && nivel_actual
+                                == 2
                             && tiempo_cambio_nivel
                                 <= 0.0
                         {
@@ -1969,7 +2704,8 @@ fn main() {
                                 &sonidos,
                             );
 
-                            nivel_actual = 1;
+                            nivel_actual =
+                                1;
 
                             cambiar_nivel_mansion(
                                 1,
@@ -1977,6 +2713,7 @@ fn main() {
                                 indice,
                                 &mut mapa,
                                 &mut zombies,
+                                &mut lickers,
                                 &mut tyrant,
                                 &mut player,
                                 &mut camera,
@@ -1987,10 +2724,17 @@ fn main() {
                             tiempo_cambio_nivel =
                                 1.0;
 
-                            tiempo_disparo = 0.0;
-                            tiempo_hachazo = 0.0;
-                            tiempo_recarga = 0.0;
-                            recargando = false;
+                            tiempo_disparo =
+                                0.0;
+
+                            tiempo_hachazo =
+                                0.0;
+
+                            tiempo_recarga =
+                                0.0;
+
+                            recargando =
+                                false;
 
                             mensaje =
                                 "MANSION - PISO 1"
@@ -2025,12 +2769,14 @@ fn main() {
                 ArmaActual::Pistola => {
                     if !recargando {
                         if balas_cargador > 0 {
-                            balas_cargador -= 1;
+                            balas_cargador -=
+                                1;
 
                             tiempo_disparo =
                                 0.12;
 
-                            sonidos.disparo();
+                            sonidos
+                                .disparo();
 
                             let normal_antes =
                                 contar_vivos_tipo(
@@ -2053,7 +2799,9 @@ fn main() {
                             let vivos_antes =
                                 zombies
                                     .iter()
-                                    .filter(|z| z.vivo)
+                                    .filter(|z| {
+                                        z.vivo
+                                    })
                                     .count();
 
                             let resultado =
@@ -2077,7 +2825,9 @@ fn main() {
                             let vivos_despues =
                                 zombies
                                     .iter()
-                                    .filter(|z| z.vivo)
+                                    .filter(|z| {
+                                        z.vivo
+                                    })
                                     .count();
 
                             if vivos_despues
@@ -2087,74 +2837,112 @@ fn main() {
                                     (
                                         vivos_antes
                                             - vivos_despues
-                                    )
-                                        as i32;
+                                    ) as i32;
 
                                 sonidos
                                     .zombie_muere();
                             }
 
-                            mensaje =
-                                match resultado {
-                                    ShotResult::Miss => {
+                            let fallo_zombie =
+                                matches!(
+                                    resultado,
+                                    ShotResult::Miss
+                                );
+
+                            if fallo_zombie {
+                                if let Some(murio) =
+                                    disparar_licker(
+                                        &mut lickers,
+                                        &player,
+                                        &camera,
+                                        &mapa,
+                                    )
+                                {
+                                    if murio {
+                                        enemigos_matados +=
+                                            1;
+
+                                        sonidos
+                                            .licker_muere();
+
+                                        mensaje =
+                                            format!(
+                                                "LICKER ELIMINADO - BAJAS {}",
+                                                enemigos_matados,
+                                            );
+                                    } else {
+                                        mensaje =
+                                            "Impacto al LICKER"
+                                                .to_string();
+                                    }
+                                } else {
+                                    mensaje =
                                         "Disparo fallido"
-                                            .to_string()
-                                    }
+                                            .to_string();
+                                }
+                            } else {
+                                mensaje =
+                                    match resultado {
+                                        ShotResult::Miss => {
+                                            "Disparo fallido"
+                                                .to_string()
+                                        }
 
-                                    ShotResult::Hit {
-                                        vida_restante,
-                                    } => {
-                                        format!(
-                                            "Impacto - {} HP",
+                                        ShotResult::Hit {
                                             vida_restante,
-                                        )
-                                    }
+                                        } => {
+                                            format!(
+                                                "Impacto - {} HP",
+                                                vida_restante,
+                                            )
+                                        }
 
-                                    ShotResult::
-                                        HeadshotHit {
-                                            vida_restante,
-                                        } =>
-                                    {
-                                        format!(
-                                            "HEADSHOT x2 - {} HP",
-                                            vida_restante,
-                                        )
-                                    }
+                                        ShotResult::
+                                            HeadshotHit {
+                                                vida_restante,
+                                            } =>
+                                        {
+                                            format!(
+                                                "HEADSHOT x2 - {} HP",
+                                                vida_restante,
+                                            )
+                                        }
 
-                                    ShotResult::Kill => {
-                                        format!(
-                                            "BAJAS: {}",
-                                            enemigos_matados,
-                                        )
-                                    }
+                                        ShotResult::Kill => {
+                                            format!(
+                                                "BAJAS: {}",
+                                                enemigos_matados,
+                                            )
+                                        }
 
-                                    ShotResult::
-                                        KillConLlave =>
-                                    {
-                                        format!(
-                                            "BAJAS: {} - LLAVE",
-                                            enemigos_matados,
-                                        )
-                                    }
+                                        ShotResult::
+                                            KillConLlave =>
+                                        {
+                                            format!(
+                                                "BAJAS: {} - LLAVE",
+                                                enemigos_matados,
+                                            )
+                                        }
 
-                                    ShotResult::
-                                        HeadshotKill =>
-                                    {
-                                        format!(
-                                            "HEADSHOT x2 - BAJA {}",
-                                            enemigos_matados,
-                                        )
-                                    }
+                                        ShotResult::
+                                            HeadshotKill =>
+                                        {
+                                            format!(
+                                                "HEADSHOT x2 - BAJA {}",
+                                                enemigos_matados,
+                                            )
+                                        }
 
-                                    ShotResult::
-                                        HeadshotKillConLlave =>
-                                    {
-                                        format!(
-                                            "HEADSHOT x2 - BAJA {} - LLAVE",
-                                            enemigos_matados,
-                                        )
-                                    }
-                                };
+                                        ShotResult::
+                                            HeadshotKillConLlave =>
+                                        {
+                                            format!(
+                                                "HEADSHOT x2 - BAJA {} - LLAVE",
+                                                enemigos_matados,
+                                            )
+                                        }
+                                    };
+                            }
                         } else {
                             sonidos
                                 .sin_municion();
@@ -2167,13 +2955,15 @@ fn main() {
                 }
 
                 ArmaActual::Hacha => {
-                    if tiempo_hachazo <= 0.0
+                    if tiempo_hachazo
+                        <= 0.0
                         && !bloqueando
                     {
                         tiempo_hachazo =
                             DURACION_HACHAZO;
 
-                        sonidos.hachazo();
+                        sonidos
+                            .hachazo();
 
                         let normal_antes =
                             contar_vivos_tipo(
@@ -2196,7 +2986,9 @@ fn main() {
                         let vivos_antes =
                             zombies
                                 .iter()
-                                .filter(|z| z.vivo)
+                                .filter(|z| {
+                                    z.vivo
+                                })
                                 .count();
 
                         let resultado =
@@ -2220,7 +3012,9 @@ fn main() {
                         let vivos_despues =
                             zombies
                                 .iter()
-                                .filter(|z| z.vivo)
+                                .filter(|z| {
+                                    z.vivo
+                                })
                                 .count();
 
                         if vivos_despues
@@ -2230,61 +3024,99 @@ fn main() {
                                 (
                                     vivos_antes
                                         - vivos_despues
-                                )
-                                    as i32;
+                                ) as i32;
 
                             sonidos
                                 .zombie_muere();
                         }
 
-                        mensaje =
-                            match resultado {
-                                ShotResult::Miss => {
+                        let fallo_zombie =
+                            matches!(
+                                resultado,
+                                ShotResult::Miss
+                            );
+
+                        if fallo_zombie {
+                            if let Some(murio) =
+                                atacar_licker_hacha(
+                                    &mut lickers,
+                                    &player,
+                                    &camera,
+                                    &mapa,
+                                )
+                            {
+                                if murio {
+                                    enemigos_matados +=
+                                        1;
+
+                                    sonidos
+                                        .licker_muere();
+
+                                    mensaje =
+                                        format!(
+                                            "LICKER ELIMINADO - BAJAS {}",
+                                            enemigos_matados,
+                                        );
+                                } else {
+                                    mensaje =
+                                        "Golpe al LICKER"
+                                            .to_string();
+                                }
+                            } else {
+                                mensaje =
                                     "Hachazo fallido"
-                                        .to_string()
-                                }
+                                        .to_string();
+                            }
+                        } else {
+                            mensaje =
+                                match resultado {
+                                    ShotResult::Miss => {
+                                        "Hachazo fallido"
+                                            .to_string()
+                                    }
 
-                                ShotResult::Hit {
-                                    vida_restante,
-                                } => {
-                                    format!(
-                                        "Golpe - {} HP",
+                                    ShotResult::Hit {
                                         vida_restante,
-                                    )
-                                }
+                                    } => {
+                                        format!(
+                                            "Golpe - {} HP",
+                                            vida_restante,
+                                        )
+                                    }
 
-                                ShotResult::Kill
-                                | ShotResult::
-                                    HeadshotKill =>
-                                {
-                                    format!(
-                                        "BAJAS: {}",
-                                        enemigos_matados,
-                                    )
-                                }
+                                    ShotResult::Kill
+                                    | ShotResult::
+                                        HeadshotKill =>
+                                    {
+                                        format!(
+                                            "BAJAS: {}",
+                                            enemigos_matados,
+                                        )
+                                    }
 
-                                ShotResult::
-                                    KillConLlave
-                                | ShotResult::
-                                    HeadshotKillConLlave =>
-                                {
-                                    format!(
-                                        "BAJAS: {} - LLAVE",
-                                        enemigos_matados,
-                                    )
-                                }
+                                    ShotResult::
+                                        KillConLlave
+                                    | ShotResult::
+                                        HeadshotKillConLlave =>
+                                    {
+                                        format!(
+                                            "BAJAS: {} - LLAVE",
+                                            enemigos_matados,
+                                        )
+                                    }
 
-                                ShotResult::
-                                    HeadshotHit {
-                                        vida_restante,
-                                    } =>
-                                {
-                                    format!(
-                                        "Golpe - {} HP",
-                                        vida_restante,
-                                    )
-                                }
-                            };
+                                    ShotResult::
+                                        HeadshotHit {
+                                            vida_restante,
+                                        } =>
+                                    {
+                                        format!(
+                                            "Golpe - {} HP",
+                                            vida_restante,
+                                        )
+                                    }
+                                };
+                        }
                     }
                 }
             }
@@ -2311,7 +3143,8 @@ fn main() {
                 "OBJETIVO COMPLETADO"
                     .to_string();
 
-            ventana.enable_cursor();
+            ventana
+                .enable_cursor();
 
             continue;
         }
@@ -2337,9 +3170,11 @@ fn main() {
                     );
             }
 
-            numero_horda += 1;
+            numero_horda +=
+                1;
 
-            siguiente_horda += 6;
+            siguiente_horda +=
+                6;
         }
 
         if vida_jugador > 0
@@ -2351,21 +3186,27 @@ fn main() {
                 == ArmaActual::Pistola
             && !recargando
         {
-            if balas_cargador == 8 {
+            if balas_cargador
+                == 8
+            {
                 mensaje =
                     "Cargador lleno"
                         .to_string();
-            } else if balas_reserva <= 0 {
+            } else if balas_reserva
+                <= 0
+            {
                 mensaje =
                     "Sin balas de reserva"
                         .to_string();
             } else {
-                recargando = true;
+                recargando =
+                    true;
 
                 tiempo_recarga =
                     DURACION_RECARGA;
 
-                sonidos.recarga();
+                sonidos
+                    .recarga();
 
                 mensaje =
                     "Recargando..."
@@ -2386,69 +3227,69 @@ fn main() {
                 .detener_musica();
 
             nivel_actual =
-                numero_mapa_inicial(
+                cargar_partida(
                     nivel_seleccionado,
-                );
-
-            enemigos_matados = 0;
-
-            bajas_normal = 0;
-            bajas_medio = 0;
-            bajas_fuerte = 0;
-
-            objetivo_completado = false;
-            pantalla_great = false;
-
-            numero_horda = 1;
-            siguiente_horda = 4;
-
-            tiempo_cambio_nivel = 0.0;
-
-            mapa =
-                Map::new(
-                    nivel_actual,
-                );
-
-            zombies =
-                crear_zombies(
                     &mut mapa,
+                    &mut zombies,
+                    &mut lickers,
+                    &mut tyrant,
+                    &mut player,
+                    &mut camera,
+                    &mut inventory,
+                    &mut puzzle,
+                    &mut damage_effect,
                 );
 
-            tyrant =
-                buscar_tyrant(
-                    &mut mapa,
-                );
+            enemigos_matados =
+                0;
 
-            player =
-                Player::new(
-                    &mapa,
-                );
+            bajas_normal =
+                0;
 
-            camera =
-                Camera::new();
+            bajas_medio =
+                0;
 
-            inventory =
-                Inventory::new();
+            bajas_fuerte =
+                0;
 
-            puzzle =
-                Puzzle::new();
+            objetivo_completado =
+                false;
 
-            damage_effect =
-                DamageEffect::new();
+            pantalla_great =
+                false;
+
+            numero_horda =
+                1;
+
+            siguiente_horda =
+                4;
+
+            tiempo_cambio_nivel =
+                0.0;
 
             arma_equipada =
                 ArmaActual::Pistola;
 
-            vida_jugador = 100;
+            vida_jugador =
+                100;
 
-            balas_cargador = 8;
-            balas_reserva = 24;
+            balas_cargador =
+                8;
 
-            tiempo_disparo = 0.0;
-            tiempo_hachazo = 0.0;
-            tiempo_recarga = 0.0;
+            balas_reserva =
+                24;
 
-            recargando = false;
+            tiempo_disparo =
+                0.0;
+
+            tiempo_hachazo =
+                0.0;
+
+            tiempo_recarga =
+                0.0;
+
+            recargando =
+                false;
 
             mensaje =
                 nombre_nivel(
@@ -2468,7 +3309,8 @@ fn main() {
                 KeyboardKey::KEY_F11,
             )
         {
-            ventana.toggle_fullscreen();
+            ventana
+                .toggle_fullscreen();
         }
 
         if ventana
@@ -2476,7 +3318,8 @@ fn main() {
                 KeyboardKey::KEY_TAB,
             )
         {
-            ventana.enable_cursor();
+            ventana
+                .enable_cursor();
         }
 
         framebuffer.clear();
@@ -2486,17 +3329,13 @@ fn main() {
             &mapa,
             &player,
             &camera,
-
             &textura_pared,
             &textura_ventana,
             &textura_puerta,
-
             &textura_subir,
             &textura_bajar,
-
             &textura_suelo,
             &textura_suelo2,
-
             &textura_techo,
         );
 
@@ -2570,7 +3409,9 @@ fn main() {
                         } else {
                             &pistol_r
                         }
-                    } else if tiempo_disparo > 0.0 {
+                    } else if tiempo_disparo
+                        > 0.0
+                    {
                         &pistol3
                     } else if apuntando {
                         &pistol2
@@ -2582,7 +3423,9 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         &axe3
-                    } else if tiempo_hachazo > 0.0 {
+                    } else if tiempo_hachazo
+                        > 0.0
+                    {
                         &axe2
                     } else {
                         &axe1
@@ -2595,7 +3438,9 @@ fn main() {
                 ArmaActual::Pistola => {
                     if recargando {
                         0.28
-                    } else if tiempo_disparo > 0.0 {
+                    } else if tiempo_disparo
+                        > 0.0
+                    {
                         0.34
                     } else if apuntando {
                         0.36
@@ -2607,7 +3452,9 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         0.42
-                    } else if tiempo_hachazo > 0.0 {
+                    } else if tiempo_hachazo
+                        > 0.0
+                    {
                         0.37
                     } else {
                         0.34
@@ -2634,10 +3481,12 @@ fn main() {
         let retroceso =
             if arma_equipada
                 == ArmaActual::Pistola
-                && tiempo_disparo > 0.0
+                && tiempo_disparo
+                    > 0.0
                 && !recargando
             {
-                8.0 * escala
+                8.0
+                    * escala
             } else {
                 0.0
             };
@@ -2654,13 +3503,15 @@ fn main() {
                 - retroceso;
 
         let mut dibujo =
-            ventana.begin_drawing(
-                &thread,
-            );
+            ventana
+                .begin_drawing(
+                    &thread,
+                );
 
-        dibujo.clear_background(
-            Color::BLACK,
-        );
+        dibujo
+            .clear_background(
+                Color::BLACK,
+            );
 
         dibujo.draw_texture_pro(
             &textura_framebuffer,
@@ -2668,8 +3519,10 @@ fn main() {
             Rectangle::new(
                 0.0,
                 0.0,
-                ANCHO_VENTANA as f32,
-                ALTO_VENTANA as f32,
+                ANCHO_VENTANA
+                    as f32,
+                ALTO_VENTANA
+                    as f32,
             ),
 
             Rectangle::new(
@@ -2769,6 +3622,22 @@ fn main() {
             escala,
         );
 
+        render_lickers(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &lickers,
+
+            &licker1,
+            &licker2,
+            &licker3,
+
+            offset_x,
+            offset_y,
+            escala,
+        );
+
         if let Some(
             tyrant_actual,
         ) =
@@ -2792,37 +3661,47 @@ fn main() {
         }
 
         if vida_jugador > 0 {
-            dibujo.draw_texture_ex(
-                textura_arma,
+            dibujo
+                .draw_texture_ex(
+                    textura_arma,
 
-                Vector2::new(
-                    arma_x,
-                    arma_y,
-                ),
+                    Vector2::new(
+                        arma_x,
+                        arma_y,
+                    ),
 
-                0.0,
+                    0.0,
 
-                escala_arma,
+                    escala_arma,
 
-                Color::WHITE,
-            );
+                    Color::WHITE,
+                );
 
             if apuntando {
                 let mira_x =
                     offset_x
-                        + ancho_render / 2.0;
+                        + ancho_render
+                            / 2.0;
 
                 let mira_y =
                     offset_y
-                        + alto_render / 2.0;
+                        + alto_render
+                            / 2.0;
 
-                dibujo.draw_circle(
-                    mira_x as i32,
-                    mira_y as i32,
-                    3.0
-                        * escala.max(1.0),
-                    Color::RED,
-                );
+                dibujo
+                    .draw_circle(
+                        mira_x
+                            as i32,
+
+                        mira_y
+                            as i32,
+
+                        3.0
+                            * escala
+                                .max(1.0),
+
+                        Color::RED,
+                    );
             }
         }
 
@@ -2845,11 +3724,19 @@ fn main() {
             escala,
         );
 
-        let vivos =
+        let vivos_zombies =
             zombies
                 .iter()
-                .filter(|zombie| {
-                    zombie.vivo
+                .filter(|z| {
+                    z.vivo
+                })
+                .count();
+
+        let vivos_lickers =
+            lickers
+                .iter()
+                .filter(|l| {
+                    l.vivo
                 })
                 .count();
 
@@ -2860,30 +3747,39 @@ fn main() {
 
         let texto_arcade =
             if nivel_seleccionado
-                == NivelSeleccionado::Mansion
+                == NivelSeleccionado::
+                    Mansion
             {
                 format!(
-                    "{} | PISO {} | HORDA {} | BAJAS {} | ENEMIGOS {}",
+                    "{} | PISO {} | HORDA {} | BAJAS {} | Z {} | L {}",
                     nombre,
                     nivel_actual,
                     numero_horda,
                     enemigos_matados,
-                    vivos,
+                    vivos_zombies,
+                    vivos_lickers,
                 )
             } else {
                 format!(
-                    "{} | HORDA {} | BAJAS {} | ENEMIGOS {}",
+                    "{} | HORDA {} | BAJAS {} | Z {} | L {}",
                     nombre,
                     numero_horda,
                     enemigos_matados,
-                    vivos,
+                    vivos_zombies,
+                    vivos_lickers,
                 )
             };
 
         dibujo.draw_text(
             &texto_arcade,
-            (offset_x + 15.0) as i32,
-            (offset_y + 115.0) as i32,
+            (
+                offset_x
+                    + 15.0
+            ) as i32,
+            (
+                offset_y
+                    + 115.0
+            ) as i32,
             18,
             Color::WHITE,
         );
@@ -2893,62 +3789,86 @@ fn main() {
                 format!(
                     "OBJETIVO | NORMAL {}/{} | MEDIO {}/{} | FUERTE {}/{}",
                     bajas_normal
-                        .min(META_NORMAL),
+                        .min(
+                            META_NORMAL,
+                        ),
                     META_NORMAL,
                     bajas_medio
-                        .min(META_MEDIO),
+                        .min(
+                            META_MEDIO,
+                        ),
                     META_MEDIO,
                     bajas_fuerte
-                        .min(META_FUERTE),
+                        .min(
+                            META_FUERTE,
+                        ),
                     META_FUERTE,
                 );
 
             dibujo.draw_text(
                 &texto_objetivo,
-                (offset_x + 15.0) as i32,
-                (offset_y + 140.0) as i32,
+                (
+                    offset_x
+                        + 15.0
+                ) as i32,
+                (
+                    offset_y
+                        + 140.0
+                ) as i32,
                 18,
                 Color::GOLD,
             );
         } else {
             dibujo.draw_text(
                 "MODO ARCADE",
-                (offset_x + 15.0) as i32,
-                (offset_y + 140.0) as i32,
+                (
+                    offset_x
+                        + 15.0
+                ) as i32,
+                (
+                    offset_y
+                        + 140.0
+                ) as i32,
                 18,
                 Color::GOLD,
             );
         }
 
-        damage_effect.render(
-            &mut dibujo,
-        );
+        damage_effect
+            .render(
+                &mut dibujo,
+            );
 
         if vida_jugador <= 0 {
-            sonidos.detener_musica();
+            sonidos
+                .detener_musica();
 
             detener_sonidos_enemigos(
                 &sonidos,
             );
 
             let sw =
-                dibujo.get_screen_width();
+                dibujo
+                    .get_screen_width();
 
             let sh =
-                dibujo.get_screen_height();
+                dibujo
+                    .get_screen_height();
 
-            dibujo.draw_rectangle(
-                0,
-                0,
-                sw,
-                sh,
-                Color::new(
+            dibujo
+                .draw_rectangle(
                     0,
                     0,
-                    0,
-                    220,
-                ),
-            );
+                    sw,
+                    sh,
+
+                    Color::new(
+                        0,
+                        0,
+                        0,
+                        220,
+                    ),
+                );
 
             let titulo =
                 "GAME OVER";
@@ -2965,13 +3885,19 @@ fn main() {
                 format!(
                     "N {}/{}   M {}/{}   F {}/{}",
                     bajas_normal
-                        .min(META_NORMAL),
+                        .min(
+                            META_NORMAL,
+                        ),
                     META_NORMAL,
                     bajas_medio
-                        .min(META_MEDIO),
+                        .min(
+                            META_MEDIO,
+                        ),
                     META_MEDIO,
                     bajas_fuerte
-                        .min(META_FUERTE),
+                        .min(
+                            META_FUERTE,
+                        ),
                     META_FUERTE,
                 );
 
@@ -2982,10 +3908,11 @@ fn main() {
                 "BACKSPACE - MENU PRINCIPAL";
 
             let titulo_w =
-                dibujo.measure_text(
-                    titulo,
-                    64,
-                );
+                dibujo
+                    .measure_text(
+                        titulo,
+                        64,
+                    );
 
             dibujo.draw_text(
                 titulo,
@@ -2998,10 +3925,11 @@ fn main() {
             );
 
             let stats_w =
-                dibujo.measure_text(
-                    &stats,
-                    26,
-                );
+                dibujo
+                    .measure_text(
+                        &stats,
+                        26,
+                    );
 
             dibujo.draw_text(
                 &stats,
@@ -3014,10 +3942,11 @@ fn main() {
             );
 
             let objetivo_w =
-                dibujo.measure_text(
-                    &objetivo,
-                    22,
-                );
+                dibujo
+                    .measure_text(
+                        &objetivo,
+                        22,
+                    );
 
             dibujo.draw_text(
                 &objetivo,
@@ -3030,10 +3959,11 @@ fn main() {
             );
 
             let reiniciar_w =
-                dibujo.measure_text(
-                    reiniciar,
-                    22,
-                );
+                dibujo
+                    .measure_text(
+                        reiniciar,
+                        22,
+                    );
 
             dibujo.draw_text(
                 reiniciar,
@@ -3046,10 +3976,11 @@ fn main() {
             );
 
             let menu_w =
-                dibujo.measure_text(
-                    menu_texto,
-                    20,
-                );
+                dibujo
+                    .measure_text(
+                        menu_texto,
+                        20,
+                    );
 
             dibujo.draw_text(
                 menu_texto,
@@ -3063,7 +3994,8 @@ fn main() {
         }
     }
 
-    sonidos.detener_musica();
+    sonidos
+        .detener_musica();
 
     detener_sonidos_enemigos(
         &sonidos,

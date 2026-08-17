@@ -73,7 +73,8 @@ fn pintar_circulo(
 ) {
     for y in -radio..=radio {
         for x in -radio..=radio {
-            if x * x + y * y
+            if x * x
+                + y * y
                 <= radio * radio
             {
                 framebuffer.point_color(
@@ -101,7 +102,10 @@ fn pintar_linea(
         y0;
 
     let dx =
-        (x1 - x0).abs();
+        (
+            x1 - x0
+        )
+            .abs();
 
     let sx =
         if x0 < x1 {
@@ -111,7 +115,10 @@ fn pintar_linea(
         };
 
     let dy =
-        -(y1 - y0).abs();
+        -(
+            y1 - y0
+        )
+            .abs();
 
     let sy =
         if y0 < y1 {
@@ -183,11 +190,13 @@ pub fn render_minimap(
 
     let escala_x =
         max_ancho
-            / mapa_ancho as f32;
+            / mapa_ancho
+                as f32;
 
     let escala_y =
         max_alto
-            / mapa_alto as f32;
+            / mapa_alto
+                as f32;
 
     let escala =
         escala_x
@@ -198,18 +207,16 @@ pub fn render_minimap(
                 1.0,
             );
 
-    let margen =
+    let origen_x =
         12;
 
-    let origen_x =
-        margen;
-
     let origen_y =
-        margen;
+        12;
 
     let ancho =
         (
-            mapa_ancho as f32
+            mapa_ancho
+                as f32
                 * escala
         )
             .ceil()
@@ -217,7 +224,8 @@ pub fn render_minimap(
 
     let alto =
         (
-            mapa_alto as f32
+            mapa_alto
+                as f32
                 * escala
         )
             .ceil()
@@ -229,12 +237,7 @@ pub fn render_minimap(
         origen_y - 5,
         ancho + 10,
         alto + 10,
-        Color::new(
-            10,
-            10,
-            10,
-            230,
-        ),
+        Color::BLACK,
     );
 
     pintar_borde_rectangulo(
@@ -262,6 +265,12 @@ pub fn render_minimap(
                         )
                     }
 
+                    'W' => {
+                        Some(
+                            Color::SKYBLUE,
+                        )
+                    }
+
                     'D' => {
                         Some(
                             Color::BROWN,
@@ -271,6 +280,12 @@ pub fn render_minimap(
                     'O' => {
                         Some(
                             Color::DARKBROWN,
+                        )
+                    }
+
+                    'C' => {
+                        Some(
+                            Color::MAROON,
                         )
                     }
 
@@ -292,6 +307,12 @@ pub fn render_minimap(
                         )
                     }
 
+                    'X' => {
+                        Some(
+                            Color::BLUE,
+                        )
+                    }
+
                     _ => {
                         None
                     }
@@ -306,23 +327,28 @@ pub fn render_minimap(
             let x =
                 origen_x
                     + (
-                        columna as f32
+                        columna
+                            as f32
                             * escala
-                    ) as i32;
+                    )
+                        as i32;
 
             let y =
                 origen_y
                     + (
-                        fila as f32
+                        fila
+                            as f32
                             * escala
-                    ) as i32;
+                    )
+                        as i32;
 
             let tamano =
                 escala
                     .ceil()
                     .max(
                         1.0,
-                    ) as i32;
+                    )
+                    as i32;
 
             pintar_rectangulo(
                 framebuffer,
@@ -344,19 +370,25 @@ pub fn render_minimap(
             / TAMANO_CELDA;
 
     let jugador_x =
-        origen_x as f32
+        origen_x
+            as f32
             + jugador_columna
                 * escala;
 
     let jugador_y =
-        origen_y as f32
+        origen_y
+            as f32
             + jugador_fila
                 * escala;
 
     pintar_circulo(
         framebuffer,
-        jugador_x.round() as i32,
-        jugador_y.round() as i32,
+        jugador_x
+            .round()
+            as i32,
+        jugador_y
+            .round()
+            as i32,
         2,
         Color::RED,
     );
@@ -366,20 +398,32 @@ pub fn render_minimap(
 
     let direccion_x =
         jugador_x
-            + camera.angle.cos()
+            + camera
+                .angle
+                .cos()
                 * largo;
 
     let direccion_y =
         jugador_y
-            + camera.angle.sin()
+            + camera
+                .angle
+                .sin()
                 * largo;
 
     pintar_linea(
         framebuffer,
-        jugador_x.round() as i32,
-        jugador_y.round() as i32,
-        direccion_x.round() as i32,
-        direccion_y.round() as i32,
+        jugador_x
+            .round()
+            as i32,
+        jugador_y
+            .round()
+            as i32,
+        direccion_x
+            .round()
+            as i32,
+        direccion_y
+            .round()
+            as i32,
         Color::YELLOW,
     );
 }

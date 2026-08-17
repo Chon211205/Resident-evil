@@ -77,43 +77,37 @@ fn crear_zombies(
 ) -> Vec<Zombie> {
     mapa.extraer_zombies()
         .into_iter()
-        .map(
-            |(
-                x,
-                y,
-                tipo,
-            )| {
-                match tipo {
-                    TipoSpawnZombie::Normal => {
-                        Zombie::new(
-                            x,
-                            y,
-                        )
-                    }
-
-                    TipoSpawnZombie::ConLlave => {
-                        Zombie::new_con_llave(
-                            x,
-                            y,
-                        )
-                    }
-
-                    TipoSpawnZombie::Medio => {
-                        Zombie::new_medio(
-                            x,
-                            y,
-                        )
-                    }
-
-                    TipoSpawnZombie::Fuerte => {
-                        Zombie::new_fuerte(
-                            x,
-                            y,
-                        )
-                    }
+        .map(|(x, y, tipo)| {
+            match tipo {
+                TipoSpawnZombie::Normal => {
+                    Zombie::new(
+                        x,
+                        y,
+                    )
                 }
-            },
-        )
+
+                TipoSpawnZombie::ConLlave => {
+                    Zombie::new_con_llave(
+                        x,
+                        y,
+                    )
+                }
+
+                TipoSpawnZombie::Medio => {
+                    Zombie::new_medio(
+                        x,
+                        y,
+                    )
+                }
+
+                TipoSpawnZombie::Fuerte => {
+                    Zombie::new_fuerte(
+                        x,
+                        y,
+                    )
+                }
+            }
+        })
         .collect()
 }
 
@@ -196,25 +190,23 @@ fn main() {
             ALTO_VENTANA,
         );
 
-    framebuffer
-        .set_background_color(
-            Color::BLACK,
-        );
+    framebuffer.set_background_color(
+        Color::BLACK,
+    );
 
     let (
         mut ventana,
         thread,
-    ) =
-        raylib::init()
-            .size(
-                ANCHO_VENTANA,
-                ALTO_VENTANA,
-            )
-            .resizable()
-            .title(
-                "Survival Horror Raycasting",
-            )
-            .build();
+    ) = raylib::init()
+        .size(
+            ANCHO_VENTANA,
+            ALTO_VENTANA,
+        )
+        .resizable()
+        .title(
+            "Survival Horror Raycasting",
+        )
+        .build();
 
     ventana.toggle_fullscreen();
 
@@ -443,12 +435,12 @@ fn main() {
             "No se pudo cargar wall.png",
         );
 
-    let mut floor_image =
+    let mut window_image =
         Image::load_image(
-            "assets/textures/floor.png",
+            "assets/textures/window.png",
         )
         .expect(
-            "No se pudo cargar floor.png",
+            "No se pudo cargar window.png",
         );
 
     let mut door_image =
@@ -459,9 +451,35 @@ fn main() {
             "No se pudo cargar door.png",
         );
 
+    let mut floor_image =
+        Image::load_image(
+            "assets/textures/floor.png",
+        )
+        .expect(
+            "No se pudo cargar floor.png",
+        );
+
+    let mut floor2_image =
+        Image::load_image(
+            "assets/textures/floor2.png",
+        )
+        .expect(
+            "No se pudo cargar floor2.png",
+        );
+
     let textura_pared =
         TextureData::from_image(
             &mut wall_image,
+        );
+
+    let textura_ventana =
+        TextureData::from_image(
+            &mut window_image,
+        );
+
+    let textura_puerta =
+        TextureData::from_image(
+            &mut door_image,
         );
 
     let textura_suelo =
@@ -469,9 +487,9 @@ fn main() {
             &mut floor_image,
         );
 
-    let textura_puerta =
+    let textura_suelo2 =
         TextureData::from_image(
-            &mut door_image,
+            &mut floor2_image,
         );
 
     let mut textura_framebuffer =
@@ -584,8 +602,7 @@ fn main() {
                 in &mut zombies
             {
                 let estaba_persiguiendo =
-                    zombie
-                        .persiguiendo;
+                    zombie.persiguiendo;
 
                 let dano =
                     zombie.update(
@@ -595,8 +612,7 @@ fn main() {
                     );
 
                 if !estaba_persiguiendo
-                    && zombie
-                        .persiguiendo
+                    && zombie.persiguiendo
                 {
                     match zombie.tipo {
                         TipoZombie::Normal => {
@@ -651,9 +667,7 @@ fn main() {
                     } else {
                         sonidos.dano();
 
-                        if vida_jugador
-                            <= 0
-                        {
+                        if vida_jugador <= 0 {
                             mensaje =
                                 "Has muerto"
                                     .to_string();
@@ -666,8 +680,7 @@ fn main() {
                         }
                     }
 
-                    damage_effect
-                        .activar();
+                    damage_effect.activar();
                 }
             }
         }
@@ -675,41 +688,32 @@ fn main() {
         let hay_normal =
             zombies
                 .iter()
-                .any(
-                    |zombie| {
-                        zombie.vivo
-                            && zombie
-                                .persiguiendo
-                            && zombie.tipo
-                                == TipoZombie::Normal
-                    },
-                );
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie.persiguiendo
+                        && zombie.tipo
+                            == TipoZombie::Normal
+                });
 
         let hay_medio =
             zombies
                 .iter()
-                .any(
-                    |zombie| {
-                        zombie.vivo
-                            && zombie
-                                .persiguiendo
-                            && zombie.tipo
-                                == TipoZombie::Medio
-                    },
-                );
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie.persiguiendo
+                        && zombie.tipo
+                            == TipoZombie::Medio
+                });
 
         let hay_fuerte =
             zombies
                 .iter()
-                .any(
-                    |zombie| {
-                        zombie.vivo
-                            && zombie
-                                .persiguiendo
-                            && zombie.tipo
-                                == TipoZombie::Fuerte
-                    },
-                );
+                .any(|zombie| {
+                    zombie.vivo
+                        && zombie.persiguiendo
+                        && zombie.tipo
+                            == TipoZombie::Fuerte
+                });
 
         if !hay_normal
             || vida_jugador <= 0
@@ -793,7 +797,8 @@ fn main() {
                 }
 
                 InteractionResult::SalidaNivel => {
-                    sonidos.detener_zombie();
+                    sonidos
+                        .detener_zombie();
 
                     sonidos
                         .detener_zombie_medio();
@@ -1162,7 +1167,8 @@ fn main() {
         if ventana.is_key_pressed(
             KeyboardKey::KEY_F5,
         ) {
-            sonidos.detener_zombie();
+            sonidos
+                .detener_zombie();
 
             sonidos
                 .detener_zombie_medio();
@@ -1254,8 +1260,10 @@ fn main() {
             &player,
             &camera,
             &textura_pared,
+            &textura_ventana,
             &textura_puerta,
             &textura_suelo,
+            &textura_suelo2,
         );
 
         render_minimap(
@@ -1343,9 +1351,7 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         &axe3
-                    } else if tiempo_hachazo
-                        > 0.0
-                    {
+                    } else if tiempo_hachazo > 0.0 {
                         &axe2
                     } else {
                         &axe1
@@ -1358,9 +1364,7 @@ fn main() {
                 ArmaActual::Pistola => {
                     if recargando {
                         0.28
-                    } else if tiempo_disparo
-                        > 0.0
-                    {
+                    } else if tiempo_disparo > 0.0 {
                         0.34
                     } else if apuntando {
                         0.36
@@ -1372,9 +1376,7 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         0.42
-                    } else if tiempo_hachazo
-                        > 0.0
-                    {
+                    } else if tiempo_hachazo > 0.0 {
                         0.37
                     } else {
                         0.34
@@ -1399,11 +1401,11 @@ fn main() {
         let retroceso =
             if arma_equipada
                 == ArmaActual::Pistola
-                && tiempo_disparo
-                    > 0.0
+                && tiempo_disparo > 0.0
                 && !recargando
             {
-                8.0 * escala
+                8.0
+                    * escala
             } else {
                 0.0
             };
@@ -1587,8 +1589,11 @@ fn main() {
                             / 2.0;
 
                 dibujo.draw_circle(
-                    mira_x as i32,
-                    mira_y as i32,
+                    mira_x
+                        as i32,
+
+                    mira_y
+                        as i32,
 
                     3.0
                         * escala.max(
@@ -1670,10 +1675,12 @@ fn main() {
                 );
 
             let centro_x =
-                screen_width / 2;
+                screen_width
+                    / 2;
 
             let centro_y =
-                screen_height / 2;
+                screen_height
+                    / 2;
 
             dibujo.draw_text(
                 titulo,
@@ -1751,10 +1758,12 @@ fn main() {
                 20;
 
             let centro_x =
-                screen_width / 2;
+                screen_width
+                    / 2;
 
             let centro_y =
-                screen_height / 2;
+                screen_height
+                    / 2;
 
             let ancho_titulo =
                 dibujo.measure_text(

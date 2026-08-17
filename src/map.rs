@@ -58,7 +58,9 @@ impl Map {
             lineas
                 .iter()
                 .map(|linea| {
-                    linea.chars().count()
+                    linea
+                        .chars()
+                        .count()
                 })
                 .max()
                 .unwrap_or(0);
@@ -162,7 +164,9 @@ impl Map {
                 fila,
                 columna,
             ),
-            '#' | 'D'
+            '#'
+                | 'D'
+                | 'W'
         )
     }
 
@@ -276,7 +280,9 @@ impl Map {
                             )
                         }
 
-                        _ => None,
+                        _ => {
+                            None
+                        }
                     };
 
                 let Some(tipo) =
@@ -334,9 +340,7 @@ impl Map {
                     "\n",
                 );
 
-        if let Err(
-            error,
-        ) =
+        if let Err(error) =
             fs::write(
                 ruta,
                 contenido,

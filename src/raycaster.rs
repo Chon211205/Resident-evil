@@ -10,8 +10,11 @@ use crate::texture_data::TextureData;
 use raylib::prelude::*;
 use std::f32::consts::PI;
 
-pub const ANCHO_VENTANA: i32 = 800;
-pub const ALTO_VENTANA: i32 = 600;
+pub const ANCHO_VENTANA: i32 =
+    800;
+
+pub const ALTO_VENTANA: i32 =
+    600;
 
 pub const FOV: f32 =
     PI / 3.0;
@@ -59,7 +62,9 @@ pub fn lanzar_rayo(
         {
             f32::INFINITY
         } else {
-            (1.0 / dir_x)
+            (
+                1.0 / dir_x
+            )
                 .abs()
         };
 
@@ -69,7 +74,9 @@ pub fn lanzar_rayo(
         {
             f32::INFINITY
         } else {
-            (1.0 / dir_y)
+            (
+                1.0 / dir_y
+            )
                 .abs()
         };
 
@@ -86,7 +93,8 @@ pub fn lanzar_rayo(
         distancia_lado_x =
             (
                 posicion_mapa_x
-                    - mapa_x as f32
+                    - mapa_x
+                        as f32
             )
                 * delta_dist_x;
     } else {
@@ -95,7 +103,8 @@ pub fn lanzar_rayo(
 
         distancia_lado_x =
             (
-                mapa_x as f32
+                mapa_x
+                    as f32
                     + 1.0
                     - posicion_mapa_x
             )
@@ -109,7 +118,8 @@ pub fn lanzar_rayo(
         distancia_lado_y =
             (
                 posicion_mapa_y
-                    - mapa_y as f32
+                    - mapa_y
+                        as f32
             )
                 * delta_dist_y;
     } else {
@@ -118,7 +128,8 @@ pub fn lanzar_rayo(
 
         distancia_lado_y =
             (
-                mapa_y as f32
+                mapa_y
+                    as f32
                     + 1.0
                     - posicion_mapa_y
             )
@@ -133,7 +144,9 @@ pub fn lanzar_rayo(
             mapa.ancho()
                 + mapa.alto()
         )
-            .max(64)
+            .max(
+                64,
+            )
             * 4;
 
     for _ in 0..max_pasos {
@@ -175,13 +188,15 @@ pub fn lanzar_rayo(
                 0.001
             } else {
                 (
-                    mapa_x as f32
+                    mapa_x
+                        as f32
                         - posicion_mapa_x
                         + (
                             1 - paso_x
                         ) as f32
                             / 2.0
-                ) / dir_x
+                )
+                    / dir_x
             }
         } else if dir_y.abs()
             < 0.000001
@@ -189,13 +204,15 @@ pub fn lanzar_rayo(
             0.001
         } else {
             (
-                mapa_y as f32
+                mapa_y
+                    as f32
                     - posicion_mapa_y
                     + (
                         1 - paso_y
                     ) as f32
                         / 2.0
-            ) / dir_y
+            )
+                / dir_y
         };
 
     let distancia =
@@ -266,8 +283,10 @@ pub fn render_3d(
     player: &Player,
     camera: &Camera,
     textura_pared: &TextureData,
+    textura_ventana: &TextureData,
     textura_puerta: &TextureData,
     textura_suelo: &TextureData,
+    textura_suelo2: &TextureData,
 ) {
     render_techo(
         framebuffer,
@@ -276,9 +295,11 @@ pub fn render_3d(
 
     render_suelo(
         framebuffer,
+        mapa,
         player,
         camera,
         textura_suelo,
+        textura_suelo2,
     );
 
     render_paredes(
@@ -287,6 +308,7 @@ pub fn render_3d(
         player,
         camera,
         textura_pared,
+        textura_ventana,
         textura_puerta,
     );
 }
@@ -297,7 +319,8 @@ fn render_techo(
 ) {
     let horizonte =
         (
-            ALTO_VENTANA as f32
+            ALTO_VENTANA
+                as f32
                 / 2.0
                 + camera
                     .vertical_offset
@@ -310,19 +333,19 @@ fn render_techo(
             )
             as i32;
 
-    let color_superior =
+    let arriba =
         Color::new(
+            10,
+            10,
             12,
-            12,
-            14,
             255,
         );
 
-    let color_inferior =
+    let abajo =
         Color::new(
+            30,
             28,
-            26,
-            24,
+            25,
             255,
         );
 
@@ -337,34 +360,34 @@ fn render_techo(
             };
 
         let r =
-            color_superior.r
+            arriba.r
                 as f32
                 + (
-                    color_inferior.r
+                    abajo.r
                         as f32
-                        - color_superior.r
+                        - arriba.r
                             as f32
                 )
                     * factor;
 
         let g =
-            color_superior.g
+            arriba.g
                 as f32
                 + (
-                    color_inferior.g
+                    abajo.g
                         as f32
-                        - color_superior.g
+                        - arriba.g
                             as f32
                 )
                     * factor;
 
         let b =
-            color_superior.b
+            arriba.b
                 as f32
                 + (
-                    color_inferior.b
+                    abajo.b
                         as f32
-                        - color_superior.b
+                        - arriba.b
                             as f32
                 )
                     * factor;
@@ -393,6 +416,7 @@ fn render_paredes(
     player: &Player,
     camera: &Camera,
     textura_pared: &TextureData,
+    textura_ventana: &TextureData,
     textura_puerta: &TextureData,
 ) {
     let distancia_plano =
@@ -409,7 +433,8 @@ fn render_paredes(
     for columna in 0..ANCHO_VENTANA {
         let porcentaje =
             (
-                columna as f32
+                columna
+                    as f32
                     + 0.5
             )
                 / ANCHO_VENTANA
@@ -474,12 +499,18 @@ fn render_paredes(
                     / 2.0;
 
         let textura =
-            if hit.tipo
-                == 'D'
-            {
-                textura_puerta
-            } else {
-                textura_pared
+            match hit.tipo {
+                'D' => {
+                    textura_puerta
+                }
+
+                'W' => {
+                    textura_ventana
+                }
+
+                _ => {
+                    textura_pared
+                }
             };
 
         dibujar_columna_pared(
@@ -550,15 +581,16 @@ fn dibujar_columna_pared(
             distancia,
         );
 
-    for y in
-        inicio_pantalla
+    for y
+        in inicio_pantalla
             ..=fin_pantalla
     {
         let porcentaje_y =
             (
                 y as f32
                     - inicio
-            ) / altura;
+            )
+                / altura;
 
         let tex_y =
             (
@@ -581,7 +613,7 @@ fn dibujar_columna_pared(
                 tex_y,
             );
 
-        let sombreado_lado =
+        let sombreado =
             if golpe_vertical {
                 0.83
             } else {
@@ -590,28 +622,31 @@ fn dibujar_columna_pared(
 
         let factor =
             oscuridad
-                * sombreado_lado;
+                * sombreado;
 
         color.r =
             (
                 color.r
                     as f32
                     * factor
-            ) as u8;
+            )
+                as u8;
 
         color.g =
             (
                 color.g
                     as f32
                     * factor
-            ) as u8;
+            )
+                as u8;
 
         color.b =
             (
                 color.b
                     as f32
                     * factor
-            ) as u8;
+            )
+                as u8;
 
         framebuffer.point_color(
             x,
@@ -623,25 +658,27 @@ fn dibujar_columna_pared(
 
 fn render_suelo(
     framebuffer: &mut Framebuffer,
+    mapa: &Map,
     player: &Player,
     camera: &Camera,
     textura_suelo: &TextureData,
+    textura_suelo2: &TextureData,
 ) {
     let centro_vertical =
-        ALTO_VENTANA
-            as f32
-            / 2.0
-            + camera
-                .vertical_offset
-                as f32;
-
-    let centro_vertical =
-        centro_vertical.clamp(
-            0.0,
+        (
             ALTO_VENTANA
                 as f32
-                - 1.0,
-        );
+                / 2.0
+                + camera
+                    .vertical_offset
+                    as f32
+        )
+            .clamp(
+                0.0,
+                ALTO_VENTANA
+                    as f32
+                    - 1.0,
+            );
 
     let distancia_plano =
         (
@@ -707,8 +744,8 @@ fn render_suelo(
             )
             as i32;
 
-    for y in
-        (
+    for y
+        in (
             inicio_y
                 ..ALTO_VENTANA
         )
@@ -732,8 +769,7 @@ fn render_suelo(
                 / diferencia_y;
 
         if !distancia.is_finite()
-            || distancia
-                > 5000.0
+            || distancia > 5000.0
         {
             continue;
         }
@@ -772,6 +808,35 @@ fn render_suelo(
             );
 
         for x in 0..ANCHO_VENTANA {
+            let columna_mapa =
+                (
+                    mundo_x
+                        / TAMANO_CELDA
+                )
+                    .floor()
+                    as i32;
+
+            let fila_mapa =
+                (
+                    mundo_y
+                        / TAMANO_CELDA
+                )
+                    .floor()
+                    as i32;
+
+            let tipo_suelo =
+                mapa.celda(
+                    fila_mapa,
+                    columna_mapa,
+                );
+
+            let textura =
+                if tipo_suelo == 'C' {
+                    textura_suelo2
+                } else {
+                    textura_suelo
+                };
+
             let tex_x =
                 (
                     mundo_x
@@ -779,8 +844,7 @@ fn render_suelo(
                             TAMANO_CELDA,
                         )
                         / TAMANO_CELDA
-                        * textura_suelo
-                            .width
+                        * textura.width
                             as f32
                 )
                     .floor()
@@ -793,8 +857,7 @@ fn render_suelo(
                             TAMANO_CELDA,
                         )
                         / TAMANO_CELDA
-                        * textura_suelo
-                            .height
+                        * textura.height
                             as f32
                 )
                     .floor()
@@ -803,44 +866,44 @@ fn render_suelo(
             let tex_x =
                 tex_x.clamp(
                     0,
-                    textura_suelo.width
-                        - 1,
+                    textura.width - 1,
                 );
 
             let tex_y =
                 tex_y.clamp(
                     0,
-                    textura_suelo.height
-                        - 1,
+                    textura.height - 1,
                 );
 
             let mut color =
-                textura_suelo
-                    .get_pixel(
-                        tex_x,
-                        tex_y,
-                    );
+                textura.get_pixel(
+                    tex_x,
+                    tex_y,
+                );
 
             color.r =
                 (
                     color.r
                         as f32
                         * oscuridad
-                ) as u8;
+                )
+                    as u8;
 
             color.g =
                 (
                     color.g
                         as f32
                         * oscuridad
-                ) as u8;
+                )
+                    as u8;
 
             color.b =
                 (
                     color.b
                         as f32
                         * oscuridad
-                ) as u8;
+                )
+                    as u8;
 
             framebuffer.point_color(
                 x,

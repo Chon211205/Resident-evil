@@ -26,6 +26,7 @@ pub struct AudioManager<'a> {
     tyrant: Sound<'a>,
     nemesis: Sound<'a>,
     nemesisshoot: Sound<'a>,
+    flamethrow: Sound<'a>,
 
     licker: Sound<'a>,
     lickerdie: Sound<'a>,
@@ -185,6 +186,14 @@ impl<'a> AudioManager<'a> {
                 )
                 .expect(
                     "No se pudo cargar nemesisshoot.mp3",
+                ),
+
+            flamethrow: audio
+                .new_sound(
+                    "assets/sounds/flamethrow.mp3",
+                )
+                .expect(
+                    "No se pudo cargar flamethrow.mp3",
                 ),
 
             licker: audio
@@ -425,6 +434,22 @@ impl<'a> AudioManager<'a> {
         self.nemesisshoot.play();
     }
 
+    pub fn lanzallamas(
+        &self,
+    ) {
+        if !self.flamethrow.is_playing() {
+            self.flamethrow.play();
+        }
+    }
+
+    pub fn detener_lanzallamas(
+        &self,
+    ) {
+        if self.flamethrow.is_playing() {
+            self.flamethrow.stop();
+        }
+    }
+
     pub fn licker(
         &self,
     ) {
@@ -470,6 +495,7 @@ impl<'a> AudioManager<'a> {
 
         self.detener_tyrant();
         self.detener_nemesis();
+        self.detener_lanzallamas();
 
         self.detener_licker();
 

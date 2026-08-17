@@ -27,6 +27,10 @@ pub enum InteractionResult {
         i32,
     ),
 
+    MunicionLanzallamasRecogida(
+        i32,
+    ),
+
     CuracionRecogida(
         i32,
     ),
@@ -139,6 +143,19 @@ pub fn recoger_objetos_cercanos(
                         25,
                     )
             }
+        }
+
+        'Q' => {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                ' ',
+            );
+
+            InteractionResult::
+                MunicionLanzallamasRecogida(
+                    25,
+                )
         }
 
         _ => {
@@ -547,17 +564,23 @@ pub fn procesar_muerte_zombie(
             0..100,
         );
 
-    if tirada < 35 {
+    if tirada < 25 {
         mapa.cambiar_celda(
             fila,
             columna,
             'H',
         );
-    } else if tirada < 70 {
+    } else if tirada < 50 {
         mapa.cambiar_celda(
             fila,
             columna,
             'A',
+        );
+    } else if tirada < 70 {
+        mapa.cambiar_celda(
+            fila,
+            columna,
+            'Q',
         );
     }
 

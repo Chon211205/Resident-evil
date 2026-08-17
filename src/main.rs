@@ -30,6 +30,7 @@ use hud::render_hud;
 use interaction::{
     disparar,
     interactuar,
+    procesar_muerte_zombie,
     recoger_objetos_cercanos,
     InteractionResult,
     ShotResult,
@@ -72,6 +73,7 @@ use raycaster::{
 
 use sprite_renderer::{
     render_ammo_sprites,
+    render_flamethrow_ammo_sprites,
     render_heal_sprites,
     render_key_sprite,
 };
@@ -111,6 +113,8 @@ const META_FUERTE: i32 = 5;
 const DANO_PISTOLA_LICKER: i32 = 50;
 const DANO_HACHA_LICKER: i32 = 75;
 const MULTIPLICADOR_HEADSHOT_LICKER: i32 = 2;
+const DANO_LANZALLAMAS: i32 = 15;
+const ALCANCE_LANZALLAMAS: f32 = 125.0;
 
 const DURACION_SONIDO_MUERTE: f32 = 0.8;
 
@@ -1079,19 +1083,107 @@ fn soltar_objeto_licker(
         rand::thread_rng()
             .gen_range(0..100);
 
-    if tirada < 35 {
+    if tirada < 25 {
         mapa.cambiar_celda(
             fila,
             columna,
             'K',
         );
-    } else if tirada < 70 {
+    } else if tirada < 50 {
         mapa.cambiar_celda(
             fila,
             columna,
             'H',
         );
+    } else if tirada < 70 {
+        mapa.cambiar_celda(
+            fila,
+            columna,
+            'Q',
+        );
     }
+}
+
+fn atacar_con_lanzallamas(
+    zombies: &mut [Zombie],
+    lickers: &mut [Licker],
+    player: &Player,
+    camera: &Camera,
+    mapa: &mut Map,
+) -> i32 {
+    let mut bajas = 0;
+
+    for zombie in zombies.iter_mut() {
+        if zombie.vivo
+            && objetivo_en_llama(
+                player,
+                camera,
+                mapa,
+                zombie.x,
+                zombie.y,
+            )
+        {
+            zombie.recibir_dano(DANO_LANZALLAMAS);
+
+            if !zombie.vivo {
+                procesar_muerte_zombie(zombie, mapa, false);
+                bajas += 1;
+            }
+        }
+    }
+
+    for licker in lickers.iter_mut() {
+        if licker.vivo
+            && objetivo_en_llama(
+                player,
+                camera,
+                mapa,
+                licker.x,
+                licker.y,
+            )
+        {
+            licker.recibir_dano(DANO_LANZALLAMAS);
+
+            if !licker.vivo {
+                soltar_objeto_licker(licker, mapa);
+                bajas += 1;
+            }
+        }
+    }
+
+    bajas
+}
+
+fn objetivo_en_llama(
+    player: &Player,
+    camera: &Camera,
+    mapa: &Map,
+    x: f32,
+    y: f32,
+) -> bool {
+    let dx = x - player.x;
+    let dy = y - player.y;
+    let distancia = (dx * dx + dy * dy).sqrt();
+
+    if distancia > ALCANCE_LANZALLAMAS || distancia <= 0.001 {
+        return false;
+    }
+
+    let diferencia =
+        normalizar_angulo(dy.atan2(dx) - camera.angle);
+
+    if diferencia.abs() > 0.32 {
+        return false;
+    }
+
+    let hit = lanzar_rayo(
+        mapa,
+        player.x,
+        player.y,
+        dy.atan2(dx),
+    );
+
+    hit.distancia >= distancia - 4.0
 }
 
 fn detener_sonidos_enemigos(
@@ -1365,6 +1457,12 @@ fn main() {
 
     let mut balas_reserva =
         24;
+
+    let mut municion_lanzallamas =
+        100;
+
+    let mut tiempo_llama =
+        0.0_f32;
 
     let mut tiempo_disparo =
         0.0_f32;
@@ -1660,6 +1758,23 @@ fn main() {
             )
             .unwrap();
 
+    let flamethrow_ammo_texture = ventana
+        .load_texture(
+            &thread,
+            "assets/textures/flamethrowammo.png",
+        )
+        .unwrap();
+
+    let flamethrow1 = ventana
+        .load_texture(&thread, "assets/textures/flamethrow.png")
+        .unwrap();
+    let flamethrow2 = ventana
+        .load_texture(&thread, "assets/textures/flamethrow2.png")
+        .unwrap();
+    let flamethrow3 = ventana
+        .load_texture(&thread, "assets/textures/flamethrow3.png")
+        .unwrap();
+
     let nemesis1 = ventana
         .load_texture(
             &thread,
@@ -1938,6 +2053,9 @@ fn main() {
                         balas_reserva =
                             24;
 
+                        municion_lanzallamas =
+                            100;
+
                         arma_equipada =
                             ArmaActual::Pistola;
 
@@ -2079,6 +2197,9 @@ fn main() {
 
                         balas_reserva =
                             24;
+
+                        municion_lanzallamas =
+                            100;
 
                         arma_equipada =
                             ArmaActual::Pistola;
@@ -2465,6 +2586,10 @@ fn main() {
                 tiempo_hachazo
                     - delta_time
             )
+                .max(0.0);
+
+        tiempo_llama =
+            (tiempo_llama - delta_time)
                 .max(0.0);
 
         if recargando
@@ -2932,6 +3057,17 @@ fn main() {
                         );
                 }
 
+                InteractionResult::MunicionLanzallamasRecogida(
+                    cantidad,
+                ) => {
+                    sonidos.recoger_municion();
+                    municion_lanzallamas += cantidad;
+                    mensaje = format!(
+                        "+{} combustible",
+                        cantidad,
+                    );
+                }
+
                 InteractionResult::CuracionRecogida(
                     cantidad,
                 ) => {
@@ -2993,6 +3129,19 @@ fn main() {
                 mensaje =
                     "Hacha equipada"
                         .to_string();
+            }
+
+            if ventana
+                .is_key_pressed(
+                    KeyboardKey::KEY_THREE,
+                )
+            {
+                arma_equipada =
+                    ArmaActual::Lanzallamas;
+                recargando = false;
+                tiempo_recarga = 0.0;
+                mensaje =
+                    "Lanzallamas equipado".to_string();
             }
 
             if ventana
@@ -3147,13 +3296,85 @@ fn main() {
 
         let apuntando =
             vida_jugador > 0
-                && arma_equipada
-                    == ArmaActual::Pistola
+                && matches!(
+                    arma_equipada,
+                    ArmaActual::Pistola
+                        | ArmaActual::Lanzallamas
+                )
                 && !recargando
                 && ventana
                     .is_mouse_button_down(
                         MouseButton::MOUSE_BUTTON_RIGHT,
                     );
+
+        let disparando_llama =
+            vida_jugador > 0
+                && arma_equipada
+                    == ArmaActual::Lanzallamas
+                && ventana.is_mouse_button_down(
+                    MouseButton::MOUSE_BUTTON_LEFT,
+                )
+                && municion_lanzallamas > 0;
+
+        if disparando_llama {
+            sonidos.lanzallamas();
+
+            if tiempo_llama <= 0.0 {
+                tiempo_llama = 0.10;
+                municion_lanzallamas -= 1;
+
+                let normal_antes =
+                    contar_vivos_tipo(&zombies, TipoZombie::Normal);
+                let medio_antes =
+                    contar_vivos_tipo(&zombies, TipoZombie::Medio);
+                let fuerte_antes =
+                    contar_vivos_tipo(&zombies, TipoZombie::Fuerte);
+
+                let bajas = atacar_con_lanzallamas(
+                    &mut zombies,
+                    &mut lickers,
+                    &player,
+                    &camera,
+                    &mut mapa,
+                );
+
+                actualizar_bajas_por_tipo(
+                    normal_antes,
+                    medio_antes,
+                    fuerte_antes,
+                    &zombies,
+                    &mut bajas_normal,
+                    &mut bajas_medio,
+                    &mut bajas_fuerte,
+                );
+
+                if bajas > 0 {
+                    enemigos_matados += bajas;
+                    sonidos.detener_zombie_muere();
+                    sonidos.zombie_muere();
+                    tiempo_sonido_muerte_zombie =
+                        DURACION_SONIDO_MUERTE;
+                    mensaje = format!(
+                        "LLAMAS - BAJAS {}",
+                        enemigos_matados,
+                    );
+                }
+            }
+        } else {
+            sonidos.detener_lanzallamas();
+
+            if vida_jugador > 0
+                && arma_equipada == ArmaActual::Lanzallamas
+                && municion_lanzallamas <= 0
+                && ventana.is_mouse_button_pressed(
+                    MouseButton::MOUSE_BUTTON_LEFT,
+                )
+            {
+                sonidos.sin_municion();
+                mensaje =
+                    "Sin combustible".to_string();
+            }
+        }
 
         if vida_jugador > 0
             && ventana
@@ -3526,6 +3747,10 @@ fn main() {
                         }
                     }
                 }
+
+                ArmaActual::Lanzallamas => {
+                    // El disparo continuo se procesa mientras se mantiene el botón.
+                }
             }
         }
 
@@ -3685,6 +3910,9 @@ fn main() {
 
             balas_reserva =
                 24;
+
+            municion_lanzallamas =
+                100;
 
             tiempo_disparo =
                 0.0;
@@ -3883,6 +4111,16 @@ fn main() {
                         &axe1
                     }
                 }
+
+                ArmaActual::Lanzallamas => {
+                    if disparando_llama {
+                        &flamethrow3
+                    } else if apuntando {
+                        &flamethrow2
+                    } else {
+                        &flamethrow1
+                    }
+                }
             };
 
         let escala_base_arma =
@@ -3904,6 +4142,16 @@ fn main() {
                         0.42
                     } else if tiempo_hachazo > 0.0 {
                         0.37
+                    } else {
+                        0.34
+                    }
+                }
+
+                ArmaActual::Lanzallamas => {
+                    if disparando_llama {
+                        0.37
+                    } else if apuntando {
+                        0.36
                     } else {
                         0.34
                     }
@@ -4152,6 +4400,17 @@ fn main() {
             escala,
         );
 
+        render_flamethrow_ammo_sprites(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &flamethrow_ammo_texture,
+            offset_x,
+            offset_y,
+            escala,
+        );
+
         if vida_jugador > 0 {
             dibujo
                 .draw_texture_ex(
@@ -4207,6 +4466,7 @@ fn main() {
             vida_jugador,
             balas_cargador,
             balas_reserva,
+            municion_lanzallamas,
             &inventory,
             &mensaje,
             offset_x,

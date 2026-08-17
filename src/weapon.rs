@@ -16,6 +16,7 @@ use crate::zombie::Zombie;
 pub enum ArmaActual {
     Pistola,
     Hacha,
+    Lanzallamas,
 }
 
 const DANO_HACHA: i32 = 75;

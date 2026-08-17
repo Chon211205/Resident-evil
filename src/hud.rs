@@ -6,6 +6,7 @@ pub fn render_hud(
     vida_jugador: i32,
     balas_cargador: i32,
     balas_reserva: i32,
+    municion_lanzallamas: i32,
     inventory: &Inventory,
     mensaje: &str,
     offset_x: f32,
@@ -102,6 +103,17 @@ pub fn render_hud(
             as i32,
         tamano_texto,
         Color::WHITE,
+    );
+
+    let texto_combustible =
+        format!("LLAMA: {}", municion_lanzallamas);
+
+    dibujo.draw_text(
+        &texto_combustible,
+        x_municion as i32,
+        (y_inferior - 28.0 * escala_ui) as i32,
+        tamano_texto,
+        Color::ORANGE,
     );
 
     if inventory.tiene_llave() {

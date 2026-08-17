@@ -25,6 +25,7 @@ pub struct AudioManager<'a> {
 
     tyrant: Sound<'a>,
     nemesis: Sound<'a>,
+    nemesisshoot: Sound<'a>,
 
     licker: Sound<'a>,
     lickerdie: Sound<'a>,
@@ -176,6 +177,14 @@ impl<'a> AudioManager<'a> {
                 )
                 .expect(
                     "No se pudo cargar nemesis.mp3",
+                ),
+
+            nemesisshoot: audio
+                .new_sound(
+                    "assets/sounds/nemesisshoot.mp3",
+                )
+                .expect(
+                    "No se pudo cargar nemesisshoot.mp3",
                 ),
 
             licker: audio
@@ -408,6 +417,12 @@ impl<'a> AudioManager<'a> {
         {
             self.nemesis.stop();
         }
+    }
+
+    pub fn disparo_nemesis(
+        &self,
+    ) {
+        self.nemesisshoot.play();
     }
 
     pub fn licker(

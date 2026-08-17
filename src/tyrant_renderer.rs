@@ -9,7 +9,7 @@ use crate::raycaster::{
     ALTO_VENTANA,
     ANCHO_VENTANA,
 };
-use crate::tyrant::Tyrant;
+use crate::tyrant::{ProyectilNemesis, Tyrant};
 
 use raylib::prelude::*;
 
@@ -248,4 +248,79 @@ fn normalizar_angulo(
     }
 
     angulo
+}
+
+pub fn render_misiles_nemesis(
+    d: &mut RaylibDrawHandle,
+    mapa: &Map,
+    player: &Player,
+    camera: &Camera,
+    misiles: &[ProyectilNemesis],
+    textura: &Texture2D,
+    offset_x: f32,
+    offset_y: f32,
+    escala_pantalla: f32,
+) {
+    for misil in misiles.iter().filter(|misil| misil.vivo) {
+        let dx = misil.x - player.x;
+        let dy = misil.y - player.y;
+        let distancia = (dx * dx + dy * dy).sqrt();
+
+        if distancia <= 0.001 {
+            continue;
+        }
+
+        let angulo = dy.atan2(dx);
+        let diferencia =
+            normalizar_angulo(angulo - camera.angle);
+
+        if diferencia.abs() > FOV / 2.0 + 0.20 {
+            continue;
+        }
+
+        let hit = lanzar_rayo(
+            mapa,
+            player.x,
+            player.y,
+            angulo,
+        );
+
+        if hit.distancia < distancia - 4.0 {
+            continue;
+        }
+
+        let distancia_corregida =
+            (distancia * diferencia.cos()).max(1.0);
+        let altura =
+            TAMANO_CELDA * ALTO_VENTANA as f32
+                / distancia_corregida
+                * 0.30;
+        let ancho = altura
+            * textura.width() as f32
+            / textura.height().max(1) as f32;
+        let centro_x = ANCHO_VENTANA as f32 / 2.0;
+        let pantalla_x = centro_x
+            + diferencia / (FOV / 2.0) * centro_x;
+        let horizonte = ALTO_VENTANA as f32 / 2.0
+            + camera.vertical_offset as f32;
+
+        d.draw_texture_pro(
+            textura,
+            Rectangle::new(
+                0.0,
+                0.0,
+                textura.width() as f32,
+                textura.height() as f32,
+            ),
+            Rectangle::new(
+                offset_x + (pantalla_x - ancho / 2.0) * escala_pantalla,
+                offset_y + (horizonte - altura / 2.0) * escala_pantalla,
+                ancho * escala_pantalla,
+                altura * escala_pantalla,
+            ),
+            Vector2::new(0.0, 0.0),
+            0.0,
+            Color::WHITE,
+        );
+    }
 }

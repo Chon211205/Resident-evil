@@ -16,6 +16,7 @@ pub struct Tyrant {
     pub tiempo_animacion: f32,
     tiempo_ultimo_ataque: f32,
     tiempo_pathfinding: f32,
+    tiempo_disparo: f32,
     camino: Vec<(i32, i32)>,
 }
 
@@ -31,6 +32,7 @@ impl Tyrant {
             tiempo_animacion: 0.0,
             tiempo_ultimo_ataque: 0.0,
             tiempo_pathfinding: 0.0,
+            tiempo_disparo: 0.0,
             camino: Vec::new(),
         }
     }
@@ -50,6 +52,9 @@ impl Tyrant {
             delta_time;
 
         self.tiempo_pathfinding -=
+            delta_time;
+
+        self.tiempo_disparo +=
             delta_time;
 
         let dx =
@@ -183,6 +188,94 @@ impl Tyrant {
                 self.tiempo_animacion +=
                     delta_time;
             }
+        }
+
+        0
+    }
+
+    pub fn intentar_disparar_misil(
+        &mut self,
+        player: &Player,
+    ) -> Option<ProyectilNemesis> {
+        const INTERVALO_DISPARO: f32 = 3.0;
+        const DISTANCIA_MINIMA: f32 = 65.0;
+        const DISTANCIA_MAXIMA: f32 = 450.0;
+
+        let dx = player.x - self.x;
+        let dy = player.y - self.y;
+        let distancia = (dx * dx + dy * dy).sqrt();
+
+        if self.tiempo_disparo < INTERVALO_DISPARO
+            || distancia < DISTANCIA_MINIMA
+            || distancia > DISTANCIA_MAXIMA
+        {
+            return None;
+        }
+
+        self.tiempo_disparo = 0.0;
+
+        Some(ProyectilNemesis::new(
+            self.x,
+            self.y,
+            dx / distancia,
+            dy / distancia,
+        ))
+    }
+}
+
+pub struct ProyectilNemesis {
+    pub x: f32,
+    pub y: f32,
+    direccion_x: f32,
+    direccion_y: f32,
+    pub vivo: bool,
+}
+
+impl ProyectilNemesis {
+    fn new(
+        x: f32,
+        y: f32,
+        direccion_x: f32,
+        direccion_y: f32,
+    ) -> Self {
+        Self {
+            x,
+            y,
+            direccion_x,
+            direccion_y,
+            vivo: true,
+        }
+    }
+
+    pub fn update(
+        &mut self,
+        player: &Player,
+        mapa: &Map,
+        delta_time: f32,
+    ) -> i32 {
+        const VELOCIDAD: f32 = 90.0;
+        const RADIO_IMPACTO: f32 = 16.0;
+        const DANO: i32 = 25;
+
+        let nuevo_x = self.x
+            + self.direccion_x * VELOCIDAD * delta_time;
+        let nuevo_y = self.y
+            + self.direccion_y * VELOCIDAD * delta_time;
+
+        if mapa.es_pared(nuevo_x, nuevo_y) {
+            self.vivo = false;
+            return 0;
+        }
+
+        self.x = nuevo_x;
+        self.y = nuevo_y;
+
+        let dx = player.x - self.x;
+        let dy = player.y - self.y;
+
+        if (dx * dx + dy * dy).sqrt() <= RADIO_IMPACTO {
+            self.vivo = false;
+            return DANO;
         }
 
         0

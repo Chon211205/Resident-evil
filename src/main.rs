@@ -78,8 +78,8 @@ use sprite_renderer::{
 
 use texture_data::TextureData;
 
-use tyrant::Tyrant;
-use tyrant_renderer::render_tyrant;
+use tyrant::{ProyectilNemesis, Tyrant};
+use tyrant_renderer::{render_misiles_nemesis, render_tyrant};
 
 type Nemesis = Tyrant;
 
@@ -1136,6 +1136,7 @@ fn cargar_partida(
     lickers: &mut Vec<Licker>,
     tyrant: &mut Option<Tyrant>,
     nemesis: &mut Option<Nemesis>,
+    misiles_nemesis: &mut Vec<ProyectilNemesis>,
     player: &mut Player,
     camera: &mut Camera,
     inventory: &mut Inventory,
@@ -1172,6 +1173,8 @@ fn cargar_partida(
             mapa,
         );
 
+    misiles_nemesis.clear();
+
     *player =
         Player::new(
             mapa,
@@ -1201,6 +1204,7 @@ fn cambiar_nivel_mansion(
     lickers: &mut Vec<Licker>,
     tyrant: &mut Option<Tyrant>,
     nemesis: &mut Option<Nemesis>,
+    misiles_nemesis: &mut Vec<ProyectilNemesis>,
     player: &mut Player,
     camera: &mut Camera,
     puzzle: &mut Puzzle,
@@ -1230,6 +1234,8 @@ fn cambiar_nivel_mansion(
         buscar_nemesis(
             mapa,
         );
+
+    misiles_nemesis.clear();
 
     *player =
         Player::new(
@@ -1323,6 +1329,9 @@ fn main() {
         buscar_nemesis(
             &mut mapa,
         );
+
+    let mut misiles_nemesis:
+        Vec<ProyectilNemesis> = Vec::new();
 
     let mut player =
         Player::new(
@@ -1672,6 +1681,13 @@ fn main() {
         )
         .unwrap();
 
+    let nemesis_shoot = ventana
+        .load_texture(
+            &thread,
+            "assets/textures/nemesisshoot.png",
+        )
+        .unwrap();
+
     let licker_v21 = ventana
         .load_texture(&thread, "assets/textures/lickerV21.png")
         .unwrap();
@@ -1905,6 +1921,7 @@ fn main() {
                                 &mut lickers,
                                 &mut tyrant,
                                 &mut nemesis,
+                                &mut misiles_nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut inventory,
@@ -2046,6 +2063,7 @@ fn main() {
                                 &mut lickers,
                                 &mut tyrant,
                                 &mut nemesis,
+                                &mut misiles_nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut inventory,
@@ -2805,6 +2823,16 @@ fn main() {
                     delta_time,
                 );
 
+                if let Some(misil) =
+                    nemesis_actual
+                        .intentar_disparar_misil(
+                            &player,
+                        )
+                {
+                    misiles_nemesis.push(misil);
+                    sonidos.disparo_nemesis();
+                }
+
                 if dano > 0 {
                     let dano_final =
                         if bloqueando { 8 } else { dano };
@@ -2831,6 +2859,44 @@ fn main() {
             }
         } else {
             sonidos.detener_nemesis();
+        }
+
+        if vida_jugador > 0 {
+            let mut dano_misiles = 0;
+
+            for misil in &mut misiles_nemesis {
+                if misil.vivo {
+                    dano_misiles += misil.update(
+                        &player,
+                        &mapa,
+                        delta_time,
+                    );
+                }
+            }
+
+            misiles_nemesis.retain(|misil| misil.vivo);
+
+            if dano_misiles > 0 {
+                let dano_final =
+                    if bloqueando { 8 } else { dano_misiles };
+
+                vida_jugador =
+                    (vida_jugador - dano_final).max(0);
+
+                if bloqueando {
+                    sonidos.bloqueo_hacha();
+                    mensaje =
+                        "Bloqueaste el misil de NEMESIS".to_string();
+                } else {
+                    sonidos.dano();
+                    mensaje = format!(
+                        "MISIL DE NEMESIS -{} VIDA",
+                        dano_final,
+                    );
+                }
+
+                damage_effect.activar();
+            }
         }
 
         if vida_jugador > 0 {
@@ -2981,6 +3047,7 @@ fn main() {
                                 &mut lickers,
                                 &mut tyrant,
                                 &mut nemesis,
+                                &mut misiles_nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut puzzle,
@@ -3039,6 +3106,7 @@ fn main() {
                                 &mut lickers,
                                 &mut tyrant,
                                 &mut nemesis,
+                                &mut misiles_nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut puzzle,
@@ -3571,6 +3639,7 @@ fn main() {
                     &mut lickers,
                     &mut tyrant,
                     &mut nemesis,
+                    &mut misiles_nemesis,
                     &mut player,
                     &mut camera,
                     &mut inventory,
@@ -4070,6 +4139,18 @@ fn main() {
                 escala,
             );
         }
+
+        render_misiles_nemesis(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &misiles_nemesis,
+            &nemesis_shoot,
+            offset_x,
+            offset_y,
+            escala,
+        );
 
         if vida_jugador > 0 {
             dibujo

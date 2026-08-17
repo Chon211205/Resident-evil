@@ -108,8 +108,16 @@ const META_FUERTE: i32 = 5;
 
 const DANO_PISTOLA_LICKER: i32 = 50;
 const DANO_HACHA_LICKER: i32 = 75;
+const MULTIPLICADOR_HEADSHOT_LICKER: i32 = 2;
 
 const DURACION_SONIDO_MUERTE: f32 = 0.8;
+
+enum ResultadoDisparoLicker {
+    Impacto { vida_restante: i32 },
+    Headshot { vida_restante: i32 },
+    Muerte,
+    MuerteHeadshot,
+}
 
 fn crear_zombies(
     mapa: &mut Map,
@@ -636,7 +644,7 @@ fn disparar_licker(
     player: &Player,
     camera: &Camera,
     mapa: &mut Map,
-) -> Option<bool> {
+) -> Option<ResultadoDisparoLicker> {
     const TOLERANCIA_ANGULO: f32 =
         0.10;
 
@@ -805,9 +813,24 @@ fn disparar_licker(
     let estaba_vivo =
         lickers[indice].vivo;
 
+    let es_headshot =
+        detectar_headshot_licker(
+            &lickers[indice],
+            mejor_distancia,
+            camera,
+        );
+
+    let dano =
+        if es_headshot {
+            DANO_PISTOLA_LICKER
+                * MULTIPLICADOR_HEADSHOT_LICKER
+        } else {
+            DANO_PISTOLA_LICKER
+        };
+
     lickers[indice]
         .recibir_dano(
-            DANO_PISTOLA_LICKER,
+            dano,
         );
 
     let murio =
@@ -821,7 +844,70 @@ fn disparar_licker(
         );
     }
 
-    Some(murio)
+    if murio {
+        if es_headshot {
+            Some(ResultadoDisparoLicker::MuerteHeadshot)
+        } else {
+            Some(ResultadoDisparoLicker::Muerte)
+        }
+    } else if es_headshot {
+        Some(ResultadoDisparoLicker::Headshot {
+            vida_restante: lickers[indice].vida,
+        })
+    } else {
+        Some(ResultadoDisparoLicker::Impacto {
+            vida_restante: lickers[indice].vida,
+        })
+    }
+}
+
+fn detectar_headshot_licker(
+    licker: &Licker,
+    distancia: f32,
+    camera: &Camera,
+) -> bool {
+    if distancia <= 0.001 {
+        return false;
+    }
+
+    let factor_tamano = match licker.estado {
+        EstadoLicker::Suelo => 0.80,
+        EstadoLicker::Trepando | EstadoLicker::Pared => 0.85,
+        EstadoLicker::Techo => 0.82,
+        EstadoLicker::Cayendo => 0.90,
+    };
+
+    let altura_proyectada =
+        (TAMANO_CELDA * ALTO_VENTANA as f32 / distancia)
+            * factor_tamano;
+
+    let desplazamiento =
+        TAMANO_CELDA
+            * licker.altura
+            * ALTO_VENTANA as f32
+            / distancia;
+
+    let horizonte =
+        ALTO_VENTANA as f32 / 2.0
+            + camera.vertical_offset as f32;
+
+    let parte_inferior =
+        horizonte
+            + altura_proyectada * 0.50
+            - desplazamiento;
+
+    let parte_superior =
+        parte_inferior
+            - altura_proyectada;
+
+    let limite_cabeza =
+        parte_superior
+            + altura_proyectada * 0.30;
+
+    let mira_y = ALTO_VENTANA as f32 / 2.0;
+
+    mira_y >= parte_superior
+        && mira_y <= limite_cabeza
 }
 
 fn atacar_licker_hacha(
@@ -2973,7 +3059,7 @@ fn main() {
                                 );
 
                             if fallo_zombie {
-                                if let Some(murio) =
+                                if let Some(resultado_licker) =
                                     disparar_licker(
                                         &mut lickers,
                                         &player,
@@ -2981,28 +3067,39 @@ fn main() {
                                         &mut mapa,
                                     )
                                 {
-                                    if murio {
-                                        enemigos_matados +=
-                                            1;
+                                    match resultado_licker {
+                                        ResultadoDisparoLicker::Muerte
+                                        | ResultadoDisparoLicker::MuerteHeadshot => {
+                                            enemigos_matados += 1;
 
-                                        sonidos
-                                            .detener_licker_muere();
+                                            sonidos.detener_licker_muere();
+                                            sonidos.licker_muere();
+                                            tiempo_sonido_muerte_licker =
+                                                DURACION_SONIDO_MUERTE;
 
-                                        sonidos
-                                            .licker_muere();
-
-                                        tiempo_sonido_muerte_licker =
-                                            DURACION_SONIDO_MUERTE;
-
-                                        mensaje =
-                                            format!(
-                                                "LICKER ELIMINADO - BAJAS {}",
-                                                enemigos_matados,
+                                            mensaje = match resultado_licker {
+                                                ResultadoDisparoLicker::MuerteHeadshot => format!(
+                                                    "HEADSHOT - LICKER ELIMINADO - BAJAS {}",
+                                                    enemigos_matados,
+                                                ),
+                                                _ => format!(
+                                                    "LICKER ELIMINADO - BAJAS {}",
+                                                    enemigos_matados,
+                                                ),
+                                            };
+                                        }
+                                        ResultadoDisparoLicker::Headshot { vida_restante } => {
+                                            mensaje = format!(
+                                                "HEADSHOT AL LICKER - {} HP",
+                                                vida_restante,
                                             );
-                                    } else {
-                                        mensaje =
-                                            "Impacto al LICKER"
-                                                .to_string();
+                                        }
+                                        ResultadoDisparoLicker::Impacto { vida_restante } => {
+                                            mensaje = format!(
+                                                "Impacto al LICKER - {} HP",
+                                                vida_restante,
+                                            );
+                                        }
                                     }
                                 } else {
                                     mensaje =

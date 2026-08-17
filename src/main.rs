@@ -128,8 +128,11 @@ fn calcular_distancia(
     x2: f32,
     y2: f32,
 ) -> f32 {
-    let dx = x2 - x1;
-    let dy = y2 - y1;
+    let dx =
+        x2 - x1;
+
+    let dy =
+        y2 - y1;
 
     (
         dx * dx
@@ -448,7 +451,8 @@ fn generar_horda(
             zombie,
         );
 
-        generados += 1;
+        generados +=
+            1;
     }
 
     generados
@@ -457,9 +461,14 @@ fn generar_horda(
 fn detener_sonidos_zombies(
     sonidos: &AudioManager<'_>,
 ) {
-    sonidos.detener_zombie();
-    sonidos.detener_zombie_medio();
-    sonidos.detener_zombie_fuerte();
+    sonidos
+        .detener_zombie();
+
+    sonidos
+        .detener_zombie_medio();
+
+    sonidos
+        .detener_zombie_fuerte();
 }
 
 fn cambiar_nivel(
@@ -499,8 +508,11 @@ fn cambiar_nivel(
             indice_portal,
         )
     {
-        player.x = x;
-        player.y = y;
+        player.x =
+            x;
+
+        player.y =
+            y;
     }
 
     *camera =
@@ -619,13 +631,16 @@ fn main() {
             )
             .build();
 
-    ventana.toggle_fullscreen();
+    ventana
+        .toggle_fullscreen();
 
-    ventana.set_target_fps(
-        60,
-    );
+    ventana
+        .set_target_fps(
+            60,
+        );
 
-    ventana.disable_cursor();
+    ventana
+        .disable_cursor();
 
     let audio =
         RaylibAudio::
@@ -640,159 +655,206 @@ fn main() {
         );
 
     let pistol1 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/pistol1.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/pistol1.png",
+            )
+            .unwrap();
 
     let pistol2 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/pistol2.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/pistol2.png",
+            )
+            .unwrap();
 
     let pistol3 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/pistol3.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/pistol3.png",
+            )
+            .unwrap();
 
     let pistol_r =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/pistolR.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/pistolR.png",
+            )
+            .unwrap();
 
     let pistol_r2 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/pistolR2.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/pistolR2.png",
+            )
+            .unwrap();
 
     let axe1 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/axe1.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/axe1.png",
+            )
+            .unwrap();
 
     let axe2 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/axe2.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/axe2.png",
+            )
+            .unwrap();
 
     let axe3 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/axe3.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/axe3.png",
+            )
+            .unwrap();
 
     let key_texture =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/key.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/key.png",
+            )
+            .unwrap();
 
     let ammo_texture =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/ammo.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/ammo.png",
+            )
+            .unwrap();
 
     let heal_texture =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/heal.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/heal.png",
+            )
+            .unwrap();
 
     let zombie1 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombie1.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombie1.png",
+            )
+            .unwrap();
 
     let zombie2 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombie2.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombie2.png",
+            )
+            .unwrap();
 
     let zombie3 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombie3.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombie3.png",
+            )
+            .unwrap();
 
     let zombie_v21 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombieV21.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV21.png",
+            )
+            .unwrap();
 
     let zombie_v22 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombieV22.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV22.png",
+            )
+            .unwrap();
 
     let zombie_v23 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombiev23.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombiev23.png",
+            )
+            .unwrap();
 
     let zombie_v31 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombieV31.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV31.png",
+            )
+            .unwrap();
 
     let zombie_v32 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombieV32.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV32.png",
+            )
+            .unwrap();
 
     let zombie_v33 =
-        ventana.load_texture(
-            &thread,
-            "assets/textures/zombieV33.png",
-        ).unwrap();
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/zombieV33.png",
+            )
+            .unwrap();
 
     let mut wall_image =
         Image::load_image(
             "assets/textures/wall.png",
-        ).unwrap();
+        )
+        .unwrap();
 
     let mut window_image =
         Image::load_image(
             "assets/textures/window.png",
-        ).unwrap();
+        )
+        .unwrap();
 
     let mut door_image =
         Image::load_image(
             "assets/textures/door.png",
-        ).unwrap();
+        )
+        .unwrap();
 
     let mut up_image =
         Image::load_image(
             "assets/textures/up.png",
-        ).unwrap();
+        )
+        .unwrap();
 
     let mut down_image =
         Image::load_image(
             "assets/textures/down.png",
-        ).unwrap();
+        )
+        .unwrap();
 
     let mut floor_image =
         Image::load_image(
             "assets/textures/floor.png",
-        ).unwrap();
+        )
+        .unwrap();
 
     let mut floor2_image =
         Image::load_image(
             "assets/textures/floor2.png",
-        ).unwrap();
+        )
+        .unwrap();
 
     let textura_pared =
         TextureData::from_image(
@@ -844,7 +906,9 @@ fn main() {
             ventana
                 .get_frame_time();
 
-        if tiempo_cambio_nivel > 0.0 {
+        if tiempo_cambio_nivel
+            > 0.0
+        {
             tiempo_cambio_nivel -=
                 delta_time;
 
@@ -883,7 +947,9 @@ fn main() {
             tiempo_recarga -=
                 delta_time;
 
-            if tiempo_recarga <= 0.0 {
+            if tiempo_recarga
+                <= 0.0
+            {
                 recargando =
                     false;
 
@@ -911,9 +977,10 @@ fn main() {
             }
         }
 
-        damage_effect.update(
-            delta_time,
-        );
+        damage_effect
+            .update(
+                delta_time,
+            );
 
         if vida_jugador > 0 {
             camera.update(
@@ -947,7 +1014,8 @@ fn main() {
                 in &mut zombies
             {
                 let estaba_persiguiendo =
-                    zombie.persiguiendo;
+                    zombie
+                        .persiguiendo;
 
                 let dano =
                     zombie.update(
@@ -957,19 +1025,26 @@ fn main() {
                     );
 
                 if !estaba_persiguiendo
-                    && zombie.persiguiendo
+                    && zombie
+                        .persiguiendo
                 {
                     match zombie.tipo {
-                        TipoZombie::Normal => {
+                        TipoZombie::
+                            Normal =>
+                        {
                             sonidos.zombie();
                         }
 
-                        TipoZombie::Medio => {
+                        TipoZombie::
+                            Medio =>
+                        {
                             sonidos
                                 .zombie_medio();
                         }
 
-                        TipoZombie::Fuerte => {
+                        TipoZombie::
+                            Fuerte =>
+                        {
                             sonidos
                                 .zombie_fuerte();
                         }
@@ -1018,7 +1093,8 @@ fn main() {
                             );
                     }
 
-                    damage_effect.activar();
+                    damage_effect
+                        .activar();
                 }
             }
         }
@@ -1029,9 +1105,11 @@ fn main() {
                 .any(
                     |zombie| {
                         zombie.vivo
-                            && zombie.persiguiendo
+                            && zombie
+                                .persiguiendo
                             && zombie.tipo
-                                == TipoZombie::Normal
+                                == TipoZombie::
+                                    Normal
                     },
                 );
 
@@ -1041,9 +1119,11 @@ fn main() {
                 .any(
                     |zombie| {
                         zombie.vivo
-                            && zombie.persiguiendo
+                            && zombie
+                                .persiguiendo
                             && zombie.tipo
-                                == TipoZombie::Medio
+                                == TipoZombie::
+                                    Medio
                     },
                 );
 
@@ -1053,9 +1133,11 @@ fn main() {
                 .any(
                     |zombie| {
                         zombie.vivo
-                            && zombie.persiguiendo
+                            && zombie
+                                .persiguiendo
                             && zombie.tipo
-                                == TipoZombie::Fuerte
+                                == TipoZombie::
+                                    Fuerte
                     },
                 );
 
@@ -1225,7 +1307,8 @@ fn main() {
                             indice,
                         ) =>
                     {
-                        if nivel_actual == 1
+                        if nivel_actual
+                            == 1
                             && tiempo_cambio_nivel
                                 <= 0.0
                         {
@@ -1276,7 +1359,8 @@ fn main() {
                             indice,
                         ) =>
                     {
-                        if nivel_actual == 2
+                        if nivel_actual
+                            == 2
                             && tiempo_cambio_nivel
                                 <= 0.0
                         {
@@ -1349,7 +1433,9 @@ fn main() {
             match arma_equipada {
                 ArmaActual::Pistola => {
                     if !recargando {
-                        if balas_cargador > 0 {
+                        if balas_cargador
+                            > 0
+                        {
                             balas_cargador -=
                                 1;
 
@@ -1402,21 +1488,38 @@ fn main() {
 
                             mensaje =
                                 match resultado {
-                                    ShotResult::Miss => {
+                                    ShotResult::
+                                        Miss =>
+                                    {
                                         "Disparo fallido"
                                             .to_string()
                                     }
 
-                                    ShotResult::Hit {
-                                        vida_restante,
-                                    } => {
+                                    ShotResult::
+                                        Hit {
+                                            vida_restante,
+                                        } =>
+                                    {
                                         format!(
                                             "Impacto - {} HP",
                                             vida_restante,
                                         )
                                     }
 
-                                    ShotResult::Kill => {
+                                    ShotResult::
+                                        HeadshotHit {
+                                            vida_restante,
+                                        } =>
+                                    {
+                                        format!(
+                                            "HEADSHOT x2 - {} HP",
+                                            vida_restante,
+                                        )
+                                    }
+
+                                    ShotResult::
+                                        Kill =>
+                                    {
                                         format!(
                                             "BAJAS: {}",
                                             enemigos_matados,
@@ -1428,6 +1531,24 @@ fn main() {
                                     {
                                         format!(
                                             "BAJAS: {} - LLAVE",
+                                            enemigos_matados,
+                                        )
+                                    }
+
+                                    ShotResult::
+                                        HeadshotKill =>
+                                    {
+                                        format!(
+                                            "HEADSHOT x2 - BAJA {}",
+                                            enemigos_matados,
+                                        )
+                                    }
+
+                                    ShotResult::
+                                        HeadshotKillConLlave =>
+                                    {
+                                        format!(
+                                            "HEADSHOT x2 - BAJA {} - LLAVE",
                                             enemigos_matados,
                                         )
                                     }
@@ -1497,21 +1618,27 @@ fn main() {
 
                         mensaje =
                             match resultado {
-                                ShotResult::Miss => {
+                                ShotResult::
+                                    Miss =>
+                                {
                                     "Hachazo fallido"
                                         .to_string()
                                 }
 
-                                ShotResult::Hit {
-                                    vida_restante,
-                                } => {
+                                ShotResult::
+                                    Hit {
+                                        vida_restante,
+                                    } =>
+                                {
                                     format!(
                                         "Golpe - {} HP",
                                         vida_restante,
                                     )
                                 }
 
-                                ShotResult::Kill => {
+                                ShotResult::
+                                    Kill =>
+                                {
                                     format!(
                                         "BAJAS: {}",
                                         enemigos_matados,
@@ -1520,6 +1647,35 @@ fn main() {
 
                                 ShotResult::
                                     KillConLlave =>
+                                {
+                                    format!(
+                                        "BAJAS: {} - LLAVE",
+                                        enemigos_matados,
+                                    )
+                                }
+
+                                ShotResult::
+                                    HeadshotHit {
+                                        vida_restante,
+                                    } =>
+                                {
+                                    format!(
+                                        "Golpe - {} HP",
+                                        vida_restante,
+                                    )
+                                }
+
+                                ShotResult::
+                                    HeadshotKill =>
+                                {
+                                    format!(
+                                        "BAJAS: {}",
+                                        enemigos_matados,
+                                    )
+                                }
+
+                                ShotResult::
+                                    HeadshotKillConLlave =>
                                 {
                                     format!(
                                         "BAJAS: {} - LLAVE",
@@ -1575,7 +1731,9 @@ fn main() {
                 mensaje =
                     "Cargador lleno"
                         .to_string();
-            } else if balas_reserva <= 0 {
+            } else if balas_reserva
+                <= 0
+            {
                 mensaje =
                     "Sin balas de reserva"
                         .to_string();
@@ -1859,8 +2017,10 @@ fn main() {
 
         let retroceso =
             if arma_equipada
-                == ArmaActual::Pistola
-                && tiempo_disparo > 0.0
+                == ArmaActual::
+                    Pistola
+                && tiempo_disparo
+                    > 0.0
                 && !recargando
             {
                 8.0
@@ -1883,42 +2043,45 @@ fn main() {
                 - retroceso;
 
         let mut dibujo =
-            ventana.begin_drawing(
-                &thread,
+            ventana
+                .begin_drawing(
+                    &thread,
+                );
+
+        dibujo
+            .clear_background(
+                Color::BLACK,
             );
 
-        dibujo.clear_background(
-            Color::BLACK,
-        );
+        dibujo
+            .draw_texture_pro(
+                &textura_framebuffer,
 
-        dibujo.draw_texture_pro(
-            &textura_framebuffer,
+                Rectangle::new(
+                    0.0,
+                    0.0,
+                    ANCHO_VENTANA
+                        as f32,
+                    ALTO_VENTANA
+                        as f32,
+                ),
 
-            Rectangle::new(
+                Rectangle::new(
+                    offset_x,
+                    offset_y,
+                    ancho_render,
+                    alto_render,
+                ),
+
+                Vector2::new(
+                    0.0,
+                    0.0,
+                ),
+
                 0.0,
-                0.0,
-                ANCHO_VENTANA
-                    as f32,
-                ALTO_VENTANA
-                    as f32,
-            ),
 
-            Rectangle::new(
-                offset_x,
-                offset_y,
-                ancho_render,
-                alto_render,
-            ),
-
-            Vector2::new(
-                0.0,
-                0.0,
-            ),
-
-            0.0,
-
-            Color::WHITE,
-        );
+                Color::WHITE,
+            );
 
         unsafe {
             raylib::ffi::
@@ -2005,20 +2168,21 @@ fn main() {
         );
 
         if vida_jugador > 0 {
-            dibujo.draw_texture_ex(
-                textura_arma,
+            dibujo
+                .draw_texture_ex(
+                    textura_arma,
 
-                Vector2::new(
-                    arma_x,
-                    arma_y,
-                ),
+                    Vector2::new(
+                        arma_x,
+                        arma_y,
+                    ),
 
-                0.0,
+                    0.0,
 
-                escala_arma,
+                    escala_arma,
 
-                Color::WHITE,
-            );
+                    Color::WHITE,
+                );
 
             if apuntando {
                 let mira_x =
@@ -2031,20 +2195,22 @@ fn main() {
                         + alto_render
                             / 2.0;
 
-                dibujo.draw_circle(
-                    mira_x
-                        as i32,
+                dibujo
+                    .draw_circle(
+                        mira_x
+                            as i32,
 
-                    mira_y
-                        as i32,
+                        mira_y
+                            as i32,
 
-                    3.0
-                        * escala.max(
-                            1.0,
-                        ),
+                        3.0
+                            * escala
+                                .max(
+                                    1.0,
+                                ),
 
-                    Color::RED,
-                );
+                        Color::RED,
+                    );
             }
         }
 
@@ -2086,29 +2252,31 @@ fn main() {
                 vivos,
             );
 
-        dibujo.draw_text(
-            &texto_arcade,
+        dibujo
+            .draw_text(
+                &texto_arcade,
 
-            (
-                offset_x
-                    + 15.0
-            )
-                as i32,
+                (
+                    offset_x
+                        + 15.0
+                )
+                    as i32,
 
-            (
-                offset_y
-                    + 115.0
-            )
-                as i32,
+                (
+                    offset_y
+                        + 115.0
+                )
+                    as i32,
 
-            18,
+                18,
 
-            Color::WHITE,
-        );
+                Color::WHITE,
+            );
 
-        damage_effect.render(
-            &mut dibujo,
-        );
+        damage_effect
+            .render(
+                &mut dibujo,
+            );
 
         if vida_jugador <= 0 {
             let sw =
@@ -2119,19 +2287,20 @@ fn main() {
                 dibujo
                     .get_screen_height();
 
-            dibujo.draw_rectangle(
-                0,
-                0,
-                sw,
-                sh,
+            dibujo
+                .draw_rectangle(
+                    0,
+                    0,
+                    sw,
+                    sh,
 
-                Color::new(
-                    0,
-                    0,
-                    0,
-                    220,
-                ),
-            );
+                    Color::new(
+                        0,
+                        0,
+                        0,
+                        220,
+                    ),
+                );
 
             let titulo =
                 "GAME OVER";
@@ -2147,22 +2316,25 @@ fn main() {
                 "F5 - JUGAR DE NUEVO";
 
             let ancho_titulo =
-                dibujo.measure_text(
-                    titulo,
-                    64,
-                );
+                dibujo
+                    .measure_text(
+                        titulo,
+                        64,
+                    );
 
             let ancho_stats =
-                dibujo.measure_text(
-                    &stats,
-                    26,
-                );
+                dibujo
+                    .measure_text(
+                        &stats,
+                        26,
+                    );
 
             let ancho_reiniciar =
-                dibujo.measure_text(
-                    reiniciar,
-                    22,
-                );
+                dibujo
+                    .measure_text(
+                        reiniciar,
+                        22,
+                    );
 
             dibujo.draw_text(
                 titulo,

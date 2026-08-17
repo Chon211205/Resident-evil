@@ -5,16 +5,22 @@ use crate::interaction::{
 };
 use crate::map::Map;
 use crate::player::Player;
-use crate::raycaster::lanzar_rayo;
 use crate::zombie::Zombie;
 
-use std::f32::consts::PI;
-
-#[derive(PartialEq, Clone, Copy)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
 pub enum ArmaActual {
     Pistola,
     Hacha,
 }
+
+const DANO_HACHA: i32 = 75;
+const DISTANCIA_HACHA: f32 = 45.0;
+const TOLERANCIA_ANGULO_HACHA: f32 = 0.45;
 
 pub fn atacar_con_hacha(
     zombies: &mut [Zombie],
@@ -22,98 +28,108 @@ pub fn atacar_con_hacha(
     camera: &Camera,
     mapa: &mut Map,
 ) -> ShotResult {
-    let alcance = 30.0;
-    let tolerancia = 0.30;
-
-    let mut objetivo:
-        Option<(usize, f32)> =
+    let mut mejor_indice:
+        Option<usize> =
         None;
 
-    for (indice, zombie)
-        in zombies.iter().enumerate()
+    let mut mejor_distancia =
+        f32::MAX;
+
+    for (
+        indice,
+        zombie,
+    ) in zombies
+        .iter()
+        .enumerate()
     {
         if !zombie.vivo {
             continue;
         }
 
         let dx =
-            zombie.x - player.x;
+            zombie.x
+                - player.x;
 
         let dy =
-            zombie.y - player.y;
+            zombie.y
+                - player.y;
 
         let distancia =
-            (dx * dx + dy * dy)
+            (
+                dx * dx
+                    + dy * dy
+            )
                 .sqrt();
 
-        if distancia > alcance {
+        if distancia
+            > DISTANCIA_HACHA
+        {
             continue;
         }
 
         let angulo_zombie =
-            dy.atan2(dx);
-
-        let diferencia =
-            normalizar_diferencia(
-                angulo_zombie
-                    - camera.angle,
+            dy.atan2(
+                dx,
             );
+
+        let mut diferencia =
+            angulo_zombie
+                - camera.angle;
+
+        while diferencia
+            > std::f32::consts::PI
+        {
+            diferencia -=
+                std::f32::consts::PI
+                    * 2.0;
+        }
+
+        while diferencia
+            < -std::f32::consts::PI
+        {
+            diferencia +=
+                std::f32::consts::PI
+                    * 2.0;
+        }
 
         if diferencia.abs()
-            > tolerancia
+            > TOLERANCIA_ANGULO_HACHA
         {
             continue;
         }
 
-        let hit_pared =
-            lanzar_rayo(
-                mapa,
-                player.x,
-                player.y,
-                angulo_zombie,
-            );
-
-        if hit_pared.distancia
-            < distancia - 3.0
-        {
+        if !hay_linea_vision(
+            mapa,
+            player.x,
+            player.y,
+            zombie.x,
+            zombie.y,
+        ) {
             continue;
         }
 
-        match objetivo {
-            None => {
-                objetivo =
-                    Some((
-                        indice,
-                        distancia,
-                    ));
-            }
+        if distancia
+            < mejor_distancia
+        {
+            mejor_distancia =
+                distancia;
 
-            Some((
-                _,
-                mejor_distancia,
-            )) => {
-                if distancia
-                    < mejor_distancia
-                {
-                    objetivo =
-                        Some((
-                            indice,
-                            distancia,
-                        ));
-                }
-            }
+            mejor_indice =
+                Some(
+                    indice,
+                );
         }
     }
 
-    let Some((indice, _)) =
-        objetivo
+    let Some(indice) =
+        mejor_indice
     else {
         return ShotResult::Miss;
     };
 
     zombies[indice]
         .recibir_dano(
-            75,
+            DANO_HACHA,
         );
 
     if zombies[indice].vivo {
@@ -126,6 +142,7 @@ pub fn atacar_con_hacha(
     procesar_muerte_zombie(
         &zombies[indice],
         mapa,
+        false,
     )
 }
 
@@ -139,39 +156,119 @@ pub fn puede_bloquear_ataque(
     }
 
     let dx =
-        zombie.x - player.x;
+        zombie.x
+            - player.x;
 
     let dy =
-        zombie.y - player.y;
+        zombie.y
+            - player.y;
+
+    let distancia =
+        (
+            dx * dx
+                + dy * dy
+        )
+            .sqrt();
+
+    if distancia > 45.0 {
+        return false;
+    }
 
     let angulo_zombie =
-        dy.atan2(dx);
-
-    let diferencia =
-        normalizar_diferencia(
-            angulo_zombie
-                - camera.angle,
+        dy.atan2(
+            dx,
         );
 
-    let angulo_bloqueo =
-        0.65;
+    let mut diferencia =
+        angulo_zombie
+            - camera.angle;
+
+    while diferencia
+        > std::f32::consts::PI
+    {
+        diferencia -=
+            std::f32::consts::PI
+                * 2.0;
+    }
+
+    while diferencia
+        < -std::f32::consts::PI
+    {
+        diferencia +=
+            std::f32::consts::PI
+                * 2.0;
+    }
 
     diferencia.abs()
-        <= angulo_bloqueo
+        <= std::f32::consts::PI
+            / 3.0
 }
 
-fn normalizar_diferencia(
-    mut angulo: f32,
-) -> f32 {
-    while angulo > PI {
-        angulo -=
-            2.0 * PI;
+fn hay_linea_vision(
+    mapa: &Map,
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+) -> bool {
+    let dx =
+        x2 - x1;
+
+    let dy =
+        y2 - y1;
+
+    let distancia =
+        (
+            dx * dx
+                + dy * dy
+        )
+            .sqrt();
+
+    if distancia
+        <= 0.001
+    {
+        return true;
     }
 
-    while angulo < -PI {
-        angulo +=
-            2.0 * PI;
+    let pasos =
+        (
+            distancia
+                / 4.0
+        )
+            .ceil()
+            as i32;
+
+    if pasos <= 0 {
+        return true;
     }
 
-    angulo
+    let paso_x =
+        dx
+            / pasos
+                as f32;
+
+    let paso_y =
+        dy
+            / pasos
+                as f32;
+
+    let mut x =
+        x1;
+
+    let mut y =
+        y1;
+
+    for _ in 0..pasos {
+        x += paso_x;
+        y += paso_y;
+
+        if mapa.es_pared(
+            x,
+            y,
+        ) {
+            return false;
+        }
+    }
+
+    true
 }

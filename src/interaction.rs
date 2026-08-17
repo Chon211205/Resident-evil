@@ -6,7 +6,15 @@ use crate::map::{
 };
 use crate::player::Player;
 use crate::puzzle::Puzzle;
-use crate::zombie::Zombie;
+
+use crate::raycaster::{
+    ALTO_VENTANA,
+};
+
+use crate::zombie::{
+    TipoZombie,
+    Zombie,
+};
 
 use rand::Rng;
 
@@ -46,6 +54,14 @@ pub enum ShotResult {
     Kill,
 
     KillConLlave,
+
+    HeadshotHit {
+        vida_restante: i32,
+    },
+
+    HeadshotKill,
+
+    HeadshotKillConLlave,
 }
 
 pub fn recoger_objetos_cercanos(
@@ -261,8 +277,11 @@ pub fn disparar(
     camera: &Camera,
     mapa: &mut Map,
 ) -> ShotResult {
-    const DANO: i32 =
+    const DANO_CUERPO: i32 =
         50;
+
+    const MULTIPLICADOR_HEADSHOT: i32 =
+        2;
 
     const TOLERANCIA_ANGULO: f32 =
         0.08;
@@ -361,31 +380,130 @@ pub fn disparar(
             Miss;
     };
 
+    let es_headshot =
+        detectar_headshot(
+            &zombies[
+                indice
+            ],
+            mejor_distancia,
+            camera,
+        );
+
+    let dano =
+        if es_headshot {
+            DANO_CUERPO
+                * MULTIPLICADOR_HEADSHOT
+        } else {
+            DANO_CUERPO
+        };
+
     let zombie =
         &mut zombies[
             indice
         ];
 
     zombie.recibir_dano(
-        DANO,
+        dano,
     );
 
     if zombie.vivo {
-        return ShotResult::Hit {
-            vida_restante:
-                zombie.vida,
-        };
+        if es_headshot {
+            return ShotResult::
+                HeadshotHit {
+                    vida_restante:
+                        zombie.vida,
+                };
+        }
+
+        return ShotResult::
+            Hit {
+                vida_restante:
+                    zombie.vida,
+            };
     }
 
     procesar_muerte_zombie(
         zombie,
         mapa,
+        es_headshot,
     )
+}
+
+fn detectar_headshot(
+    zombie: &Zombie,
+    distancia: f32,
+    camera: &Camera,
+) -> bool {
+    if distancia
+        <= 0.001
+    {
+        return false;
+    }
+
+    let escala_zombie =
+        match zombie.tipo {
+            TipoZombie::Normal => {
+                0.80
+            }
+
+            TipoZombie::Medio => {
+                0.95
+            }
+
+            TipoZombie::Fuerte => {
+                1.10
+            }
+        };
+
+    let altura_proyectada =
+        (
+            TAMANO_CELDA
+                * ALTO_VENTANA
+                    as f32
+                / distancia
+        )
+            * escala_zombie;
+
+    let horizonte =
+        ALTO_VENTANA
+            as f32
+            / 2.0
+            + camera
+                .vertical_offset
+                as f32;
+
+    let parte_inferior =
+        horizonte
+            + altura_proyectada
+                * 0.50;
+
+    let parte_superior =
+        parte_inferior
+            - altura_proyectada;
+
+    let altura_cabeza =
+        altura_proyectada
+            * 0.30;
+
+    let limite_cabeza =
+        parte_superior
+            + altura_cabeza;
+
+    let mira_y =
+        ALTO_VENTANA
+            as f32
+            / 2.0;
+
+    mira_y
+        >= parte_superior
+        && mira_y
+            <= limite_cabeza
 }
 
 pub fn procesar_muerte_zombie(
     zombie: &Zombie,
     mapa: &mut Map,
+    headshot: bool,
 ) -> ShotResult {
     let columna =
         (
@@ -411,6 +529,11 @@ pub fn procesar_muerte_zombie(
             columna,
             'K',
         );
+
+        if headshot {
+            return ShotResult::
+                HeadshotKillConLlave;
+        }
 
         return ShotResult::
             KillConLlave;
@@ -438,7 +561,13 @@ pub fn procesar_muerte_zombie(
         );
     }
 
-    ShotResult::Kill
+    if headshot {
+        ShotResult::
+            HeadshotKill
+    } else {
+        ShotResult::
+            Kill
+    }
 }
 
 fn hay_linea_vision(
@@ -461,7 +590,9 @@ fn hay_linea_vision(
         )
             .sqrt();
 
-    if distancia <= 0.001 {
+    if distancia
+        <= 0.001
+    {
         return true;
     }
 

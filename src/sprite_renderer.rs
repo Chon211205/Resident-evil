@@ -402,3 +402,34 @@ pub fn render_flamethrow_ammo_sprites(
         }
     }
 }
+
+pub fn render_antivirus_sprite(
+    dibujo: &mut RaylibDrawHandle,
+    mapa: &Map,
+    player: &Player,
+    camera: &Camera,
+    textura: &Texture2D,
+    offset_x: f32,
+    offset_y: f32,
+    escala: f32,
+) {
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            if mapa.celda(fila as i32, columna as i32) == 'V' {
+                render_objeto(
+                    dibujo,
+                    mapa,
+                    player,
+                    camera,
+                    fila,
+                    columna,
+                    textura,
+                    0.36,
+                    offset_x,
+                    offset_y,
+                    escala,
+                );
+            }
+        }
+    }
+}

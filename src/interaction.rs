@@ -31,6 +31,8 @@ pub enum InteractionResult {
         i32,
     ),
 
+    AntivirusRecogido,
+
     CuracionRecogida(
         i32,
     ),
@@ -156,6 +158,16 @@ pub fn recoger_objetos_cercanos(
                 MunicionLanzallamasRecogida(
                     25,
                 )
+        }
+
+        'V' => {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                ' ',
+            );
+
+            InteractionResult::AntivirusRecogido
         }
 
         _ => {

@@ -73,6 +73,7 @@ use raycaster::{
 
 use sprite_renderer::{
     render_ammo_sprites,
+    render_antivirus_sprite,
     render_flamethrow_ammo_sprites,
     render_heal_sprites,
     render_key_sprite,
@@ -1409,6 +1410,9 @@ fn main() {
     let mut objetivo_completado =
         false;
 
+    let mut antivirus_recogido =
+        false;
+
     let mut pantalla_great =
         false;
 
@@ -1789,6 +1793,13 @@ fn main() {
         )
         .unwrap();
 
+    let antivirus_texture = ventana
+        .load_texture(
+            &thread,
+            "assets/textures/antivirus.png",
+        )
+        .unwrap();
+
     let flamethrow1 = ventana
         .load_texture(&thread, "assets/textures/flamethrow.png")
         .unwrap();
@@ -2098,6 +2109,9 @@ fn main() {
                         objetivo_completado =
                             false;
 
+                        antivirus_recogido =
+                            false;
+
                         pantalla_great =
                             false;
 
@@ -2241,6 +2255,9 @@ fn main() {
                             0;
 
                         objetivo_completado =
+                            false;
+
+                        antivirus_recogido =
                             false;
 
                         pantalla_great =
@@ -3092,6 +3109,12 @@ fn main() {
                     );
                 }
 
+                InteractionResult::AntivirusRecogido => {
+                    antivirus_recogido = true;
+                    mensaje =
+                        "ANTIVIRUS CONSEGUIDO".to_string();
+                }
+
                 InteractionResult::CuracionRecogida(
                     cantidad,
                 ) => {
@@ -3778,12 +3801,21 @@ fn main() {
             }
         }
 
+        let meta_alcanzada =
+            if nivel_seleccionado
+                == NivelSeleccionado::Laboratorio
+            {
+                antivirus_recogido
+            } else {
+                objetivo_completo(
+                    bajas_normal,
+                    bajas_medio,
+                    bajas_fuerte,
+                )
+            };
+
         if !objetivo_completado
-            && objetivo_completo(
-                bajas_normal,
-                bajas_medio,
-                bajas_fuerte,
-            )
+            && meta_alcanzada
         {
             objetivo_completado =
                 true;
@@ -3909,6 +3941,9 @@ fn main() {
                 0;
 
             objetivo_completado =
+                false;
+
+            antivirus_recogido =
                 false;
 
             pantalla_great =
@@ -4435,6 +4470,17 @@ fn main() {
             escala,
         );
 
+        render_antivirus_sprite(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &antivirus_texture,
+            offset_x,
+            offset_y,
+            escala,
+        );
+
         if vida_jugador > 0 {
             dibujo
                 .draw_texture_ex(
@@ -4557,18 +4603,22 @@ fn main() {
 
         if !objetivo_completado {
             let texto_objetivo =
-                format!(
-                    "OBJETIVO | NORMAL {}/{} | MEDIO {}/{} | FUERTE {}/{}",
-                    bajas_normal
-                        .min(META_NORMAL),
-                    META_NORMAL,
-                    bajas_medio
-                        .min(META_MEDIO),
-                    META_MEDIO,
-                    bajas_fuerte
-                        .min(META_FUERTE),
-                    META_FUERTE,
-                );
+                if nivel_seleccionado
+                    == NivelSeleccionado::Laboratorio
+                {
+                    "OBJETIVO | ENCUENTRA EL ANTIVIRUS AL FINAL DEL LABORATORIO"
+                        .to_string()
+                } else {
+                    format!(
+                        "OBJETIVO | NORMAL {}/{} | MEDIO {}/{} | FUERTE {}/{}",
+                        bajas_normal.min(META_NORMAL),
+                        META_NORMAL,
+                        bajas_medio.min(META_MEDIO),
+                        META_MEDIO,
+                        bajas_fuerte.min(META_FUERTE),
+                        META_FUERTE,
+                    )
+                };
 
             dibujo.draw_text(
                 &texto_objetivo,

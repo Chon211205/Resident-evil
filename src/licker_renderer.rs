@@ -3,6 +3,7 @@ use crate::licker::{
     EstadoLicker,
     LadoPared,
     Licker,
+    TipoLicker,
 };
 use crate::map::{
     Map,
@@ -29,6 +30,12 @@ pub fn render_lickers(
     licker1: &Texture2D,
     licker2: &Texture2D,
     licker3: &Texture2D,
+    licker_v21: &Texture2D,
+    licker_v22: &Texture2D,
+    licker_v23: &Texture2D,
+    licker_v31: &Texture2D,
+    licker_v32: &Texture2D,
+    licker_v33: &Texture2D,
     offset_x: f32,
     offset_y: f32,
     escala_pantalla: f32,
@@ -91,6 +98,12 @@ pub fn render_lickers(
             licker1,
             licker2,
             licker3,
+            licker_v21,
+            licker_v22,
+            licker_v23,
+            licker_v31,
+            licker_v32,
+            licker_v33,
             offset_x,
             offset_y,
             escala_pantalla,
@@ -108,6 +121,12 @@ fn render_licker(
     licker1: &Texture2D,
     licker2: &Texture2D,
     licker3: &Texture2D,
+    licker_v21: &Texture2D,
+    licker_v22: &Texture2D,
+    licker_v23: &Texture2D,
+    licker_v31: &Texture2D,
+    licker_v32: &Texture2D,
+    licker_v33: &Texture2D,
     offset_x: f32,
     offset_y: f32,
     escala_pantalla: f32,
@@ -159,6 +178,12 @@ fn render_licker(
             licker1,
             licker2,
             licker3,
+            licker_v21,
+            licker_v22,
+            licker_v23,
+            licker_v31,
+            licker_v32,
+            licker_v33,
         );
 
     let distancia_corregida =
@@ -351,7 +376,28 @@ fn seleccionar_textura<'a>(
     licker1: &'a Texture2D,
     licker2: &'a Texture2D,
     licker3: &'a Texture2D,
+    licker_v21: &'a Texture2D,
+    licker_v22: &'a Texture2D,
+    licker_v23: &'a Texture2D,
+    licker_v31: &'a Texture2D,
+    licker_v32: &'a Texture2D,
+    licker_v33: &'a Texture2D,
 ) -> &'a Texture2D {
+    if licker.tipo != TipoLicker::Normal {
+        let (parado, persecucion_1, persecucion_2) = match licker.tipo {
+            TipoLicker::Medio => (licker_v21, licker_v22, licker_v23),
+            TipoLicker::Fuerte => (licker_v31, licker_v32, licker_v33),
+            TipoLicker::Normal => unreachable!(),
+        };
+
+        if !licker.persiguiendo {
+            return parado;
+        }
+
+        let frame = (licker.tiempo_animacion * 6.0) as i32 % 2;
+        return if frame == 0 { persecucion_1 } else { persecucion_2 };
+    }
+
     match licker.estado {
         EstadoLicker::Suelo => {
             let frame =

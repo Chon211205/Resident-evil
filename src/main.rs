@@ -155,11 +155,12 @@ fn crear_lickers(
 
     for fila in 0..mapa.alto() {
         for columna in 0..mapa.ancho() {
-            if mapa.celda(
+            let tipo_spawn = mapa.celda(
                 fila as i32,
                 columna as i32,
-            ) == 'R'
-            {
+            );
+
+            if matches!(tipo_spawn, 'R' | 'S' | 'T') {
                 let x =
                     columna as f32
                         * TAMANO_CELDA
@@ -170,12 +171,14 @@ fn crear_lickers(
                         * TAMANO_CELDA
                         + TAMANO_CELDA / 2.0;
 
-                lickers.push(
-                    Licker::new(
-                        x,
-                        y,
-                    ),
-                );
+                let licker = match tipo_spawn {
+                    'R' => Licker::new(x, y),
+                    'S' => Licker::new_medio(x, y),
+                    'T' => Licker::new_fuerte(x, y),
+                    _ => unreachable!(),
+                };
+
+                lickers.push(licker);
 
                 mapa.cambiar_celda(
                     fila as i32,
@@ -1472,6 +1475,26 @@ fn main() {
                 "assets/textures/licker3.png",
             )
             .unwrap();
+
+    let licker_v21 = ventana
+        .load_texture(&thread, "assets/textures/lickerV21.png")
+        .unwrap();
+    let licker_v22 = ventana
+        .load_texture(&thread, "assets/textures/lickerV22.png")
+        .unwrap();
+    let licker_v23 = ventana
+        .load_texture(&thread, "assets/textures/lickerV23.png")
+        .unwrap();
+
+    let licker_v31 = ventana
+        .load_texture(&thread, "assets/textures/lickerV31.png")
+        .unwrap();
+    let licker_v32 = ventana
+        .load_texture(&thread, "assets/textures/lickerV32.png")
+        .unwrap();
+    let licker_v33 = ventana
+        .load_texture(&thread, "assets/textures/lickerV33.png")
+        .unwrap();
 
     let mut wall_image =
         Image::load_image(
@@ -3728,6 +3751,14 @@ fn main() {
             &licker1,
             &licker2,
             &licker3,
+
+            &licker_v21,
+            &licker_v22,
+            &licker_v23,
+
+            &licker_v31,
+            &licker_v32,
+            &licker_v33,
 
             offset_x,
             offset_y,

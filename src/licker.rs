@@ -14,6 +14,13 @@ pub enum EstadoLicker {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TipoLicker {
+    Normal,
+    Medio,
+    Fuerte,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum LadoPared {
     Izquierda,
     Derecha,
@@ -27,6 +34,8 @@ pub struct Licker {
 
     pub vida: i32,
     pub vivo: bool,
+    pub persiguiendo: bool,
+    pub tipo: TipoLicker,
 
     pub estado: EstadoLicker,
     pub lado_pared: Option<LadoPared>,
@@ -43,12 +52,32 @@ impl Licker {
         x: f32,
         y: f32,
     ) -> Self {
+        Self::new_con_tipo(x, y, TipoLicker::Normal)
+    }
+
+    pub fn new_medio(x: f32, y: f32) -> Self {
+        Self::new_con_tipo(x, y, TipoLicker::Medio)
+    }
+
+    pub fn new_fuerte(x: f32, y: f32) -> Self {
+        Self::new_con_tipo(x, y, TipoLicker::Fuerte)
+    }
+
+    fn new_con_tipo(x: f32, y: f32, tipo: TipoLicker) -> Self {
+        let vida = match tipo {
+            TipoLicker::Normal => 180,
+            TipoLicker::Medio => 260,
+            TipoLicker::Fuerte => 360,
+        };
+
         Self {
             x,
             y,
 
-            vida: 180,
+            vida,
             vivo: true,
+            persiguiendo: false,
+            tipo,
 
             estado: EstadoLicker::Suelo,
             lado_pared: None,
@@ -162,6 +191,7 @@ impl Licker {
         if distancia
             <= DISTANCIA_ATAQUE
         {
+            self.persiguiendo = false;
             if self.tiempo_ataque
                 >= 1.1
             {
@@ -173,6 +203,8 @@ impl Licker {
 
             return 0;
         }
+
+        self.persiguiendo = true;
 
         if self.tiempo_cambio_estado
             >= 1.5

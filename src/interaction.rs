@@ -564,6 +564,40 @@ pub fn procesar_muerte_zombie(
             0..100,
         );
 
+    if mapa.nivel() == 3 {
+        if tirada < 40 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'K',
+            );
+        } else if tirada < 50 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'H',
+            );
+        } else if tirada < 60 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'A',
+            );
+        } else if tirada < 70 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'Q',
+            );
+        }
+
+        if headshot {
+            return ShotResult::HeadshotKill;
+        }
+
+        return ShotResult::Kill;
+    }
+
     if tirada < 25 {
         mapa.cambiar_celda(
             fila,

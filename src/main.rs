@@ -1083,6 +1083,30 @@ fn soltar_objeto_licker(
         rand::thread_rng()
             .gen_range(0..100);
 
+    if mapa.nivel() == 3 {
+        if tirada < 40 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'K',
+            );
+        } else if tirada < 55 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'H',
+            );
+        } else if tirada < 70 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'Q',
+            );
+        }
+
+        return;
+    }
+
     if tirada < 25 {
         mapa.cambiar_celda(
             fila,

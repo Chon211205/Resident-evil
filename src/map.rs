@@ -12,6 +12,7 @@ pub struct Map {
     celdas: Vec<Vec<char>>,
     ancho: usize,
     alto: usize,
+    nivel: i32,
 }
 
 impl Map {
@@ -23,10 +24,13 @@ impl Map {
             _ => include_str!("../mapa_nivel1.txt"),
         };
 
-        Self::desde_texto(contenido)
+        Self::desde_texto(contenido, nivel)
     }
 
-    fn desde_texto(contenido: &str) -> Self {
+    fn desde_texto(
+        contenido: &str,
+        nivel: i32,
+    ) -> Self {
         let lineas: Vec<String> = contenido
             .lines()
             .map(|linea| {
@@ -64,7 +68,12 @@ impl Map {
             celdas,
             ancho,
             alto,
+            nivel,
         }
+    }
+
+    pub fn nivel(&self) -> i32 {
+        self.nivel
     }
 
     pub fn ancho(&self) -> usize {

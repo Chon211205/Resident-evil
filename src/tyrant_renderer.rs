@@ -226,8 +226,6 @@ pub fn render_tyrant(
         Color::WHITE,
     );
 
-    diferencia =
-        diferencia;
 }
 
 fn normalizar_angulo(

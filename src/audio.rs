@@ -1,4 +1,5 @@
 use raylib::audio::{
+    Music,
     RaylibAudio,
     Sound,
 };
@@ -23,12 +24,27 @@ pub struct AudioManager<'a> {
     heal: Sound<'a>,
 
     tyrant: Sound<'a>,
+
+    mansion: Music<'a>,
 }
 
 impl<'a> AudioManager<'a> {
     pub fn new(
         audio: &'a RaylibAudio,
     ) -> Self {
+        let mut mansion =
+            audio
+                .new_music(
+                    "assets/sounds/mansion.mp3",
+                )
+                .expect(
+                    "No se pudo cargar mansion.mp3",
+                );
+
+        mansion.set_volume(
+            1.00,
+        );
+
         Self {
             shoot: audio
                 .new_sound(
@@ -149,6 +165,44 @@ impl<'a> AudioManager<'a> {
                 .expect(
                     "No se pudo cargar tyrant.mp3",
                 ),
+
+            mansion,
+        }
+    }
+
+    pub fn actualizar_musica(
+        &self,
+    ) {
+        self.mansion
+            .update_stream();
+
+        if !self.mansion
+            .is_stream_playing()
+        {
+            self.mansion
+                .play_stream();
+        }
+    }
+
+    pub fn iniciar_musica(
+        &self,
+    ) {
+        if !self.mansion
+            .is_stream_playing()
+        {
+            self.mansion
+                .play_stream();
+        }
+    }
+
+    pub fn detener_musica(
+        &self,
+    ) {
+        if self.mansion
+            .is_stream_playing()
+        {
+            self.mansion
+                .stop_stream();
         }
     }
 

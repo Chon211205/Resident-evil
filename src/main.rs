@@ -635,7 +635,7 @@ fn disparar_licker(
     lickers: &mut [Licker],
     player: &Player,
     camera: &Camera,
-    mapa: &Map,
+    mapa: &mut Map,
 ) -> Option<bool> {
     const TOLERANCIA_ANGULO: f32 =
         0.10;
@@ -814,6 +814,13 @@ fn disparar_licker(
         estaba_vivo
             && !lickers[indice].vivo;
 
+    if murio {
+        soltar_objeto_licker(
+            &lickers[indice],
+            mapa,
+        );
+    }
+
     Some(murio)
 }
 
@@ -821,7 +828,7 @@ fn atacar_licker_hacha(
     lickers: &mut [Licker],
     player: &Player,
     camera: &Camera,
-    mapa: &Map,
+    mapa: &mut Map,
 ) -> Option<bool> {
     const DISTANCIA_HACHA: f32 =
         45.0;
@@ -933,7 +940,45 @@ fn atacar_licker_hacha(
         estaba_vivo
             && !lickers[indice].vivo;
 
+    if murio {
+        soltar_objeto_licker(
+            &lickers[indice],
+            mapa,
+        );
+    }
+
     Some(murio)
+}
+
+fn soltar_objeto_licker(
+    licker: &Licker,
+    mapa: &mut Map,
+) {
+    let columna =
+        (licker.x / TAMANO_CELDA)
+            .floor() as i32;
+
+    let fila =
+        (licker.y / TAMANO_CELDA)
+            .floor() as i32;
+
+    let tirada =
+        rand::thread_rng()
+            .gen_range(0..100);
+
+    if tirada < 35 {
+        mapa.cambiar_celda(
+            fila,
+            columna,
+            'K',
+        );
+    } else if tirada < 70 {
+        mapa.cambiar_celda(
+            fila,
+            columna,
+            'H',
+        );
+    }
 }
 
 fn detener_sonidos_enemigos(
@@ -2933,7 +2978,7 @@ fn main() {
                                         &mut lickers,
                                         &player,
                                         &camera,
-                                        &mapa,
+                                        &mut mapa,
                                     )
                                 {
                                     if murio {
@@ -3119,7 +3164,7 @@ fn main() {
                                     &mut lickers,
                                     &player,
                                     &camera,
-                                    &mapa,
+                                    &mut mapa,
                                 )
                             {
                                 if murio {

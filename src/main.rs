@@ -2382,6 +2382,14 @@ fn main() {
                 pantalla_great =
                     false;
 
+                if nivel_seleccionado
+                    == NivelSeleccionado::Laboratorio
+                {
+                    numero_horda = 1;
+                    siguiente_horda =
+                        enemigos_matados;
+                }
+
                 mensaje =
                     "MODO ARCADE"
                         .to_string();
@@ -3838,6 +3846,11 @@ fn main() {
         }
 
         while vida_jugador > 0
+            && (
+                nivel_seleccionado
+                    == NivelSeleccionado::Mansion
+                || objetivo_completado
+            )
             && enemigos_matados
                 >= siguiente_horda
         {
@@ -4577,14 +4590,24 @@ fn main() {
                     vivos_lickers,
                 )
             } else {
-                format!(
-                    "{} | HORDA {} | BAJAS {} | Z {} | L {}",
-                    nombre,
-                    numero_horda,
-                    enemigos_matados,
-                    vivos_zombies,
-                    vivos_lickers,
-                )
+                if objetivo_completado {
+                    format!(
+                        "{} | MODO HORDAS {} | BAJAS {} | Z {} | L {}",
+                        nombre,
+                        numero_horda,
+                        enemigos_matados,
+                        vivos_zombies,
+                        vivos_lickers,
+                    )
+                } else {
+                    format!(
+                        "{} | MISION ANTIVIRUS | BAJAS {} | Z {} | L {}",
+                        nombre,
+                        enemigos_matados,
+                        vivos_zombies,
+                        vivos_lickers,
+                    )
+                }
             };
 
         dibujo.draw_text(

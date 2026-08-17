@@ -81,6 +81,8 @@ use texture_data::TextureData;
 use tyrant::Tyrant;
 use tyrant_renderer::render_tyrant;
 
+type Nemesis = Tyrant;
+
 use weapon::{
     atacar_con_hacha,
     puede_bloquear_ataque,
@@ -861,6 +863,31 @@ fn disparar_licker(
     }
 }
 
+fn buscar_nemesis(
+    mapa: &mut Map,
+) -> Option<Nemesis> {
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            if mapa.celda(fila as i32, columna as i32) == 'N' {
+                let x = columna as f32 * TAMANO_CELDA
+                    + TAMANO_CELDA / 2.0;
+                let y = fila as f32 * TAMANO_CELDA
+                    + TAMANO_CELDA / 2.0;
+
+                mapa.cambiar_celda(
+                    fila as i32,
+                    columna as i32,
+                    ' ',
+                );
+
+                return Some(Nemesis::new(x, y));
+            }
+        }
+    }
+
+    None
+}
+
 fn detectar_headshot_licker(
     licker: &Licker,
     distancia: f32,
@@ -1108,6 +1135,7 @@ fn cargar_partida(
     zombies: &mut Vec<Zombie>,
     lickers: &mut Vec<Licker>,
     tyrant: &mut Option<Tyrant>,
+    nemesis: &mut Option<Nemesis>,
     player: &mut Player,
     camera: &mut Camera,
     inventory: &mut Inventory,
@@ -1139,6 +1167,11 @@ fn cargar_partida(
             mapa,
         );
 
+    *nemesis =
+        buscar_nemesis(
+            mapa,
+        );
+
     *player =
         Player::new(
             mapa,
@@ -1167,6 +1200,7 @@ fn cambiar_nivel_mansion(
     zombies: &mut Vec<Zombie>,
     lickers: &mut Vec<Licker>,
     tyrant: &mut Option<Tyrant>,
+    nemesis: &mut Option<Nemesis>,
     player: &mut Player,
     camera: &mut Camera,
     puzzle: &mut Puzzle,
@@ -1189,6 +1223,11 @@ fn cambiar_nivel_mansion(
 
     *tyrant =
         buscar_tyrant(
+            mapa,
+        );
+
+    *nemesis =
+        buscar_nemesis(
             mapa,
         );
 
@@ -1277,6 +1316,11 @@ fn main() {
 
     let mut tyrant =
         buscar_tyrant(
+            &mut mapa,
+        );
+
+    let mut nemesis =
+        buscar_nemesis(
             &mut mapa,
         );
 
@@ -1607,6 +1651,27 @@ fn main() {
             )
             .unwrap();
 
+    let nemesis1 = ventana
+        .load_texture(
+            &thread,
+            "assets/textures/nemesis1.png",
+        )
+        .unwrap();
+
+    let nemesis2 = ventana
+        .load_texture(
+            &thread,
+            "assets/textures/nemesis2.png",
+        )
+        .unwrap();
+
+    let nemesis3 = ventana
+        .load_texture(
+            &thread,
+            "assets/textures/nemesis3.png",
+        )
+        .unwrap();
+
     let licker_v21 = ventana
         .load_texture(&thread, "assets/textures/lickerV21.png")
         .unwrap();
@@ -1839,6 +1904,7 @@ fn main() {
                                 &mut zombies,
                                 &mut lickers,
                                 &mut tyrant,
+                                &mut nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut inventory,
@@ -1979,6 +2045,7 @@ fn main() {
                                 &mut zombies,
                                 &mut lickers,
                                 &mut tyrant,
+                                &mut nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut inventory,
@@ -2715,6 +2782,58 @@ fn main() {
         }
 
         if vida_jugador > 0 {
+            if let Some(nemesis_actual) =
+                nemesis.as_mut()
+            {
+                let distancia_nemesis =
+                    calcular_distancia(
+                        player.x,
+                        player.y,
+                        nemesis_actual.x,
+                        nemesis_actual.y,
+                    );
+
+                if distancia_nemesis <= 450.0 {
+                    sonidos.nemesis();
+                } else {
+                    sonidos.detener_nemesis();
+                }
+
+                let dano = nemesis_actual.update(
+                    &player,
+                    &mapa,
+                    delta_time,
+                );
+
+                if dano > 0 {
+                    let dano_final =
+                        if bloqueando { 8 } else { dano };
+
+                    vida_jugador -= dano_final;
+                    vida_jugador = vida_jugador.max(0);
+
+                    if bloqueando {
+                        sonidos.bloqueo_hacha();
+                        mensaje =
+                            "Bloqueaste a NEMESIS".to_string();
+                    } else {
+                        sonidos.dano();
+                        mensaje = format!(
+                            "NEMESIS -{} VIDA",
+                            dano_final,
+                        );
+                    }
+
+                    damage_effect.activar();
+                }
+            } else {
+                sonidos.detener_nemesis();
+            }
+        } else {
+            sonidos.detener_nemesis();
+        }
+
+        if vida_jugador > 0 {
             match recoger_objetos_cercanos(
                 &mut mapa,
                 &player,
@@ -2861,6 +2980,7 @@ fn main() {
                                 &mut zombies,
                                 &mut lickers,
                                 &mut tyrant,
+                                &mut nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut puzzle,
@@ -2918,6 +3038,7 @@ fn main() {
                                 &mut zombies,
                                 &mut lickers,
                                 &mut tyrant,
+                                &mut nemesis,
                                 &mut player,
                                 &mut camera,
                                 &mut puzzle,
@@ -3449,6 +3570,7 @@ fn main() {
                     &mut zombies,
                     &mut lickers,
                     &mut tyrant,
+                    &mut nemesis,
                     &mut player,
                     &mut camera,
                     &mut inventory,
@@ -3922,6 +4044,26 @@ fn main() {
                 &tyrant1,
                 &tyrant2,
                 &tyrant3,
+
+                offset_x,
+                offset_y,
+                escala,
+            );
+        }
+
+        if let Some(nemesis_actual) =
+            nemesis.as_ref()
+        {
+            render_tyrant(
+                &mut dibujo,
+                &mapa,
+                &player,
+                &camera,
+                nemesis_actual,
+
+                &nemesis1,
+                &nemesis2,
+                &nemesis3,
 
                 offset_x,
                 offset_y,

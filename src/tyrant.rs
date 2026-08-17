@@ -66,7 +66,8 @@ impl Tyrant {
                 .sqrt();
 
         self.persiguiendo =
-            true;
+            distancia
+                > DISTANCIA_ATAQUE;
 
         if distancia
             <= DISTANCIA_ATAQUE

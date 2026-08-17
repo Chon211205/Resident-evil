@@ -109,6 +109,8 @@ const META_FUERTE: i32 = 5;
 const DANO_PISTOLA_LICKER: i32 = 50;
 const DANO_HACHA_LICKER: i32 = 75;
 
+const DURACION_SONIDO_MUERTE: f32 = 0.8;
+
 fn crear_zombies(
     mapa: &mut Map,
 ) -> Vec<Zombie> {
@@ -121,15 +123,24 @@ fn crear_zombies(
                 }
 
                 TipoSpawnZombie::ConLlave => {
-                    Zombie::new_con_llave(x, y)
+                    Zombie::new_con_llave(
+                        x,
+                        y,
+                    )
                 }
 
                 TipoSpawnZombie::Medio => {
-                    Zombie::new_medio(x, y)
+                    Zombie::new_medio(
+                        x,
+                        y,
+                    )
                 }
 
                 TipoSpawnZombie::Fuerte => {
-                    Zombie::new_fuerte(x, y)
+                    Zombie::new_fuerte(
+                        x,
+                        y,
+                    )
                 }
             }
         })
@@ -344,8 +355,7 @@ fn max_zombies_para_horda(
             as usize
             * 2;
 
-    (18 + extra)
-        .min(30)
+    (18 + extra).min(30)
 }
 
 fn cantidad_horda(
@@ -362,8 +372,7 @@ fn cantidad_horda(
             (
                 14
                     + (
-                        numero_horda
-                            - 5
+                        numero_horda - 5
                     )
                         .max(0)
                         as usize
@@ -444,9 +453,7 @@ fn buscar_spawn_horda(
         let ocupado =
             zombies
                 .iter()
-                .filter(|z| {
-                    z.vivo
-                })
+                .filter(|z| z.vivo)
                 .any(|zombie| {
                     calcular_distancia(
                         zombie.x,
@@ -630,8 +637,7 @@ fn disparar_licker(
     const TOLERANCIA_ANGULO: f32 =
         0.10;
 
-    let mut mejor_indice:
-        Option<usize> =
+    let mut mejor_indice =
         None;
 
     let mut mejor_distancia =
@@ -820,8 +826,7 @@ fn atacar_licker_hacha(
     const TOLERANCIA: f32 =
         0.45;
 
-    let mut mejor_indice:
-        Option<usize> =
+    let mut mejor_indice =
         None;
 
     let mut mejor_distancia =
@@ -931,19 +936,21 @@ fn atacar_licker_hacha(
 fn detener_sonidos_enemigos(
     sonidos: &AudioManager<'_>,
 ) {
-    sonidos.detener_zombie();
-    sonidos.detener_zombie_medio();
-    sonidos.detener_zombie_fuerte();
-    sonidos.detener_tyrant();
-    sonidos.detener_licker();
+    sonidos
+        .detener_todos_enemigos();
 }
 
 fn numero_mapa_inicial(
     nivel: NivelSeleccionado,
 ) -> i32 {
     match nivel {
-        NivelSeleccionado::Mansion => 1,
-        NivelSeleccionado::Laboratorio => 3,
+        NivelSeleccionado::Mansion => {
+            1
+        }
+
+        NivelSeleccionado::Laboratorio => {
+            3
+        }
     }
 }
 
@@ -1184,6 +1191,12 @@ fn main() {
     let mut tiempo_recarga =
         0.0_f32;
 
+    let mut tiempo_sonido_muerte_zombie =
+        0.0_f32;
+
+    let mut tiempo_sonido_muerte_licker =
+        0.0_f32;
+
     const DURACION_RECARGA: f32 =
         0.8;
 
@@ -1219,13 +1232,16 @@ fn main() {
             )
             .build();
 
-    ventana.toggle_fullscreen();
+    ventana
+        .toggle_fullscreen();
 
-    ventana.set_target_fps(
-        60,
-    );
+    ventana
+        .set_target_fps(
+            60,
+        );
 
-    ventana.enable_cursor();
+    ventana
+        .enable_cursor();
 
     let audio =
         RaylibAudio::
@@ -1439,9 +1455,7 @@ fn main() {
                 &thread,
                 "assets/textures/licker1.png",
             )
-            .expect(
-                "No se pudo cargar licker1.png",
-            );
+            .unwrap();
 
     let licker2 =
         ventana
@@ -1449,9 +1463,7 @@ fn main() {
                 &thread,
                 "assets/textures/licker2.png",
             )
-            .expect(
-                "No se pudo cargar licker2.png",
-            );
+            .unwrap();
 
     let licker3 =
         ventana
@@ -1459,9 +1471,7 @@ fn main() {
                 &thread,
                 "assets/textures/licker3.png",
             )
-            .expect(
-                "No se pudo cargar licker3.png",
-            );
+            .unwrap();
 
     let mut wall_image =
         Image::load_image(
@@ -1515,33 +1525,25 @@ fn main() {
         Image::load_image(
             "assets/textures/labwall.png",
         )
-        .expect(
-            "No se pudo cargar labwall.png",
-        );
+        .unwrap();
 
     let mut lab_door_image =
         Image::load_image(
             "assets/textures/labdoor.png",
         )
-        .expect(
-            "No se pudo cargar labdoor.png",
-        );
+        .unwrap();
 
     let mut lab_floor_image =
         Image::load_image(
             "assets/textures/labfloor.png",
         )
-        .expect(
-            "No se pudo cargar labfloor.png",
-        );
+        .unwrap();
 
     let mut lab_roof_image =
         Image::load_image(
             "assets/textures/labroof.png",
         )
-        .expect(
-            "No se pudo cargar labroof.png",
-        );
+        .unwrap();
 
     let textura_pared =
         TextureData::from_image(
@@ -1618,6 +1620,40 @@ fn main() {
             ventana
                 .get_frame_time();
 
+        if tiempo_sonido_muerte_zombie
+            > 0.0
+        {
+            tiempo_sonido_muerte_zombie -=
+                delta_time;
+
+            if tiempo_sonido_muerte_zombie
+                <= 0.0
+            {
+                sonidos
+                    .detener_zombie_muere();
+
+                tiempo_sonido_muerte_zombie =
+                    0.0;
+            }
+        }
+
+        if tiempo_sonido_muerte_licker
+            > 0.0
+        {
+            tiempo_sonido_muerte_licker -=
+                delta_time;
+
+            if tiempo_sonido_muerte_licker
+                <= 0.0
+            {
+                sonidos
+                    .detener_licker_muere();
+
+                tiempo_sonido_muerte_licker =
+                    0.0;
+            }
+        }
+
         if estado_juego
             == EstadoJuego::Jugando
             && vida_jugador > 0
@@ -1640,8 +1676,7 @@ fn main() {
                 ) {
                     AccionMenu::Jugar => {
                         nivel_seleccionado =
-                            NivelSeleccionado::
-                                Mansion;
+                            NivelSeleccionado::Mansion;
 
                         nivel_actual =
                             cargar_partida(
@@ -1705,6 +1740,12 @@ fn main() {
                         tiempo_recarga =
                             0.0;
 
+                        tiempo_sonido_muerte_zombie =
+                            0.0;
+
+                        tiempo_sonido_muerte_licker =
+                            0.0;
+
                         recargando =
                             false;
 
@@ -1713,8 +1754,7 @@ fn main() {
                                 .to_string();
 
                         estado_juego =
-                            EstadoJuego::
-                                Jugando;
+                            EstadoJuego::Jugando;
 
                         sonidos
                             .detener_musica();
@@ -1726,18 +1766,14 @@ fn main() {
                             .disable_cursor();
                     }
 
-                    AccionMenu::
-                        SeleccionarNivel =>
-                    {
+                    AccionMenu::SeleccionarNivel => {
                         estado_juego =
-                            EstadoJuego::
-                                SeleccionNivel;
+                            EstadoJuego::SeleccionNivel;
                     }
 
                     AccionMenu::Controles => {
                         estado_juego =
-                            EstadoJuego::
-                                Controles;
+                            EstadoJuego::Controles;
                     }
 
                     AccionMenu::Salir => {
@@ -1763,9 +1799,7 @@ fn main() {
                 continue;
             }
 
-            EstadoJuego::
-                SeleccionNivel =>
-            {
+            EstadoJuego::SeleccionNivel => {
                 detener_sonidos_enemigos(
                     &sonidos,
                 );
@@ -1778,9 +1812,9 @@ fn main() {
                         &ventana,
                     )
                 {
-                    AccionSeleccionNivel::
-                        Elegir(nivel) =>
-                    {
+                    AccionSeleccionNivel::Elegir(
+                        nivel,
+                    ) => {
                         nivel_seleccionado =
                             nivel;
 
@@ -1846,6 +1880,12 @@ fn main() {
                         tiempo_recarga =
                             0.0;
 
+                        tiempo_sonido_muerte_zombie =
+                            0.0;
+
+                        tiempo_sonido_muerte_licker =
+                            0.0;
+
                         recargando =
                             false;
 
@@ -1862,23 +1902,18 @@ fn main() {
                             .iniciar_musica();
 
                         estado_juego =
-                            EstadoJuego::
-                                Jugando;
+                            EstadoJuego::Jugando;
 
                         ventana
                             .disable_cursor();
                     }
 
-                    AccionSeleccionNivel::
-                        Volver =>
-                    {
+                    AccionSeleccionNivel::Volver => {
                         estado_juego =
-                            EstadoJuego::
-                                Menu;
+                            EstadoJuego::Menu;
                     }
 
-                    AccionSeleccionNivel::
-                        Ninguna => {}
+                    AccionSeleccionNivel::Ninguna => {}
                 }
 
                 let mut dibujo =
@@ -1904,8 +1939,7 @@ fn main() {
 
                 if ventana
                     .is_key_pressed(
-                        KeyboardKey::
-                            KEY_BACKSPACE,
+                        KeyboardKey::KEY_BACKSPACE,
                     )
                 {
                     estado_juego =
@@ -1959,8 +1993,7 @@ fn main() {
 
             if ventana
                 .is_key_pressed(
-                    KeyboardKey::
-                        KEY_BACKSPACE,
+                    KeyboardKey::KEY_BACKSPACE,
                 )
             {
                 pantalla_great =
@@ -2012,9 +2045,7 @@ fn main() {
                 format!(
                     "ZOMBIES NORMALES: {}/{}",
                     bajas_normal
-                        .min(
-                            META_NORMAL,
-                        ),
+                        .min(META_NORMAL),
                     META_NORMAL,
                 );
 
@@ -2022,9 +2053,7 @@ fn main() {
                 format!(
                     "ZOMBIES MEDIOS: {}/{}",
                     bajas_medio
-                        .min(
-                            META_MEDIO,
-                        ),
+                        .min(META_MEDIO),
                     META_MEDIO,
                 );
 
@@ -2032,9 +2061,7 @@ fn main() {
                 format!(
                     "ZOMBIES FUERTES: {}/{}",
                     bajas_fuerte
-                        .min(
-                            META_FUERTE,
-                        ),
+                        .min(META_FUERTE),
                     META_FUERTE,
                 );
 
@@ -2045,11 +2072,10 @@ fn main() {
                 "BACKSPACE - MENU PRINCIPAL";
 
             let titulo_w =
-                dibujo
-                    .measure_text(
-                        titulo,
-                        80,
-                    );
+                dibujo.measure_text(
+                    titulo,
+                    80,
+                );
 
             dibujo.draw_text(
                 titulo,
@@ -2062,11 +2088,10 @@ fn main() {
             );
 
             let sub_w =
-                dibujo
-                    .measure_text(
-                        subtitulo,
-                        28,
-                    );
+                dibujo.measure_text(
+                    subtitulo,
+                    28,
+                );
 
             dibujo.draw_text(
                 subtitulo,
@@ -2079,11 +2104,10 @@ fn main() {
             );
 
             let normal_w =
-                dibujo
-                    .measure_text(
-                        &normal,
-                        24,
-                    );
+                dibujo.measure_text(
+                    &normal,
+                    24,
+                );
 
             dibujo.draw_text(
                 &normal,
@@ -2096,11 +2120,10 @@ fn main() {
             );
 
             let medio_w =
-                dibujo
-                    .measure_text(
-                        &medio,
-                        24,
-                    );
+                dibujo.measure_text(
+                    &medio,
+                    24,
+                );
 
             dibujo.draw_text(
                 &medio,
@@ -2113,11 +2136,10 @@ fn main() {
             );
 
             let fuerte_w =
-                dibujo
-                    .measure_text(
-                        &fuerte,
-                        24,
-                    );
+                dibujo.measure_text(
+                    &fuerte,
+                    24,
+                );
 
             dibujo.draw_text(
                 &fuerte,
@@ -2130,11 +2152,10 @@ fn main() {
             );
 
             let arcade_w =
-                dibujo
-                    .measure_text(
-                        arcade,
-                        24,
-                    );
+                dibujo.measure_text(
+                    arcade,
+                    24,
+                );
 
             dibujo.draw_text(
                 arcade,
@@ -2147,11 +2168,10 @@ fn main() {
             );
 
             let volver_w =
-                dibujo
-                    .measure_text(
-                        volver,
-                        20,
-                    );
+                dibujo.measure_text(
+                    volver,
+                    20,
+                );
 
             dibujo.draw_text(
                 volver,
@@ -2168,8 +2188,7 @@ fn main() {
 
         if ventana
             .is_key_pressed(
-                KeyboardKey::
-                    KEY_BACKSPACE,
+                KeyboardKey::KEY_BACKSPACE,
             )
         {
             detener_sonidos_enemigos(
@@ -2268,12 +2287,10 @@ fn main() {
             vida_jugador > 0
                 && arma_equipada
                     == ArmaActual::Hacha
-                && tiempo_hachazo
-                    <= 0.0
+                && tiempo_hachazo <= 0.0
                 && ventana
                     .is_mouse_button_down(
-                        MouseButton::
-                            MOUSE_BUTTON_RIGHT,
+                        MouseButton::MOUSE_BUTTON_RIGHT,
                     );
 
         if vida_jugador > 0 {
@@ -2551,9 +2568,7 @@ fn main() {
                 &mut puzzle,
                 vida_jugador,
             ) {
-                InteractionResult::
-                    LlaveRecogida =>
-                {
+                InteractionResult::LlaveRecogida => {
                     sonidos
                         .llave();
 
@@ -2562,11 +2577,9 @@ fn main() {
                             .to_string();
                 }
 
-                InteractionResult::
-                    MunicionRecogida(
-                        cantidad,
-                    ) =>
-                {
+                InteractionResult::MunicionRecogida(
+                    cantidad,
+                ) => {
                     sonidos
                         .recoger_municion();
 
@@ -2580,11 +2593,9 @@ fn main() {
                         );
                 }
 
-                InteractionResult::
-                    CuracionRecogida(
-                        cantidad,
-                    ) =>
-                {
+                InteractionResult::CuracionRecogida(
+                    cantidad,
+                ) => {
                     sonidos
                         .curacion();
 
@@ -2657,9 +2668,7 @@ fn main() {
                     &mut inventory,
                     &mut puzzle,
                 ) {
-                    InteractionResult::
-                        PuertaAbierta =>
-                    {
+                    InteractionResult::PuertaAbierta => {
                         sonidos
                             .puerta();
 
@@ -2668,22 +2677,18 @@ fn main() {
                                 .to_string();
                     }
 
-                    InteractionResult::
-                        PuertaCerrada =>
-                    {
+                    InteractionResult::PuertaCerrada => {
                         mensaje =
                             "Necesitas una llave"
                                 .to_string();
                     }
 
-                    InteractionResult::
-                        SubirNivel(indice) =>
-                    {
+                    InteractionResult::SubirNivel(
+                        indice,
+                    ) => {
                         if nivel_seleccionado
-                            == NivelSeleccionado::
-                                Mansion
-                            && nivel_actual
-                                == 1
+                            == NivelSeleccionado::Mansion
+                            && nivel_actual == 1
                             && tiempo_cambio_nivel
                                 <= 0.0
                         {
@@ -2720,6 +2725,12 @@ fn main() {
                             tiempo_recarga =
                                 0.0;
 
+                            tiempo_sonido_muerte_zombie =
+                                0.0;
+
+                            tiempo_sonido_muerte_licker =
+                                0.0;
+
                             recargando =
                                 false;
 
@@ -2729,14 +2740,12 @@ fn main() {
                         }
                     }
 
-                    InteractionResult::
-                        BajarNivel(indice) =>
-                    {
+                    InteractionResult::BajarNivel(
+                        indice,
+                    ) => {
                         if nivel_seleccionado
-                            == NivelSeleccionado::
-                                Mansion
-                            && nivel_actual
-                                == 2
+                            == NivelSeleccionado::Mansion
+                            && nivel_actual == 2
                             && tiempo_cambio_nivel
                                 <= 0.0
                         {
@@ -2773,6 +2782,12 @@ fn main() {
                             tiempo_recarga =
                                 0.0;
 
+                            tiempo_sonido_muerte_zombie =
+                                0.0;
+
+                            tiempo_sonido_muerte_licker =
+                                0.0;
+
                             recargando =
                                 false;
 
@@ -2794,15 +2809,13 @@ fn main() {
                 && !recargando
                 && ventana
                     .is_mouse_button_down(
-                        MouseButton::
-                            MOUSE_BUTTON_RIGHT,
+                        MouseButton::MOUSE_BUTTON_RIGHT,
                     );
 
         if vida_jugador > 0
             && ventana
                 .is_mouse_button_pressed(
-                    MouseButton::
-                        MOUSE_BUTTON_LEFT,
+                    MouseButton::MOUSE_BUTTON_LEFT,
                 )
         {
             match arma_equipada {
@@ -2839,9 +2852,7 @@ fn main() {
                             let vivos_antes =
                                 zombies
                                     .iter()
-                                    .filter(|z| {
-                                        z.vivo
-                                    })
+                                    .filter(|z| z.vivo)
                                     .count();
 
                             let resultado =
@@ -2865,9 +2876,7 @@ fn main() {
                             let vivos_despues =
                                 zombies
                                     .iter()
-                                    .filter(|z| {
-                                        z.vivo
-                                    })
+                                    .filter(|z| z.vivo)
                                     .count();
 
                             if vivos_despues
@@ -2880,7 +2889,13 @@ fn main() {
                                     ) as i32;
 
                                 sonidos
+                                    .detener_zombie_muere();
+
+                                sonidos
                                     .zombie_muere();
+
+                                tiempo_sonido_muerte_zombie =
+                                    DURACION_SONIDO_MUERTE;
                             }
 
                             let fallo_zombie =
@@ -2903,7 +2918,13 @@ fn main() {
                                             1;
 
                                         sonidos
+                                            .detener_licker_muere();
+
+                                        sonidos
                                             .licker_muere();
+
+                                        tiempo_sonido_muerte_licker =
+                                            DURACION_SONIDO_MUERTE;
 
                                         mensaje =
                                             format!(
@@ -2937,11 +2958,9 @@ fn main() {
                                             )
                                         }
 
-                                        ShotResult::
-                                            HeadshotHit {
-                                                vida_restante,
-                                            } =>
-                                        {
+                                        ShotResult::HeadshotHit {
+                                            vida_restante,
+                                        } => {
                                             format!(
                                                 "HEADSHOT x2 - {} HP",
                                                 vida_restante,
@@ -2955,27 +2974,21 @@ fn main() {
                                             )
                                         }
 
-                                        ShotResult::
-                                            KillConLlave =>
-                                        {
+                                        ShotResult::KillConLlave => {
                                             format!(
                                                 "BAJAS: {} - LLAVE",
                                                 enemigos_matados,
                                             )
                                         }
 
-                                        ShotResult::
-                                            HeadshotKill =>
-                                        {
+                                        ShotResult::HeadshotKill => {
                                             format!(
                                                 "HEADSHOT x2 - BAJA {}",
                                                 enemigos_matados,
                                             )
                                         }
 
-                                        ShotResult::
-                                            HeadshotKillConLlave =>
-                                        {
+                                        ShotResult::HeadshotKillConLlave => {
                                             format!(
                                                 "HEADSHOT x2 - BAJA {} - LLAVE",
                                                 enemigos_matados,
@@ -2995,8 +3008,7 @@ fn main() {
                 }
 
                 ArmaActual::Hacha => {
-                    if tiempo_hachazo
-                        <= 0.0
+                    if tiempo_hachazo <= 0.0
                         && !bloqueando
                     {
                         tiempo_hachazo =
@@ -3026,9 +3038,7 @@ fn main() {
                         let vivos_antes =
                             zombies
                                 .iter()
-                                .filter(|z| {
-                                    z.vivo
-                                })
+                                .filter(|z| z.vivo)
                                 .count();
 
                         let resultado =
@@ -3052,9 +3062,7 @@ fn main() {
                         let vivos_despues =
                             zombies
                                 .iter()
-                                .filter(|z| {
-                                    z.vivo
-                                })
+                                .filter(|z| z.vivo)
                                 .count();
 
                         if vivos_despues
@@ -3067,7 +3075,13 @@ fn main() {
                                 ) as i32;
 
                             sonidos
+                                .detener_zombie_muere();
+
+                            sonidos
                                 .zombie_muere();
+
+                            tiempo_sonido_muerte_zombie =
+                                DURACION_SONIDO_MUERTE;
                         }
 
                         let fallo_zombie =
@@ -3090,7 +3104,13 @@ fn main() {
                                         1;
 
                                     sonidos
+                                        .detener_licker_muere();
+
+                                    sonidos
                                         .licker_muere();
+
+                                    tiempo_sonido_muerte_licker =
+                                        DURACION_SONIDO_MUERTE;
 
                                     mensaje =
                                         format!(
@@ -3125,31 +3145,24 @@ fn main() {
                                     }
 
                                     ShotResult::Kill
-                                    | ShotResult::
-                                        HeadshotKill =>
-                                    {
+                                    | ShotResult::HeadshotKill => {
                                         format!(
                                             "BAJAS: {}",
                                             enemigos_matados,
                                         )
                                     }
 
-                                    ShotResult::
-                                        KillConLlave
-                                    | ShotResult::
-                                        HeadshotKillConLlave =>
-                                    {
+                                    ShotResult::KillConLlave
+                                    | ShotResult::HeadshotKillConLlave => {
                                         format!(
                                             "BAJAS: {} - LLAVE",
                                             enemigos_matados,
                                         )
                                     }
 
-                                    ShotResult::
-                                        HeadshotHit {
-                                            vida_restante,
-                                        } =>
-                                    {
+                                    ShotResult::HeadshotHit {
+                                        vida_restante,
+                                    } => {
                                         format!(
                                             "Golpe - {} HP",
                                             vida_restante,
@@ -3226,9 +3239,7 @@ fn main() {
                 == ArmaActual::Pistola
             && !recargando
         {
-            if balas_cargador
-                == 8
-            {
+            if balas_cargador == 8 {
                 mensaje =
                     "Cargador lleno"
                         .to_string();
@@ -3328,6 +3339,12 @@ fn main() {
             tiempo_recarga =
                 0.0;
 
+            tiempo_sonido_muerte_zombie =
+                0.0;
+
+            tiempo_sonido_muerte_licker =
+                0.0;
+
             recargando =
                 false;
 
@@ -3366,8 +3383,7 @@ fn main() {
 
         let es_laboratorio =
             nivel_seleccionado
-                == NivelSeleccionado::
-                    Laboratorio;
+                == NivelSeleccionado::Laboratorio;
 
         let pared_actual =
             if es_laboratorio {
@@ -3493,9 +3509,7 @@ fn main() {
                         } else {
                             &pistol_r
                         }
-                    } else if tiempo_disparo
-                        > 0.0
-                    {
+                    } else if tiempo_disparo > 0.0 {
                         &pistol3
                     } else if apuntando {
                         &pistol2
@@ -3507,9 +3521,7 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         &axe3
-                    } else if tiempo_hachazo
-                        > 0.0
-                    {
+                    } else if tiempo_hachazo > 0.0 {
                         &axe2
                     } else {
                         &axe1
@@ -3522,9 +3534,7 @@ fn main() {
                 ArmaActual::Pistola => {
                     if recargando {
                         0.28
-                    } else if tiempo_disparo
-                        > 0.0
-                    {
+                    } else if tiempo_disparo > 0.0 {
                         0.34
                     } else if apuntando {
                         0.36
@@ -3536,9 +3546,7 @@ fn main() {
                 ArmaActual::Hacha => {
                     if bloqueando {
                         0.42
-                    } else if tiempo_hachazo
-                        > 0.0
-                    {
+                    } else if tiempo_hachazo > 0.0 {
                         0.37
                     } else {
                         0.34
@@ -3565,12 +3573,10 @@ fn main() {
         let retroceso =
             if arma_equipada
                 == ArmaActual::Pistola
-                && tiempo_disparo
-                    > 0.0
+                && tiempo_disparo > 0.0
                 && !recargando
             {
-                8.0
-                    * escala
+                8.0 * escala
             } else {
                 0.0
             };
@@ -3627,26 +3633,25 @@ fn main() {
         );
 
         unsafe {
-            raylib::ffi::
-                BeginScissorMode(
-                    offset_x
-                        .round()
-                        as i32,
+            raylib::ffi::BeginScissorMode(
+                offset_x
+                    .round()
+                    as i32,
 
-                    offset_y
-                        .round()
-                        as i32,
+                offset_y
+                    .round()
+                    as i32,
 
-                    ancho_render
-                        .round()
-                        .max(1.0)
-                        as i32,
+                ancho_render
+                    .round()
+                    .max(1.0)
+                    as i32,
 
-                    alto_render
-                        .round()
-                        .max(1.0)
-                        as i32,
-                );
+                alto_render
+                    .round()
+                    .max(1.0)
+                    as i32,
+            );
         }
 
         let textura_llave_actual =
@@ -3818,17 +3823,13 @@ fn main() {
         let vivos_zombies =
             zombies
                 .iter()
-                .filter(|z| {
-                    z.vivo
-                })
+                .filter(|z| z.vivo)
                 .count();
 
         let vivos_lickers =
             lickers
                 .iter()
-                .filter(|l| {
-                    l.vivo
-                })
+                .filter(|l| l.vivo)
                 .count();
 
         let nombre =
@@ -3838,8 +3839,7 @@ fn main() {
 
         let texto_arcade =
             if nivel_seleccionado
-                == NivelSeleccionado::
-                    Mansion
+                == NivelSeleccionado::Mansion
             {
                 format!(
                     "{} | PISO {} | HORDA {} | BAJAS {} | Z {} | L {}",
@@ -3880,19 +3880,13 @@ fn main() {
                 format!(
                     "OBJETIVO | NORMAL {}/{} | MEDIO {}/{} | FUERTE {}/{}",
                     bajas_normal
-                        .min(
-                            META_NORMAL,
-                        ),
+                        .min(META_NORMAL),
                     META_NORMAL,
                     bajas_medio
-                        .min(
-                            META_MEDIO,
-                        ),
+                        .min(META_MEDIO),
                     META_MEDIO,
                     bajas_fuerte
-                        .min(
-                            META_FUERTE,
-                        ),
+                        .min(META_FUERTE),
                     META_FUERTE,
                 );
 
@@ -3976,19 +3970,13 @@ fn main() {
                 format!(
                     "N {}/{}   M {}/{}   F {}/{}",
                     bajas_normal
-                        .min(
-                            META_NORMAL,
-                        ),
+                        .min(META_NORMAL),
                     META_NORMAL,
                     bajas_medio
-                        .min(
-                            META_MEDIO,
-                        ),
+                        .min(META_MEDIO),
                     META_MEDIO,
                     bajas_fuerte
-                        .min(
-                            META_FUERTE,
-                        ),
+                        .min(META_FUERTE),
                     META_FUERTE,
                 );
 
@@ -3999,11 +3987,10 @@ fn main() {
                 "BACKSPACE - MENU PRINCIPAL";
 
             let titulo_w =
-                dibujo
-                    .measure_text(
-                        titulo,
-                        64,
-                    );
+                dibujo.measure_text(
+                    titulo,
+                    64,
+                );
 
             dibujo.draw_text(
                 titulo,
@@ -4016,11 +4003,10 @@ fn main() {
             );
 
             let stats_w =
-                dibujo
-                    .measure_text(
-                        &stats,
-                        26,
-                    );
+                dibujo.measure_text(
+                    &stats,
+                    26,
+                );
 
             dibujo.draw_text(
                 &stats,
@@ -4033,11 +4019,10 @@ fn main() {
             );
 
             let objetivo_w =
-                dibujo
-                    .measure_text(
-                        &objetivo,
-                        22,
-                    );
+                dibujo.measure_text(
+                    &objetivo,
+                    22,
+                );
 
             dibujo.draw_text(
                 &objetivo,
@@ -4050,11 +4035,10 @@ fn main() {
             );
 
             let reiniciar_w =
-                dibujo
-                    .measure_text(
-                        reiniciar,
-                        22,
-                    );
+                dibujo.measure_text(
+                    reiniciar,
+                    22,
+                );
 
             dibujo.draw_text(
                 reiniciar,
@@ -4067,11 +4051,10 @@ fn main() {
             );
 
             let menu_w =
-                dibujo
-                    .measure_text(
-                        menu_texto,
-                        20,
-                    );
+                dibujo.measure_text(
+                    menu_texto,
+                    20,
+                );
 
             dibujo.draw_text(
                 menu_texto,

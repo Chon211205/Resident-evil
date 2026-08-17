@@ -327,6 +327,16 @@ impl<'a> AudioManager<'a> {
         self.zombiedie.play();
     }
 
+    pub fn detener_zombie_muere(
+        &self,
+    ) {
+        if self.zombiedie
+            .is_playing()
+        {
+            self.zombiedie.stop();
+        }
+    }
+
     pub fn recoger_municion(
         &self,
     ) {
@@ -397,13 +407,28 @@ impl<'a> AudioManager<'a> {
         self.lickerdie.play();
     }
 
+    pub fn detener_licker_muere(
+        &self,
+    ) {
+        if self.lickerdie
+            .is_playing()
+        {
+            self.lickerdie.stop();
+        }
+    }
+
     pub fn detener_todos_enemigos(
         &self,
     ) {
         self.detener_zombie();
         self.detener_zombie_medio();
         self.detener_zombie_fuerte();
+
         self.detener_tyrant();
+
         self.detener_licker();
+
+        self.detener_zombie_muere();
+        self.detener_licker_muere();
     }
 }

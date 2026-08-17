@@ -121,24 +121,15 @@ fn crear_zombies(
                 }
 
                 TipoSpawnZombie::ConLlave => {
-                    Zombie::new_con_llave(
-                        x,
-                        y,
-                    )
+                    Zombie::new_con_llave(x, y)
                 }
 
                 TipoSpawnZombie::Medio => {
-                    Zombie::new_medio(
-                        x,
-                        y,
-                    )
+                    Zombie::new_medio(x, y)
                 }
 
                 TipoSpawnZombie::Fuerte => {
-                    Zombie::new_fuerte(
-                        x,
-                        y,
-                    )
+                    Zombie::new_fuerte(x, y)
                 }
             }
         })
@@ -347,17 +338,13 @@ fn max_zombies_para_horda(
 ) -> usize {
     let extra =
         (
-            numero_horda
-                / 5
+            numero_horda / 5
         )
             .max(0)
             as usize
             * 2;
 
-    (
-        18
-            + extra
-    )
+    (18 + extra)
         .min(30)
 }
 
@@ -681,9 +668,7 @@ fn disparar_licker(
         }
 
         let angulo =
-            dy.atan2(
-                dx,
-            );
+            dy.atan2(dx);
 
         let diferencia =
             normalizar_angulo(
@@ -883,9 +868,7 @@ fn atacar_licker_hacha(
         }
 
         let angulo =
-            dy.atan2(
-                dx,
-            );
+            dy.atan2(dx);
 
         let diferencia =
             normalizar_angulo(
@@ -959,13 +942,8 @@ fn numero_mapa_inicial(
     nivel: NivelSeleccionado,
 ) -> i32 {
     match nivel {
-        NivelSeleccionado::Mansion => {
-            1
-        }
-
-        NivelSeleccionado::Laboratorio => {
-            3
-        }
+        NivelSeleccionado::Mansion => 1,
+        NivelSeleccionado::Laboratorio => 3,
     }
 }
 
@@ -1333,6 +1311,16 @@ fn main() {
             )
             .unwrap();
 
+    let lab_key_texture =
+        ventana
+            .load_texture(
+                &thread,
+                "assets/textures/labkey.png",
+            )
+            .expect(
+                "No se pudo cargar labkey.png",
+            );
+
     let ammo_texture =
         ventana
             .load_texture(
@@ -1523,6 +1511,38 @@ fn main() {
         )
         .unwrap();
 
+    let mut lab_wall_image =
+        Image::load_image(
+            "assets/textures/labwall.png",
+        )
+        .expect(
+            "No se pudo cargar labwall.png",
+        );
+
+    let mut lab_door_image =
+        Image::load_image(
+            "assets/textures/labdoor.png",
+        )
+        .expect(
+            "No se pudo cargar labdoor.png",
+        );
+
+    let mut lab_floor_image =
+        Image::load_image(
+            "assets/textures/labfloor.png",
+        )
+        .expect(
+            "No se pudo cargar labfloor.png",
+        );
+
+    let mut lab_roof_image =
+        Image::load_image(
+            "assets/textures/labroof.png",
+        )
+        .expect(
+            "No se pudo cargar labroof.png",
+        );
+
     let textura_pared =
         TextureData::from_image(
             &mut wall_image,
@@ -1561,6 +1581,26 @@ fn main() {
     let textura_techo =
         TextureData::from_image(
             &mut roof_image,
+        );
+
+    let textura_lab_pared =
+        TextureData::from_image(
+            &mut lab_wall_image,
+        );
+
+    let textura_lab_puerta =
+        TextureData::from_image(
+            &mut lab_door_image,
+        );
+
+    let textura_lab_suelo =
+        TextureData::from_image(
+            &mut lab_floor_image,
+        );
+
+    let textura_lab_techo =
+        TextureData::from_image(
+            &mut lab_roof_image,
         );
 
     let mut textura_framebuffer =
@@ -3324,19 +3364,63 @@ fn main() {
 
         framebuffer.clear();
 
+        let es_laboratorio =
+            nivel_seleccionado
+                == NivelSeleccionado::
+                    Laboratorio;
+
+        let pared_actual =
+            if es_laboratorio {
+                &textura_lab_pared
+            } else {
+                &textura_pared
+            };
+
+        let puerta_actual =
+            if es_laboratorio {
+                &textura_lab_puerta
+            } else {
+                &textura_puerta
+            };
+
+        let suelo_actual =
+            if es_laboratorio {
+                &textura_lab_suelo
+            } else {
+                &textura_suelo
+            };
+
+        let suelo2_actual =
+            if es_laboratorio {
+                &textura_lab_suelo
+            } else {
+                &textura_suelo2
+            };
+
+        let techo_actual =
+            if es_laboratorio {
+                &textura_lab_techo
+            } else {
+                &textura_techo
+            };
+
         render_3d(
             &mut framebuffer,
             &mapa,
             &player,
             &camera,
-            &textura_pared,
+
+            pared_actual,
             &textura_ventana,
-            &textura_puerta,
+            puerta_actual,
+
             &textura_subir,
             &textura_bajar,
-            &textura_suelo,
-            &textura_suelo2,
-            &textura_techo,
+
+            suelo_actual,
+            suelo2_actual,
+
+            techo_actual,
         );
 
         render_minimap(
@@ -3565,12 +3649,19 @@ fn main() {
                 );
         }
 
+        let textura_llave_actual =
+            if es_laboratorio {
+                &lab_key_texture
+            } else {
+                &key_texture
+            };
+
         render_key_sprite(
             &mut dibujo,
             &mapa,
             &player,
             &camera,
-            &key_texture,
+            textura_llave_actual,
             offset_x,
             offset_y,
             escala,

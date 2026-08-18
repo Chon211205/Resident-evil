@@ -594,7 +594,7 @@ impl Menu {
             );
         }
 
-        let continuar = "ENTER - VOLVER AL MENU";
+        let continuar = "ENTER - CONTINUAR";
         let ancho_continuar = d.measure_text(continuar, 20);
 
         d.draw_text(

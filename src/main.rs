@@ -2581,10 +2581,12 @@ fn main() {
                 if ventana.is_key_pressed(
                     KeyboardKey::KEY_ENTER,
                 ) || gamepad::aceptar(&ventana)
-                    || ventana.is_key_pressed(
-                        KeyboardKey::KEY_BACKSPACE,
-                    )
-                    || gamepad::volver(&ventana)
+                {
+                    pantalla_great = true;
+                    estado_juego = EstadoJuego::Jugando;
+                } else if ventana.is_key_pressed(
+                    KeyboardKey::KEY_BACKSPACE,
+                ) || gamepad::volver(&ventana)
                 {
                     estado_juego = EstadoJuego::Menu;
                 }
@@ -2697,7 +2699,7 @@ fn main() {
                     ventana.enable_cursor();
                 } else {
                     pantalla_great = false;
-                    estado_juego = EstadoJuego::HistoriaFinal;
+                    estado_juego = EstadoJuego::Menu;
                     sonidos.detener_musica();
                     ventana.enable_cursor();
                 }
@@ -4228,8 +4230,14 @@ fn main() {
             objetivo_completado =
                 true;
 
-            pantalla_great =
-                true;
+            if nivel_seleccionado
+                == NivelSeleccionado::Final
+            {
+                pantalla_great = false;
+                estado_juego = EstadoJuego::HistoriaFinal;
+            } else {
+                pantalla_great = true;
+            }
 
             detener_sonidos_enemigos(
                 &sonidos,

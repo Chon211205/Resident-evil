@@ -275,6 +275,7 @@ pub fn render_3d(
     camera: &Camera,
 
     textura_pared: &TextureData,
+    textura_caja: &TextureData,
     textura_ventana: &TextureData,
     textura_puerta: &TextureData,
 
@@ -318,6 +319,7 @@ pub fn render_3d(
         camera,
 
         textura_pared,
+        textura_caja,
         textura_ventana,
         textura_puerta,
 
@@ -824,6 +826,7 @@ fn render_paredes(
     camera: &Camera,
 
     textura_pared: &TextureData,
+    textura_caja: &TextureData,
     textura_ventana: &TextureData,
     textura_puerta: &TextureData,
 
@@ -903,6 +906,10 @@ fn render_paredes(
 
         let textura =
             match hit.tipo {
+                'J' => {
+                    textura_caja
+                }
+
                 'W' => {
                     textura_ventana
                 }

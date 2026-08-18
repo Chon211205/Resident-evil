@@ -1945,6 +1945,12 @@ fn main() {
         )
         .unwrap();
 
+    let mut metal_crate_image =
+        Image::load_image(
+            "assets/textures/metalcrate.png",
+        )
+        .unwrap();
+
     let mut lab_roof_image =
         Image::load_image(
             "assets/textures/labroof.png",
@@ -2015,6 +2021,11 @@ fn main() {
     let textura_rooftop_suelo =
         TextureData::from_image(
             &mut rooftop_floor_image,
+        );
+
+    let textura_caja_metal =
+        TextureData::from_image(
+            &mut metal_crate_image,
         );
 
     let textura_lab_techo =
@@ -4285,6 +4296,7 @@ fn main() {
             &camera,
 
             pared_actual,
+            &textura_caja_metal,
             &textura_ventana,
             puerta_actual,
 

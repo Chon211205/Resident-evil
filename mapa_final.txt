@@ -3,15 +3,15 @@ GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 GG                               GG
 GG          H                    GG
 GG  P                      Y     GG
-GG      ##               ##      GG
-GG      ##               ##      GG
-GG             ###               GG
+GG      JJ               JJ      GG
+GG      JJ               JJ      GG
+GG             JJJ               GG
 GG                               GG
 GG  I           E            I   GG
 GG                               GG
-GG             ###               GG
-GG  A   ##               ##  Q   GG
-GG      ##               ##      GG
+GG             JJJ               GG
+GG  A   JJ               JJ  Q   GG
+GG      JJ               JJ      GG
 GG   N          I           H    GG
 GG                               GG
 GG                               GG

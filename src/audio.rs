@@ -32,6 +32,7 @@ pub struct AudioManager<'a> {
     lickerdie: Sound<'a>,
 
     mansion: Music<'a>,
+    laboratorio: Music<'a>,
 }
 
 impl<'a> AudioManager<'a> {
@@ -48,6 +49,19 @@ impl<'a> AudioManager<'a> {
                 );
 
         mansion.set_volume(
+            0.30,
+        );
+
+        let laboratorio =
+            audio
+                .new_music(
+                    "assets/sounds/lab.mp3",
+                )
+                .expect(
+                    "No se pudo cargar lab.mp3",
+                );
+
+        laboratorio.set_volume(
             0.30,
         );
 
@@ -213,32 +227,44 @@ impl<'a> AudioManager<'a> {
                 ),
 
             mansion,
+            laboratorio,
         }
     }
 
     pub fn actualizar_musica(
         &self,
+        es_laboratorio: bool,
     ) {
-        self.mansion
-            .update_stream();
+        if es_laboratorio {
+            self.laboratorio.update_stream();
 
-        if !self.mansion
-            .is_stream_playing()
-        {
-            self.mansion
-                .play_stream();
+            if self.mansion.is_stream_playing() {
+                self.mansion.stop_stream();
+            }
+
+            if !self.laboratorio.is_stream_playing() {
+                self.laboratorio.play_stream();
+            }
+        } else {
+            self.mansion.update_stream();
+
+            if self.laboratorio.is_stream_playing() {
+                self.laboratorio.stop_stream();
+            }
+
+            if !self.mansion.is_stream_playing() {
+                self.mansion.play_stream();
+            }
         }
     }
 
     pub fn iniciar_musica(
         &self,
+        es_laboratorio: bool,
     ) {
-        if !self.mansion
-            .is_stream_playing()
-        {
-            self.mansion
-                .play_stream();
-        }
+        self.actualizar_musica(
+            es_laboratorio,
+        );
     }
 
     pub fn detener_musica(
@@ -248,6 +274,13 @@ impl<'a> AudioManager<'a> {
             .is_stream_playing()
         {
             self.mansion
+                .stop_stream();
+        }
+
+        if self.laboratorio
+            .is_stream_playing()
+        {
+            self.laboratorio
                 .stop_stream();
         }
     }

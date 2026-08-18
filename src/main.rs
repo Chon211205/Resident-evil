@@ -2044,7 +2044,10 @@ fn main() {
             && vida_jugador > 0
         {
             sonidos
-                .actualizar_musica();
+                .actualizar_musica(
+                    nivel_seleccionado
+                        == NivelSeleccionado::Laboratorio,
+                );
         }
 
         match estado_juego {
@@ -2153,7 +2156,10 @@ fn main() {
                             .detener_musica();
 
                         sonidos
-                            .iniciar_musica();
+                            .iniciar_musica(
+                                nivel_seleccionado
+                                    == NivelSeleccionado::Laboratorio,
+                            );
 
                         ventana
                             .disable_cursor();
@@ -2300,7 +2306,10 @@ fn main() {
                             .detener_musica();
 
                         sonidos
-                            .iniciar_musica();
+                            .iniciar_musica(
+                                nivel_seleccionado
+                                    == NivelSeleccionado::Laboratorio,
+                            );
 
                         estado_juego =
                             EstadoJuego::Jugando;
@@ -2369,7 +2378,10 @@ fn main() {
             );
 
             sonidos
-                .actualizar_musica();
+                .actualizar_musica(
+                    nivel_seleccionado
+                        == NivelSeleccionado::Laboratorio,
+                );
 
             ventana
                 .enable_cursor();
@@ -4011,7 +4023,10 @@ fn main() {
                     .to_string();
 
             sonidos
-                .iniciar_musica();
+                .iniciar_musica(
+                    nivel_seleccionado
+                        == NivelSeleccionado::Laboratorio,
+                );
 
             ventana
                 .disable_cursor();
@@ -4078,7 +4093,7 @@ fn main() {
             recargando = false;
             mensaje = "LABORATORIO".to_string();
 
-            sonidos.iniciar_musica();
+            sonidos.iniciar_musica(true);
             ventana.disable_cursor();
             continue;
         }

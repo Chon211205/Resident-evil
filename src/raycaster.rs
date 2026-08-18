@@ -287,6 +287,9 @@ pub fn render_3d(
     textura_techo: &TextureData,
     panorama: Option<&TextureData>,
 ) {
+    let limitar_suelo =
+        panorama.is_some();
+
     if let Some(panorama) = panorama {
         render_panorama(framebuffer, camera, panorama);
     } else {
@@ -305,6 +308,7 @@ pub fn render_3d(
         camera,
         textura_suelo,
         textura_suelo2,
+        limitar_suelo,
     );
 
     render_paredes(
@@ -434,20 +438,14 @@ fn render_techo(
 
         for x in 0..ANCHO_VENTANA {
             let local_x =
-                mundo_x
-                    / TAMANO_CELDA;
-
+                mundo_x / TAMANO_CELDA;
             let local_y =
-                mundo_y
-                    / TAMANO_CELDA;
+                mundo_y / TAMANO_CELDA;
 
             let u =
-                local_x
-                    - local_x.floor();
-
+                local_x - local_x.floor();
             let v =
-                local_y
-                    - local_y.floor();
+                local_y - local_y.floor();
 
             let tex_x =
                 (
@@ -560,6 +558,7 @@ fn render_suelo(
     camera: &Camera,
     textura_suelo: &TextureData,
     textura_suelo2: &TextureData,
+    limitar_al_mapa: bool,
 ) {
     let horizonte =
         ALTO_VENTANA
@@ -686,6 +685,20 @@ fn render_suelo(
                     columna,
                 );
 
+            if limitar_al_mapa
+                && (
+                    fila < 0
+                    || columna < 0
+                    || fila >= mapa.alto() as i32
+                    || columna >= mapa.ancho() as i32
+                    || celda == 'G'
+                )
+            {
+                mundo_x += paso_x;
+                mundo_y += paso_y;
+                continue;
+            }
+
             let textura =
                 if celda == 'C' {
                     textura_suelo2
@@ -694,20 +707,14 @@ fn render_suelo(
                 };
 
             let local_x =
-                mundo_x
-                    / TAMANO_CELDA;
-
+                mundo_x / TAMANO_CELDA;
             let local_y =
-                mundo_y
-                    / TAMANO_CELDA;
+                mundo_y / TAMANO_CELDA;
 
             let u =
-                local_x
-                    - local_x.floor();
-
+                local_x - local_x.floor();
             let v =
-                local_y
-                    - local_y.floor();
+                local_y - local_y.floor();
 
             let tex_x =
                 (
@@ -1080,14 +1087,10 @@ fn render_panorama(
     camera: &Camera,
     panorama: &TextureData,
 ) {
-    let horizonte =
-        (ALTO_VENTANA as f32 / 2.0
-            + camera.vertical_offset as f32)
-            .clamp(1.0, ALTO_VENTANA as f32);
-
-    for y in 0..horizonte as i32 {
+    for y in 0..ALTO_VENTANA {
         let textura_y =
-            ((y as f32 / horizonte) * panorama.height as f32)
+            ((y as f32 / ALTO_VENTANA as f32)
+                * panorama.height as f32)
                 .clamp(0.0, panorama.height as f32 - 1.0)
                 as i32;
 

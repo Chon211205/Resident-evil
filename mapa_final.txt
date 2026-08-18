@@ -1,25 +1,19 @@
-GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-GG                                           GG
-GG   P        H          ####          A     GG
-GG                      ####                 GG
-GG          ####                   ####      GG
-GG    I     ####                   ####      GG
-GG          ####       Y           ####      GG
-GG                                           GG
-GG             ####          ####            GG
-GG             ####    Q     ####            GG
-GG    A        ####          ####       H    GG
-GG                                           GG
-GG       ####                      ####      GG
-GG       ####          N           ####      GG
-GG       ####                      ####      GG
-GG                                           GG
-GG    I           H          Q          I    GG
-GG                                           GG
-GG          ####                  ####       GG
-GG          ####                  ####       GG
-GG                   E                       GG
-GG                                           GG
-GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GG                               GG
+GG          H                    GG
+GG  P                      Y     GG
+GG      ##               ##      GG
+GG      ##               ##      GG
+GG             ###               GG
+GG                               GG
+GG  I           E            I   GG
+GG                               GG
+GG             ###               GG
+GG  A   ##               ##  Q   GG
+GG      ##               ##      GG
+GG   N          I           H    GG
+GG                               GG
+GG                               GG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG

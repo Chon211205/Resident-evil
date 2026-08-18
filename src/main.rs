@@ -1939,6 +1939,12 @@ fn main() {
         )
         .unwrap();
 
+    let mut rooftop_floor_image =
+        Image::load_image(
+            "assets/textures/rooftopfloor.png",
+        )
+        .unwrap();
+
     let mut lab_roof_image =
         Image::load_image(
             "assets/textures/labroof.png",
@@ -2004,6 +2010,11 @@ fn main() {
     let textura_lab_suelo =
         TextureData::from_image(
             &mut lab_floor_image,
+        );
+
+    let textura_rooftop_suelo =
+        TextureData::from_image(
+            &mut rooftop_floor_image,
         );
 
     let textura_lab_techo =
@@ -4239,14 +4250,22 @@ fn main() {
             };
 
         let suelo_actual =
-            if es_laboratorio {
+            if nivel_seleccionado
+                == NivelSeleccionado::Final
+            {
+                &textura_rooftop_suelo
+            } else if es_laboratorio {
                 &textura_lab_suelo
             } else {
                 &textura_suelo
             };
 
         let suelo2_actual =
-            if es_laboratorio {
+            if nivel_seleccionado
+                == NivelSeleccionado::Final
+            {
+                &textura_rooftop_suelo
+            } else if es_laboratorio {
                 &textura_lab_suelo
             } else {
                 &textura_suelo2

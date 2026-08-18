@@ -38,6 +38,32 @@ pub fn update(
             * delta_time
             * 1.8;
 
+    // Stick derecho vertical: permite apuntar hacia arriba y abajo.
+    // En raylib el eje Y es positivo al mover el stick hacia abajo,
+    // igual que el desplazamiento vertical del mouse.
+    let mirada_vertical_control =
+        gamepad::eje(
+            window,
+            GamepadAxis::GAMEPAD_AXIS_RIGHT_Y,
+        );
+
+    if mirada_vertical_control != 0.0 {
+        let movimiento_vertical =
+            mirada_vertical_control
+                * rotation_speed
+                * delta_time
+                * 95.0;
+
+        // vertical_offset usa enteros; el minimo evita perder movimientos
+        // suaves del stick por el redondeo de cada fotograma.
+        self.vertical_offset +=
+            movimiento_vertical
+                .signum() as i32
+                * movimiento_vertical
+                    .abs()
+                    .max(1.0) as i32;
+    }
+
     self.vertical_offset +=
         (mouse_delta.y * sensibilidad_y)
             as i32;

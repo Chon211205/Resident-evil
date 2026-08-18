@@ -33,6 +33,10 @@ pub enum InteractionResult {
 
     AntivirusRecogido,
 
+    InterruptorActivado,
+
+    EvacuacionEncontrada,
+
     CuracionRecogida(
         i32,
     ),
@@ -168,6 +172,20 @@ pub fn recoger_objetos_cercanos(
             );
 
             InteractionResult::AntivirusRecogido
+        }
+
+        'I' => {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                ' ',
+            );
+
+            InteractionResult::InterruptorActivado
+        }
+
+        'E' => {
+            InteractionResult::EvacuacionEncontrada
         }
 
         _ => {

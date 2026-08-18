@@ -75,6 +75,7 @@ use sprite_renderer::{
     render_ammo_sprites,
     render_antivirus_sprite,
     render_flamethrow_ammo_sprites,
+    render_final_objective_sprites,
     render_heal_sprites,
     render_key_sprite,
 };
@@ -1229,6 +1230,10 @@ fn numero_mapa_inicial(
         NivelSeleccionado::Laboratorio => {
             3
         }
+
+        NivelSeleccionado::Final => {
+            4
+        }
     }
 }
 
@@ -1242,6 +1247,10 @@ fn nombre_nivel(
 
         NivelSeleccionado::Laboratorio => {
             "LABORATORIO"
+        }
+
+        NivelSeleccionado::Final => {
+            "HELIPUERTO FINAL"
         }
     }
 }
@@ -1411,6 +1420,12 @@ fn main() {
         false;
 
     let mut antivirus_recogido =
+        false;
+
+    let mut interruptores_final =
+        0_i32;
+
+    let mut evacuacion_completada =
         false;
 
     let mut pantalla_great =
@@ -2046,7 +2061,7 @@ fn main() {
             sonidos
                 .actualizar_musica(
                     nivel_seleccionado
-                        == NivelSeleccionado::Laboratorio,
+                        != NivelSeleccionado::Mansion,
                 );
         }
 
@@ -2115,6 +2130,9 @@ fn main() {
                         antivirus_recogido =
                             false;
 
+                        interruptores_final = 0;
+                        evacuacion_completada = false;
+
                         pantalla_great =
                             false;
 
@@ -2158,7 +2176,7 @@ fn main() {
                         sonidos
                             .iniciar_musica(
                                 nivel_seleccionado
-                                    == NivelSeleccionado::Laboratorio,
+                                    != NivelSeleccionado::Mansion,
                             );
 
                         ventana
@@ -2266,6 +2284,9 @@ fn main() {
                         antivirus_recogido =
                             false;
 
+                        interruptores_final = 0;
+                        evacuacion_completada = false;
+
                         pantalla_great =
                             false;
 
@@ -2308,7 +2329,7 @@ fn main() {
                         sonidos
                             .iniciar_musica(
                                 nivel_seleccionado
-                                    == NivelSeleccionado::Laboratorio,
+                                    != NivelSeleccionado::Mansion,
                             );
 
                         estado_juego =
@@ -2380,11 +2401,58 @@ fn main() {
             sonidos
                 .actualizar_musica(
                     nivel_seleccionado
-                        == NivelSeleccionado::Laboratorio,
+                        != NivelSeleccionado::Mansion,
                 );
 
             ventana
                 .enable_cursor();
+
+            if nivel_seleccionado
+                == NivelSeleccionado::Laboratorio
+                && ventana.is_key_pressed(
+                    KeyboardKey::KEY_N,
+                )
+            {
+                nivel_seleccionado =
+                    NivelSeleccionado::Final;
+
+                nivel_actual = cargar_partida(
+                    nivel_seleccionado,
+                    &mut mapa,
+                    &mut zombies,
+                    &mut lickers,
+                    &mut tyrant,
+                    &mut nemesis,
+                    &mut misiles_nemesis,
+                    &mut player,
+                    &mut camera,
+                    &mut inventory,
+                    &mut puzzle,
+                    &mut damage_effect,
+                );
+
+                vida_jugador = 100;
+                balas_cargador = 8;
+                balas_reserva = 24;
+                municion_lanzallamas = 100;
+                arma_equipada = ArmaActual::Pistola;
+                enemigos_matados = 0;
+                bajas_normal = 0;
+                bajas_medio = 0;
+                bajas_fuerte = 0;
+                objetivo_completado = false;
+                antivirus_recogido = false;
+                interruptores_final = 0;
+                evacuacion_completada = false;
+                pantalla_great = false;
+                numero_horda = 1;
+                siguiente_horda = 4;
+                mensaje = "HELIPUERTO FINAL".to_string();
+
+                sonidos.iniciar_musica(true);
+                ventana.disable_cursor();
+                continue;
+            }
 
             if ventana
                 .is_key_pressed(
@@ -2487,7 +2555,13 @@ fn main() {
                 );
 
             let arcade =
-                "ENTER - SEGUIR JUGANDO";
+                if nivel_seleccionado
+                    == NivelSeleccionado::Laboratorio
+                {
+                    "ENTER - MODO HORDAS | N - NIVEL FINAL"
+                } else {
+                    "ENTER - SEGUIR JUGANDO"
+                };
 
             let volver =
                 "BACKSPACE - MENU PRINCIPAL";
@@ -3133,6 +3207,28 @@ fn main() {
                     antivirus_recogido = true;
                     mensaje =
                         "ANTIVIRUS CONSEGUIDO".to_string();
+                }
+
+                InteractionResult::InterruptorActivado => {
+                    interruptores_final =
+                        (interruptores_final + 1).min(3);
+                    mensaje = format!(
+                        "INTERRUPTORES {}/3",
+                        interruptores_final,
+                    );
+                }
+
+                InteractionResult::EvacuacionEncontrada => {
+                    if interruptores_final >= 3 {
+                        evacuacion_completada = true;
+                        mensaje =
+                            "EVACUACION ACTIVADA".to_string();
+                    } else {
+                        mensaje = format!(
+                            "FALTAN {} INTERRUPTORES",
+                            3 - interruptores_final,
+                        );
+                    }
                 }
 
                 InteractionResult::CuracionRecogida(
@@ -3822,16 +3918,16 @@ fn main() {
         }
 
         let meta_alcanzada =
-            if nivel_seleccionado
-                == NivelSeleccionado::Laboratorio
-            {
-                antivirus_recogido
-            } else {
-                objetivo_completo(
-                    bajas_normal,
-                    bajas_medio,
-                    bajas_fuerte,
-                )
+            match nivel_seleccionado {
+                NivelSeleccionado::Laboratorio => antivirus_recogido,
+                NivelSeleccionado::Final => evacuacion_completada,
+                NivelSeleccionado::Mansion => {
+                    objetivo_completo(
+                        bajas_normal,
+                        bajas_medio,
+                        bajas_fuerte,
+                    )
+                }
             };
 
         if !objetivo_completado
@@ -3971,6 +4067,9 @@ fn main() {
             antivirus_recogido =
                 false;
 
+            interruptores_final = 0;
+            evacuacion_completada = false;
+
             pantalla_great =
                 false;
 
@@ -4025,7 +4124,7 @@ fn main() {
             sonidos
                 .iniciar_musica(
                     nivel_seleccionado
-                        == NivelSeleccionado::Laboratorio,
+                        != NivelSeleccionado::Mansion,
                 );
 
             ventana
@@ -4053,13 +4152,19 @@ fn main() {
         if vida_jugador <= 0
             && objetivo_completado
             && nivel_seleccionado
-                == NivelSeleccionado::Mansion
+                != NivelSeleccionado::Final
             && ventana.is_key_pressed(
                 KeyboardKey::KEY_ENTER,
             )
         {
             nivel_seleccionado =
-                NivelSeleccionado::Laboratorio;
+                match nivel_seleccionado {
+                    NivelSeleccionado::Mansion =>
+                        NivelSeleccionado::Laboratorio,
+                    NivelSeleccionado::Laboratorio =>
+                        NivelSeleccionado::Final,
+                    NivelSeleccionado::Final => unreachable!(),
+                };
 
             nivel_actual = cargar_partida(
                 nivel_seleccionado,
@@ -4087,11 +4192,15 @@ fn main() {
             bajas_fuerte = 0;
             objetivo_completado = false;
             antivirus_recogido = false;
+            interruptores_final = 0;
+            evacuacion_completada = false;
             pantalla_great = false;
             numero_horda = 1;
             siguiente_horda = 4;
             recargando = false;
-            mensaje = "LABORATORIO".to_string();
+            mensaje =
+                nombre_nivel(nivel_seleccionado)
+                    .to_string();
 
             sonidos.iniciar_musica(true);
             ventana.disable_cursor();
@@ -4102,7 +4211,7 @@ fn main() {
 
         let es_laboratorio =
             nivel_seleccionado
-                == NivelSeleccionado::Laboratorio;
+                != NivelSeleccionado::Mansion;
 
         let pared_actual =
             if es_laboratorio {
@@ -4557,6 +4666,18 @@ fn main() {
             escala,
         );
 
+        render_final_objective_sprites(
+            &mut dibujo,
+            &mapa,
+            &player,
+            &camera,
+            &lab_key_texture,
+            &antivirus_texture,
+            offset_x,
+            offset_y,
+            escala,
+        );
+
         if vida_jugador > 0 {
             dibujo
                 .draw_texture_ex(
@@ -4663,9 +4784,19 @@ fn main() {
                         vivos_lickers,
                     )
                 } else {
+                    let mision =
+                        if nivel_seleccionado
+                            == NivelSeleccionado::Final
+                        {
+                            "EVACUACION"
+                        } else {
+                            "ANTIVIRUS"
+                        };
+
                     format!(
-                        "{} | MISION ANTIVIRUS | BAJAS {} | Z {} | L {}",
+                        "{} | MISION {} | BAJAS {} | Z {} | L {}",
                         nombre,
+                        mision,
                         enemigos_matados,
                         vivos_zombies,
                         vivos_lickers,
@@ -4689,13 +4820,15 @@ fn main() {
 
         if !objetivo_completado {
             let texto_objetivo =
-                if nivel_seleccionado
-                    == NivelSeleccionado::Laboratorio
-                {
-                    "OBJETIVO | ENCUENTRA EL ANTIVIRUS AL FINAL DEL LABORATORIO"
-                        .to_string()
-                } else {
-                    format!(
+                match nivel_seleccionado {
+                    NivelSeleccionado::Laboratorio =>
+                        "OBJETIVO | ENCUENTRA EL ANTIVIRUS AL FINAL DEL LABORATORIO"
+                            .to_string(),
+                    NivelSeleccionado::Final => format!(
+                        "OBJETIVO | INTERRUPTORES {}/3 | LLEGA A EVACUACION",
+                        interruptores_final,
+                    ),
+                    NivelSeleccionado::Mansion => format!(
                         "OBJETIVO | NORMAL {}/{} | MEDIO {}/{} | FUERTE {}/{}",
                         bajas_normal.min(META_NORMAL),
                         META_NORMAL,
@@ -4703,7 +4836,7 @@ fn main() {
                         META_MEDIO,
                         bajas_fuerte.min(META_FUERTE),
                         META_FUERTE,
-                    )
+                    ),
                 };
 
             dibujo.draw_text(
@@ -4787,11 +4920,15 @@ fn main() {
                 );
 
             let objetivo =
-                if nivel_seleccionado
-                    == NivelSeleccionado::Laboratorio
-                    && objetivo_completado
-                {
-                    "ANTIVIRUS CONSEGUIDO".to_string()
+                if objetivo_completado {
+                    match nivel_seleccionado {
+                        NivelSeleccionado::Laboratorio =>
+                            "ANTIVIRUS CONSEGUIDO".to_string(),
+                        NivelSeleccionado::Final =>
+                            "EVACUACION COMPLETADA".to_string(),
+                        NivelSeleccionado::Mansion =>
+                            "MISION DE LA MANSION COMPLETADA".to_string(),
+                    }
                 } else {
                     format!(
                         "N {}/{}   M {}/{}   F {}/{}",
@@ -4807,7 +4944,7 @@ fn main() {
             let reiniciar =
                 if objetivo_completado
                     && nivel_seleccionado
-                        == NivelSeleccionado::Mansion
+                        != NivelSeleccionado::Final
                 {
                     "ENTER - SIGUIENTE NIVEL | F5 - JUGAR DE NUEVO"
                 } else if objetivo_completado {

@@ -433,3 +433,40 @@ pub fn render_antivirus_sprite(
         }
     }
 }
+
+pub fn render_final_objective_sprites(
+    dibujo: &mut RaylibDrawHandle,
+    mapa: &Map,
+    player: &Player,
+    camera: &Camera,
+    textura_interruptor: &Texture2D,
+    textura_evacuacion: &Texture2D,
+    offset_x: f32,
+    offset_y: f32,
+    escala: f32,
+) {
+    for fila in 0..mapa.alto() {
+        for columna in 0..mapa.ancho() {
+            let (textura, tamano) =
+                match mapa.celda(fila as i32, columna as i32) {
+                    'I' => (textura_interruptor, 0.32),
+                    'E' => (textura_evacuacion, 0.42),
+                    _ => continue,
+                };
+
+            render_objeto(
+                dibujo,
+                mapa,
+                player,
+                camera,
+                fila,
+                columna,
+                textura,
+                tamano,
+                offset_x,
+                offset_y,
+                escala,
+            );
+        }
+    }
+}

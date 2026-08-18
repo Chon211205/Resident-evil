@@ -21,6 +21,7 @@ pub enum AccionMenu {
 pub enum NivelSeleccionado {
     Mansion,
     Laboratorio,
+    Final,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -100,7 +101,7 @@ impl Menu {
         &mut self,
         rl: &RaylibHandle,
     ) -> AccionSeleccionNivel {
-        const TOTAL_NIVELES: usize = 2;
+        const TOTAL_NIVELES: usize = 3;
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_UP,
@@ -135,6 +136,12 @@ impl Menu {
                 1 => {
                     AccionSeleccionNivel::Elegir(
                         NivelSeleccionado::Laboratorio,
+                    )
+                }
+
+                2 => {
+                    AccionSeleccionNivel::Elegir(
+                        NivelSeleccionado::Final,
                     )
                 }
 
@@ -402,6 +409,10 @@ impl Menu {
             (
                 "LABORATORIO",
                 "Sobrevive dentro del laboratorio",
+            ),
+            (
+                "HELIPUERTO FINAL",
+                "Activa los sistemas y alcanza la evacuacion",
             ),
         ];
 

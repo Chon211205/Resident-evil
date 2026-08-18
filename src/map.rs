@@ -21,6 +21,7 @@ impl Map {
             1 => include_str!("../mapa_nivel1.txt"),
             2 => include_str!("../mapa_nivel2.txt"),
             3 => include_str!("../lab.txt"),
+            4 => include_str!("../mapa_final.txt"),
             _ => include_str!("../mapa_nivel1.txt"),
         };
 

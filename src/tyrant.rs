@@ -475,5 +475,7 @@ fn es_transitable(
             | 'H'
             | 'Q'
             | 'V'
+            | 'I'
+            | 'E'
     )
 }

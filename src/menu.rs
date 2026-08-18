@@ -1,4 +1,5 @@
 use raylib::prelude::*;
+use crate::audio::ModoMusica;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EstadoJuego {
@@ -8,6 +9,7 @@ pub enum EstadoJuego {
     HistoriaFinal,
     Jugando,
     Controles,
+    Opciones,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -16,6 +18,7 @@ pub enum AccionMenu {
     Jugar,
     SeleccionarNivel,
     Controles,
+    Opciones,
     Salir,
 }
 
@@ -50,7 +53,7 @@ impl Menu {
         &mut self,
         rl: &RaylibHandle,
     ) -> AccionMenu {
-        const TOTAL_OPCIONES: usize = 4;
+        const TOTAL_OPCIONES: usize = 5;
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_UP,
@@ -87,6 +90,10 @@ impl Menu {
                 }
 
                 3 => {
+                    AccionMenu::Opciones
+                }
+
+                4 => {
                     AccionMenu::Salir
                 }
 
@@ -97,6 +104,24 @@ impl Menu {
         }
 
         AccionMenu::Ninguna
+    }
+
+    pub fn update_opciones(
+        &self,
+        rl: &RaylibHandle,
+        modo: &mut ModoMusica,
+    ) -> bool {
+        if rl.is_key_pressed(KeyboardKey::KEY_LEFT)
+            || rl.is_key_pressed(KeyboardKey::KEY_RIGHT)
+            || rl.is_key_pressed(KeyboardKey::KEY_ENTER)
+        {
+            *modo = match *modo {
+                ModoMusica::Normal => ModoMusica::BadBlood,
+                ModoMusica::BadBlood => ModoMusica::Normal,
+            };
+        }
+
+        rl.is_key_pressed(KeyboardKey::KEY_BACKSPACE)
     }
 
     pub fn update_seleccion_nivel(
@@ -256,6 +281,7 @@ impl Menu {
             "JUGAR",
             "SELECCIONAR NIVEL",
             "CONTROLES",
+            "OPCIONES",
             "SALIR",
         ];
 
@@ -740,6 +766,62 @@ impl Menu {
                 - volver_ancho / 2,
             sh - 60,
             18,
+            Color::GRAY,
+        );
+    }
+
+    pub fn render_opciones(
+        &self,
+        d: &mut RaylibDrawHandle,
+        modo: ModoMusica,
+    ) {
+        let sw = d.get_screen_width();
+        let sh = d.get_screen_height();
+
+        d.clear_background(Color::new(5, 5, 8, 255));
+
+        let titulo = "OPCIONES";
+        let titulo_ancho = d.measure_text(titulo, 48);
+
+        d.draw_text(
+            titulo,
+            sw / 2 - titulo_ancho / 2,
+            sh / 2 - 150,
+            48,
+            Color::RED,
+        );
+
+        let seleccion = match modo {
+            ModoMusica::Normal => "< MUSICA: NORMAL >",
+            ModoMusica::BadBlood => "< MUSICA: BAD BLOOD >",
+        };
+
+        let ancho = d.measure_text(seleccion, 30);
+
+        d.draw_text(
+            seleccion,
+            sw / 2 - ancho / 2,
+            sh / 2 - 25,
+            30,
+            Color::GOLD,
+        );
+
+        let ayuda = "IZQUIERDA / DERECHA / ENTER - CAMBIAR";
+        let ayuda_ancho = d.measure_text(ayuda, 18);
+
+        d.draw_text(
+            ayuda,
+            sw / 2 - ayuda_ancho / 2,
+            sh / 2 + 45,
+            18,
+            Color::LIGHTGRAY,
+        );
+
+        d.draw_text(
+            "BACKSPACE - VOLVER",
+            25,
+            sh - 40,
+            16,
             Color::GRAY,
         );
     }

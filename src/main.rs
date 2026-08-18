@@ -21,7 +21,7 @@ mod weapon;
 mod zombie;
 mod zombie_renderer;
 
-use audio::AudioManager;
+use audio::{AudioManager, ModoMusica};
 use camera::Camera;
 use damage_effect::DamageEffect;
 use framebuffer::Framebuffer;
@@ -1484,6 +1484,9 @@ fn main() {
     let mut pagina_historia =
         0_usize;
 
+    let mut modo_musica =
+        ModoMusica::Normal;
+
     let mut enemigos_matados =
         0_i32;
 
@@ -2182,6 +2185,7 @@ fn main() {
                 .actualizar_musica(
                     nivel_seleccionado
                         != NivelSeleccionado::Mansion,
+                    modo_musica,
                 );
         }
 
@@ -2308,6 +2312,11 @@ fn main() {
                     AccionMenu::Controles => {
                         estado_juego =
                             EstadoJuego::Controles;
+                    }
+
+                    AccionMenu::Opciones => {
+                        estado_juego =
+                            EstadoJuego::Opciones;
                     }
 
                     AccionMenu::Salir => {
@@ -2509,8 +2518,14 @@ fn main() {
                     &sonidos,
                 );
 
-                sonidos
-                    .detener_musica();
+                if modo_musica == ModoMusica::BadBlood {
+                    sonidos.actualizar_musica(
+                        false,
+                        modo_musica,
+                    );
+                } else {
+                    sonidos.detener_musica();
+                }
 
                 ventana
                     .enable_cursor();
@@ -2531,6 +2546,7 @@ fn main() {
                         sonidos.iniciar_musica(
                             nivel_seleccionado
                                 != NivelSeleccionado::Mansion,
+                            modo_musica,
                         );
                         ventana.disable_cursor();
                     }
@@ -2569,6 +2585,28 @@ fn main() {
                 continue;
             }
 
+            EstadoJuego::Opciones => {
+                sonidos.detener_musica();
+                ventana.enable_cursor();
+
+                if menu.update_opciones(
+                    &ventana,
+                    &mut modo_musica,
+                ) {
+                    estado_juego = EstadoJuego::Menu;
+                }
+
+                let mut dibujo =
+                    ventana.begin_drawing(&thread);
+
+                menu.render_opciones(
+                    &mut dibujo,
+                    modo_musica,
+                );
+
+                continue;
+            }
+
             EstadoJuego::Jugando => {}
         }
 
@@ -2581,6 +2619,7 @@ fn main() {
                 .actualizar_musica(
                     nivel_seleccionado
                         != NivelSeleccionado::Mansion,
+                    modo_musica,
                 );
 
             ventana
@@ -2639,7 +2678,9 @@ fn main() {
                         .to_string();
                     pagina_historia = 0;
                     estado_juego = EstadoJuego::Historia;
-                    sonidos.detener_musica();
+                    if modo_musica == ModoMusica::Normal {
+                        sonidos.detener_musica();
+                    }
                     ventana.enable_cursor();
                 } else {
                     pantalla_great = false;
@@ -4340,6 +4381,7 @@ fn main() {
                 .iniciar_musica(
                     nivel_seleccionado
                         != NivelSeleccionado::Mansion,
+                    modo_musica,
                 );
 
             ventana

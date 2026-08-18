@@ -4,6 +4,12 @@ use raylib::audio::{
     Sound,
 };
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ModoMusica {
+    Normal,
+    BadBlood,
+}
+
 pub struct AudioManager<'a> {
     shoot: Sound<'a>,
     reload: Sound<'a>,
@@ -33,6 +39,7 @@ pub struct AudioManager<'a> {
 
     mansion: Music<'a>,
     laboratorio: Music<'a>,
+    badblood: Music<'a>,
 }
 
 impl<'a> AudioManager<'a> {
@@ -64,6 +71,12 @@ impl<'a> AudioManager<'a> {
         laboratorio.set_volume(
             0.30,
         );
+
+        let badblood = audio
+            .new_music("assets/sounds/badblood.mp3")
+            .expect("No se pudo cargar badblood.mp3");
+
+        badblood.set_volume(0.35);
 
         Self {
             shoot: audio
@@ -228,13 +241,37 @@ impl<'a> AudioManager<'a> {
 
             mansion,
             laboratorio,
+            badblood,
         }
     }
 
     pub fn actualizar_musica(
         &self,
         es_laboratorio: bool,
+        modo: ModoMusica,
     ) {
+        if modo == ModoMusica::BadBlood {
+            self.badblood.update_stream();
+
+            if self.mansion.is_stream_playing() {
+                self.mansion.stop_stream();
+            }
+
+            if self.laboratorio.is_stream_playing() {
+                self.laboratorio.stop_stream();
+            }
+
+            if !self.badblood.is_stream_playing() {
+                self.badblood.play_stream();
+            }
+
+            return;
+        }
+
+        if self.badblood.is_stream_playing() {
+            self.badblood.stop_stream();
+        }
+
         if es_laboratorio {
             self.laboratorio.update_stream();
 
@@ -261,9 +298,11 @@ impl<'a> AudioManager<'a> {
     pub fn iniciar_musica(
         &self,
         es_laboratorio: bool,
+        modo: ModoMusica,
     ) {
         self.actualizar_musica(
             es_laboratorio,
+            modo,
         );
     }
 
@@ -282,6 +321,10 @@ impl<'a> AudioManager<'a> {
         {
             self.laboratorio
                 .stop_stream();
+        }
+
+        if self.badblood.is_stream_playing() {
+            self.badblood.stop_stream();
         }
     }
 

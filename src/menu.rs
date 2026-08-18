@@ -5,6 +5,7 @@ pub enum EstadoJuego {
     Menu,
     SeleccionNivel,
     Historia,
+    HistoriaFinal,
     Jugando,
     Controles,
 }
@@ -341,6 +342,7 @@ impl Menu {
         &self,
         d: &mut RaylibDrawHandle,
         pagina: usize,
+        nivel: NivelSeleccionado,
     ) {
         let sw =
             d.get_screen_width();
@@ -367,21 +369,67 @@ impl Menu {
         }
 
         let (titulo, lineas, color_titulo) =
-            if pagina == 0 {
-                (
+            match (nivel, pagina) {
+                (NivelSeleccionado::Final, 0) => (
+                    "ULTIMA TRANSMISION",
+                    vec![
+                        "Con el antivirus asegurado, Nohc logro llegar",
+                        "al helipuerto para solicitar una evacuacion.",
+                        "",
+                        "Tyrant y Nemesis lo siguieron hasta la azotea.",
+                        "La unica salida es reparar la radio",
+                        "y resistir hasta que llegue el helicoptero.",
+                    ],
+                    Color::RED,
+                ),
+                (NivelSeleccionado::Final, _) => (
+                    "NIVEL: HELIPUERTO FINAL",
+                    vec![
+                        "OBJETIVO",
+                        "",
+                        "Elimina 12 enemigos y derrota",
+                        "al menos un licker de cada tipo.",
+                        "Reune las 3 piezas de radio y usala",
+                        "para llamar al helicoptero.",
+                    ],
+                    Color::GOLD,
+                ),
+                (NivelSeleccionado::Laboratorio, 0) => (
+                    "DESCUBRIMIENTO SUBTERRANEO",
+                    vec![
+                        "Al explorar la mansion, el agente Nohc",
+                        "descubrio un laboratorio subterraneo.",
+                        "",
+                        "En sus instalaciones se encuentra un antivirus",
+                        "que podria servir para desarrollar una cura",
+                        "contra el brote del virus T en Peten.",
+                    ],
+                    Color::RED,
+                ),
+                (NivelSeleccionado::Laboratorio, _) => (
+                    "NIVEL: LABORATORIO",
+                    vec![
+                        "OBJETIVO",
+                        "",
+                        "Explora el laboratorio subterraneo.",
+                        "Encuentra el antivirus ubicado al final",
+                        "y escapa con el para desarrollar la cura.",
+                    ],
+                    Color::GOLD,
+                ),
+                (_, 0) => (
                     "ARCHIVO CONFIDENCIAL",
                     vec![
                         "Se encontro una nueva sede de Umbrella Corps:",
                         "una mansion abandonada en Guatemala.",
                         "",
-                        "El agente Noch fue enviado a investigar.",
+                        "El agente Nohc fue enviado a investigar.",
                         "Al llegar, descubrio una casa llena de",
                         "armas biologicas.",
                     ],
                     Color::RED,
-                )
-            } else {
-                (
+                ),
+                (_, _) => (
                     "NIVEL: MANSION",
                     vec![
                         "OBJETIVO",
@@ -392,7 +440,7 @@ impl Menu {
                         "Sobrevive y descubre que oculta la mansion.",
                     ],
                     Color::GOLD,
-                )
+                ),
             };
 
         let tamano_titulo =
@@ -453,6 +501,77 @@ impl Menu {
             sh - 40,
             16,
             Color::GRAY,
+        );
+    }
+
+    pub fn render_historia_final(
+        &self,
+        d: &mut RaylibDrawHandle,
+    ) {
+        let sw = d.get_screen_width();
+        let sh = d.get_screen_height();
+
+        d.clear_background(Color::new(2, 3, 5, 255));
+
+        for y in 0..sh {
+            let intensidad =
+                (20.0 * (1.0 - y as f32 / sh.max(1) as f32))
+                    as u8;
+
+            d.draw_line(
+                0,
+                y,
+                sw,
+                y,
+                Color::new(0, intensidad / 3, intensidad, 255),
+            );
+        }
+
+        let titulo = "EPILOGO";
+        let tamano_titulo = 48;
+        let ancho_titulo =
+            d.measure_text(titulo, tamano_titulo);
+
+        d.draw_text(
+            titulo,
+            sw / 2 - ancho_titulo / 2,
+            sh / 2 - 180,
+            tamano_titulo,
+            Color::GOLD,
+        );
+
+        let lineas = [
+            "Nohc logro escapar con el antivirus.",
+            "",
+            "Lo llevo a un laboratorio del Gobierno",
+            "de los Estados Unidos para crear una cura",
+            "y evitar mas tragedias relacionadas",
+            "con las armas biologicas.",
+            "",
+            "La mision habia terminado... por ahora.",
+        ];
+
+        for (indice, linea) in lineas.iter().enumerate() {
+            let ancho = d.measure_text(linea, 24);
+
+            d.draw_text(
+                linea,
+                sw / 2 - ancho / 2,
+                sh / 2 - 80 + indice as i32 * 34,
+                24,
+                Color::RAYWHITE,
+            );
+        }
+
+        let continuar = "ENTER - VOLVER AL MENU";
+        let ancho_continuar = d.measure_text(continuar, 20);
+
+        d.draw_text(
+            continuar,
+            sw / 2 - ancho_continuar / 2,
+            sh - 65,
+            20,
+            Color::LIGHTGRAY,
         );
     }
 

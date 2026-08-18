@@ -2443,17 +2443,14 @@ fn main() {
                         sonidos
                             .detener_musica();
 
-                        sonidos
-                            .iniciar_musica(
-                                nivel_seleccionado
-                                    != NivelSeleccionado::Mansion,
-                            );
+                        pagina_historia =
+                            0;
 
                         estado_juego =
-                            EstadoJuego::Jugando;
+                            EstadoJuego::Historia;
 
                         ventana
-                            .disable_cursor();
+                            .enable_cursor();
                     }
 
                     AccionSeleccionNivel::Volver => {
@@ -2531,7 +2528,10 @@ fn main() {
                     } else {
                         pagina_historia = 0;
                         estado_juego = EstadoJuego::Jugando;
-                        sonidos.iniciar_musica(false);
+                        sonidos.iniciar_musica(
+                            nivel_seleccionado
+                                != NivelSeleccionado::Mansion,
+                        );
                         ventana.disable_cursor();
                     }
                 }
@@ -2542,7 +2542,29 @@ fn main() {
                 menu.render_historia(
                     &mut dibujo,
                     pagina_historia,
+                    nivel_seleccionado,
                 );
+
+                continue;
+            }
+
+            EstadoJuego::HistoriaFinal => {
+                detener_sonidos_enemigos(&sonidos);
+                sonidos.detener_musica();
+                ventana.enable_cursor();
+
+                if ventana.is_key_pressed(
+                    KeyboardKey::KEY_ENTER,
+                ) || ventana.is_key_pressed(
+                    KeyboardKey::KEY_BACKSPACE,
+                ) {
+                    estado_juego = EstadoJuego::Menu;
+                }
+
+                let mut dibujo =
+                    ventana.begin_drawing(&thread);
+
+                menu.render_historia_final(&mut dibujo);
 
                 continue;
             }
@@ -2564,75 +2586,67 @@ fn main() {
             ventana
                 .enable_cursor();
 
-            if nivel_seleccionado
-                == NivelSeleccionado::Laboratorio
-                && ventana.is_key_pressed(
-                    KeyboardKey::KEY_N,
-                )
-            {
-                nivel_seleccionado =
-                    NivelSeleccionado::Final;
-
-                nivel_actual = cargar_partida(
-                    nivel_seleccionado,
-                    &mut mapa,
-                    &mut zombies,
-                    &mut lickers,
-                    &mut tyrant,
-                    &mut nemesis,
-                    &mut misiles_nemesis,
-                    &mut player,
-                    &mut camera,
-                    &mut inventory,
-                    &mut puzzle,
-                    &mut damage_effect,
-                );
-
-                vida_jugador = 100;
-                balas_cargador = 8;
-                balas_reserva = 24;
-                municion_lanzallamas = 100;
-                arma_equipada = ArmaActual::Pistola;
-                enemigos_matados = 0;
-                bajas_normal = 0;
-                bajas_medio = 0;
-                bajas_fuerte = 0;
-                objetivo_completado = false;
-                antivirus_recogido = false;
-                interruptores_final = 0;
-                evacuacion_completada = false;
-                pantalla_great = false;
-                numero_horda = 1;
-                siguiente_horda = 4;
-                mensaje = "HELIPUERTO FINAL".to_string();
-
-                sonidos.iniciar_musica(true);
-                ventana.disable_cursor();
-                continue;
-            }
-
             if ventana
                 .is_key_pressed(
                     KeyboardKey::KEY_ENTER,
                 )
             {
-                pantalla_great =
-                    false;
-
                 if nivel_seleccionado
-                    == NivelSeleccionado::Laboratorio
+                    != NivelSeleccionado::Final
                 {
+                    nivel_seleccionado =
+                        match nivel_seleccionado {
+                            NivelSeleccionado::Mansion =>
+                                NivelSeleccionado::Laboratorio,
+                            NivelSeleccionado::Laboratorio =>
+                                NivelSeleccionado::Final,
+                            NivelSeleccionado::Final => unreachable!(),
+                        };
+
+                    nivel_actual = cargar_partida(
+                        nivel_seleccionado,
+                        &mut mapa,
+                        &mut zombies,
+                        &mut lickers,
+                        &mut tyrant,
+                        &mut nemesis,
+                        &mut misiles_nemesis,
+                        &mut player,
+                        &mut camera,
+                        &mut inventory,
+                        &mut puzzle,
+                        &mut damage_effect,
+                    );
+
+                    vida_jugador = 100;
+                    balas_cargador = 8;
+                    balas_reserva = 24;
+                    municion_lanzallamas = 100;
+                    arma_equipada = ArmaActual::Pistola;
+                    enemigos_matados = 0;
+                    bajas_normal = 0;
+                    bajas_medio = 0;
+                    bajas_fuerte = 0;
+                    objetivo_completado = false;
+                    antivirus_recogido = false;
+                    interruptores_final = 0;
+                    evacuacion_completada = false;
+                    pantalla_great = false;
                     numero_horda = 1;
-                    siguiente_horda =
-                        enemigos_matados;
-                }
-
-                mensaje =
-                    "MODO ARCADE"
+                    siguiente_horda = 4;
+                    recargando = false;
+                    mensaje = nombre_nivel(nivel_seleccionado)
                         .to_string();
-
-                ventana
-                    .disable_cursor();
+                    pagina_historia = 0;
+                    estado_juego = EstadoJuego::Historia;
+                    sonidos.detener_musica();
+                    ventana.enable_cursor();
+                } else {
+                    pantalla_great = false;
+                    estado_juego = EstadoJuego::HistoriaFinal;
+                    sonidos.detener_musica();
+                    ventana.enable_cursor();
+                }
 
                 continue;
             }
@@ -2713,11 +2727,11 @@ fn main() {
 
             let arcade =
                 if nivel_seleccionado
-                    == NivelSeleccionado::Laboratorio
+                    == NivelSeleccionado::Final
                 {
-                    "ENTER - MODO HORDAS | N - NIVEL FINAL"
+                    "ENTER - VER EPILOGO"
                 } else {
-                    "ENTER - SEGUIR JUGANDO"
+                    "ENTER - SIGUIENTE NIVEL"
                 };
 
             let volver =
@@ -4348,64 +4362,6 @@ fn main() {
         {
             ventana
                 .enable_cursor();
-        }
-
-        if vida_jugador <= 0
-            && objetivo_completado
-            && nivel_seleccionado
-                != NivelSeleccionado::Final
-            && ventana.is_key_pressed(
-                KeyboardKey::KEY_ENTER,
-            )
-        {
-            nivel_seleccionado =
-                match nivel_seleccionado {
-                    NivelSeleccionado::Mansion =>
-                        NivelSeleccionado::Laboratorio,
-                    NivelSeleccionado::Laboratorio =>
-                        NivelSeleccionado::Final,
-                    NivelSeleccionado::Final => unreachable!(),
-                };
-
-            nivel_actual = cargar_partida(
-                nivel_seleccionado,
-                &mut mapa,
-                &mut zombies,
-                &mut lickers,
-                &mut tyrant,
-                &mut nemesis,
-                &mut misiles_nemesis,
-                &mut player,
-                &mut camera,
-                &mut inventory,
-                &mut puzzle,
-                &mut damage_effect,
-            );
-
-            vida_jugador = 100;
-            balas_cargador = 8;
-            balas_reserva = 24;
-            municion_lanzallamas = 100;
-            arma_equipada = ArmaActual::Pistola;
-            enemigos_matados = 0;
-            bajas_normal = 0;
-            bajas_medio = 0;
-            bajas_fuerte = 0;
-            objetivo_completado = false;
-            antivirus_recogido = false;
-            interruptores_final = 0;
-            evacuacion_completada = false;
-            pantalla_great = false;
-            numero_horda = 1;
-            siguiente_horda = 4;
-            recargando = false;
-            mensaje =
-                nombre_nivel(nivel_seleccionado)
-                    .to_string();
-
-            sonidos.iniciar_musica(true);
-            ventana.disable_cursor();
-            continue;
         }
 
         framebuffer.clear();

@@ -1481,6 +1481,9 @@ fn main() {
     let mut nivel_actual =
         1;
 
+    let mut pagina_historia =
+        0_usize;
+
     let mut enemigos_matados =
         0_i32;
 
@@ -2284,20 +2287,17 @@ fn main() {
                             "MANSION"
                                 .to_string();
 
+                        pagina_historia =
+                            0;
+
                         estado_juego =
-                            EstadoJuego::Jugando;
+                            EstadoJuego::Historia;
 
                         sonidos
                             .detener_musica();
 
-                        sonidos
-                            .iniciar_musica(
-                                nivel_seleccionado
-                                    != NivelSeleccionado::Mansion,
-                            );
-
                         ventana
-                            .disable_cursor();
+                            .enable_cursor();
                     }
 
                     AccionMenu::SeleccionarNivel => {
@@ -2502,6 +2502,46 @@ fn main() {
 
                 menu.render_controles(
                     &mut dibujo,
+                );
+
+                continue;
+            }
+
+            EstadoJuego::Historia => {
+                detener_sonidos_enemigos(
+                    &sonidos,
+                );
+
+                sonidos
+                    .detener_musica();
+
+                ventana
+                    .enable_cursor();
+
+                if ventana.is_key_pressed(
+                    KeyboardKey::KEY_BACKSPACE,
+                ) {
+                    pagina_historia = 0;
+                    estado_juego = EstadoJuego::Menu;
+                } else if ventana.is_key_pressed(
+                    KeyboardKey::KEY_ENTER,
+                ) {
+                    if pagina_historia == 0 {
+                        pagina_historia = 1;
+                    } else {
+                        pagina_historia = 0;
+                        estado_juego = EstadoJuego::Jugando;
+                        sonidos.iniciar_musica(false);
+                        ventana.disable_cursor();
+                    }
+                }
+
+                let mut dibujo =
+                    ventana.begin_drawing(&thread);
+
+                menu.render_historia(
+                    &mut dibujo,
+                    pagina_historia,
                 );
 
                 continue;

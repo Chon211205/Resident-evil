@@ -4,6 +4,7 @@ use raylib::prelude::*;
 pub enum EstadoJuego {
     Menu,
     SeleccionNivel,
+    Historia,
     Jugando,
     Controles,
 }
@@ -332,6 +333,125 @@ impl Menu {
                 - ayuda_ancho / 2,
             sh - 55,
             18,
+            Color::GRAY,
+        );
+    }
+
+    pub fn render_historia(
+        &self,
+        d: &mut RaylibDrawHandle,
+        pagina: usize,
+    ) {
+        let sw =
+            d.get_screen_width();
+
+        let sh =
+            d.get_screen_height();
+
+        d.clear_background(
+            Color::new(3, 4, 6, 255),
+        );
+
+        for y in 0..sh {
+            let intensidad =
+                (18.0 * (1.0 - y as f32 / sh.max(1) as f32))
+                    as u8;
+
+            d.draw_line(
+                0,
+                y,
+                sw,
+                y,
+                Color::new(intensidad, 0, 0, 255),
+            );
+        }
+
+        let (titulo, lineas, color_titulo) =
+            if pagina == 0 {
+                (
+                    "ARCHIVO CONFIDENCIAL",
+                    vec![
+                        "Se encontro una nueva sede de Umbrella Corps:",
+                        "una mansion abandonada en Guatemala.",
+                        "",
+                        "El agente Noch fue enviado a investigar.",
+                        "Al llegar, descubrio una casa llena de",
+                        "armas biologicas.",
+                    ],
+                    Color::RED,
+                )
+            } else {
+                (
+                    "NIVEL: MANSION",
+                    vec![
+                        "OBJETIVO",
+                        "",
+                        "Elimina 20 zombis normales,",
+                        "15 zombis medios y 5 zombis fuertes.",
+                        "",
+                        "Sobrevive y descubre que oculta la mansion.",
+                    ],
+                    Color::GOLD,
+                )
+            };
+
+        let tamano_titulo =
+            42;
+
+        let ancho_titulo =
+            d.measure_text(titulo, tamano_titulo);
+
+        d.draw_text(
+            titulo,
+            sw / 2 - ancho_titulo / 2,
+            sh / 2 - 180,
+            tamano_titulo,
+            color_titulo,
+        );
+
+        for (indice, linea) in lineas.iter().enumerate() {
+            let tamano =
+                if *linea == "OBJETIVO" { 28 } else { 24 };
+
+            let ancho =
+                d.measure_text(linea, tamano);
+
+            d.draw_text(
+                linea,
+                sw / 2 - ancho / 2,
+                sh / 2 - 85 + indice as i32 * 36,
+                tamano,
+                if *linea == "OBJETIVO" {
+                    Color::GOLD
+                } else {
+                    Color::RAYWHITE
+                },
+            );
+        }
+
+        let continuar =
+            if pagina == 0 {
+                "ENTER - CONTINUAR"
+            } else {
+                "ENTER - INICIAR MISION"
+            };
+
+        let ancho_continuar =
+            d.measure_text(continuar, 20);
+
+        d.draw_text(
+            continuar,
+            sw / 2 - ancho_continuar / 2,
+            sh - 75,
+            20,
+            Color::LIGHTGRAY,
+        );
+
+        d.draw_text(
+            "BACKSPACE - VOLVER",
+            25,
+            sh - 40,
+            16,
             Color::GRAY,
         );
     }

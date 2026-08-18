@@ -187,3 +187,6 @@ Para verificar que el proyecto compila:
 cargo test
 ```
 
+## video en funcionamiento con control:
+
+[video](https://youtube.com/shorts/4BkeAJ5_iaE)

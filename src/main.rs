@@ -2,6 +2,7 @@ mod audio;
 mod camera;
 mod damage_effect;
 mod framebuffer;
+mod gamepad;
 mod hud;
 mod interaction;
 mod inventory;
@@ -2495,10 +2496,14 @@ fn main() {
                     .is_key_pressed(
                         KeyboardKey::KEY_BACKSPACE,
                     )
+                    || gamepad::volver(&ventana)
                 {
                     estado_juego =
                         EstadoJuego::Menu;
                 }
+
+                let control_conectado =
+                    gamepad::conectado(&ventana);
 
                 let mut dibujo =
                     ventana
@@ -2508,6 +2513,7 @@ fn main() {
 
                 menu.render_controles(
                     &mut dibujo,
+                    control_conectado,
                 );
 
                 continue;
@@ -2532,12 +2538,12 @@ fn main() {
 
                 if ventana.is_key_pressed(
                     KeyboardKey::KEY_BACKSPACE,
-                ) {
+                ) || gamepad::volver(&ventana) {
                     pagina_historia = 0;
                     estado_juego = EstadoJuego::Menu;
                 } else if ventana.is_key_pressed(
                     KeyboardKey::KEY_ENTER,
-                ) {
+                ) || gamepad::aceptar(&ventana) {
                     if pagina_historia == 0 {
                         pagina_historia = 1;
                     } else {
@@ -2571,9 +2577,12 @@ fn main() {
 
                 if ventana.is_key_pressed(
                     KeyboardKey::KEY_ENTER,
-                ) || ventana.is_key_pressed(
-                    KeyboardKey::KEY_BACKSPACE,
-                ) {
+                ) || gamepad::aceptar(&ventana)
+                    || ventana.is_key_pressed(
+                        KeyboardKey::KEY_BACKSPACE,
+                    )
+                    || gamepad::volver(&ventana)
+                {
                     estado_juego = EstadoJuego::Menu;
                 }
 
@@ -2629,6 +2638,7 @@ fn main() {
                 .is_key_pressed(
                     KeyboardKey::KEY_ENTER,
                 )
+                || gamepad::aceptar(&ventana)
             {
                 if nivel_seleccionado
                     != NivelSeleccionado::Final
@@ -2696,6 +2706,7 @@ fn main() {
                 .is_key_pressed(
                     KeyboardKey::KEY_BACKSPACE,
                 )
+                || gamepad::volver(&ventana)
             {
                 pantalla_great =
                     false;
@@ -2897,6 +2908,7 @@ fn main() {
             .is_key_pressed(
                 KeyboardKey::KEY_BACKSPACE,
             )
+            || gamepad::volver(&ventana)
         {
             detener_sonidos_enemigos(
                 &sonidos,
@@ -2996,13 +3008,15 @@ fn main() {
 
         let bloqueando =
             vida_jugador > 0
-                && arma_equipada
-                    == ArmaActual::Hacha
+                && arma_equipada == ArmaActual::Hacha
                 && tiempo_hachazo <= 0.0
-                && ventana
-                    .is_mouse_button_down(
+                && (ventana.is_mouse_button_down(
                         MouseButton::MOUSE_BUTTON_RIGHT,
-                    );
+                    )
+                    || gamepad::pulsado(
+                        &ventana,
+                        GamepadButton::GAMEPAD_BUTTON_LEFT_TRIGGER_2,
+                    ));
 
         if vida_jugador > 0 {
             for zombie
@@ -3490,6 +3504,7 @@ fn main() {
                 .is_key_pressed(
                     KeyboardKey::KEY_ONE,
                 )
+                || gamepad::arriba(&ventana)
             {
                 arma_equipada =
                     ArmaActual::Pistola;
@@ -3506,6 +3521,7 @@ fn main() {
                 .is_key_pressed(
                     KeyboardKey::KEY_TWO,
                 )
+                || gamepad::izquierda(&ventana)
             {
                 arma_equipada =
                     ArmaActual::Hacha;
@@ -3528,6 +3544,7 @@ fn main() {
                 .is_key_pressed(
                     KeyboardKey::KEY_THREE,
                 )
+                || gamepad::derecha(&ventana)
             {
                 arma_equipada =
                     ArmaActual::Lanzallamas;
@@ -3541,6 +3558,7 @@ fn main() {
                 .is_key_pressed(
                     KeyboardKey::KEY_E,
                 )
+                || gamepad::aceptar(&ventana)
             {
                 match interactuar(
                     &mut mapa,
@@ -3695,18 +3713,25 @@ fn main() {
                         | ArmaActual::Lanzallamas
                 )
                 && !recargando
-                && ventana
-                    .is_mouse_button_down(
+                && (ventana.is_mouse_button_down(
                         MouseButton::MOUSE_BUTTON_RIGHT,
-                    );
+                    )
+                    || gamepad::pulsado(
+                        &ventana,
+                        GamepadButton::GAMEPAD_BUTTON_LEFT_TRIGGER_2,
+                    ));
 
         let disparando_llama =
             vida_jugador > 0
                 && arma_equipada
                     == ArmaActual::Lanzallamas
-                && ventana.is_mouse_button_down(
-                    MouseButton::MOUSE_BUTTON_LEFT,
-                )
+                && (ventana.is_mouse_button_down(
+                        MouseButton::MOUSE_BUTTON_LEFT,
+                    )
+                    || gamepad::pulsado(
+                        &ventana,
+                        GamepadButton::GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
+                    ))
                 && municion_lanzallamas > 0;
 
         if disparando_llama {
@@ -3759,9 +3784,13 @@ fn main() {
             if vida_jugador > 0
                 && arma_equipada == ArmaActual::Lanzallamas
                 && municion_lanzallamas <= 0
-                && ventana.is_mouse_button_pressed(
-                    MouseButton::MOUSE_BUTTON_LEFT,
-                )
+                && (ventana.is_mouse_button_pressed(
+                        MouseButton::MOUSE_BUTTON_LEFT,
+                    )
+                    || gamepad::presionado(
+                        &ventana,
+                        GamepadButton::GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
+                    ))
             {
                 sonidos.sin_municion();
                 mensaje =
@@ -3770,10 +3799,14 @@ fn main() {
         }
 
         if vida_jugador > 0
-            && ventana
-                .is_mouse_button_pressed(
-                    MouseButton::MOUSE_BUTTON_LEFT,
-                )
+            && (ventana
+                    .is_mouse_button_pressed(
+                        MouseButton::MOUSE_BUTTON_LEFT,
+                    )
+                || gamepad::presionado(
+                    &ventana,
+                    GamepadButton::GAMEPAD_BUTTON_RIGHT_TRIGGER_2,
+                ))
         {
             match arma_equipada {
                 ArmaActual::Pistola => {
@@ -4243,10 +4276,14 @@ fn main() {
         }
 
         if vida_jugador > 0
-            && ventana
-                .is_key_pressed(
-                    KeyboardKey::KEY_R,
-                )
+            && (ventana
+                    .is_key_pressed(
+                        KeyboardKey::KEY_R,
+                    )
+                || gamepad::presionado(
+                    &ventana,
+                    GamepadButton::GAMEPAD_BUTTON_RIGHT_FACE_LEFT,
+                ))
             && arma_equipada
                 == ArmaActual::Pistola
             && !recargando

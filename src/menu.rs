@@ -1,5 +1,6 @@
 use raylib::prelude::*;
 use crate::audio::ModoMusica;
+use crate::gamepad;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EstadoJuego {
@@ -57,7 +58,7 @@ impl Menu {
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_UP,
-        ) {
+        ) || gamepad::arriba(rl) {
             if self.opcion_menu == 0 {
                 self.opcion_menu =
                     TOTAL_OPCIONES - 1;
@@ -68,7 +69,7 @@ impl Menu {
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_DOWN,
-        ) {
+        ) || gamepad::abajo(rl) {
             self.opcion_menu =
                 (
                     self.opcion_menu + 1
@@ -77,7 +78,7 @@ impl Menu {
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_ENTER,
-        ) {
+        ) || gamepad::aceptar(rl) {
             return match self.opcion_menu {
                 0 => AccionMenu::Jugar,
 
@@ -114,6 +115,9 @@ impl Menu {
         if rl.is_key_pressed(KeyboardKey::KEY_LEFT)
             || rl.is_key_pressed(KeyboardKey::KEY_RIGHT)
             || rl.is_key_pressed(KeyboardKey::KEY_ENTER)
+            || gamepad::izquierda(rl)
+            || gamepad::derecha(rl)
+            || gamepad::aceptar(rl)
         {
             *modo = match *modo {
                 ModoMusica::Normal => ModoMusica::BadBlood,
@@ -122,6 +126,7 @@ impl Menu {
         }
 
         rl.is_key_pressed(KeyboardKey::KEY_BACKSPACE)
+            || gamepad::volver(rl)
     }
 
     pub fn update_seleccion_nivel(
@@ -132,7 +137,7 @@ impl Menu {
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_UP,
-        ) {
+        ) || gamepad::arriba(rl) {
             if self.opcion_nivel == 0 {
                 self.opcion_nivel =
                     TOTAL_NIVELES - 1;
@@ -143,7 +148,7 @@ impl Menu {
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_DOWN,
-        ) {
+        ) || gamepad::abajo(rl) {
             self.opcion_nivel =
                 (
                     self.opcion_nivel + 1
@@ -152,7 +157,7 @@ impl Menu {
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_ENTER,
-        ) {
+        ) || gamepad::aceptar(rl) {
             return match self.opcion_nivel {
                 0 => {
                     AccionSeleccionNivel::Elegir(
@@ -180,7 +185,7 @@ impl Menu {
 
         if rl.is_key_pressed(
             KeyboardKey::KEY_BACKSPACE,
-        ) {
+        ) || gamepad::volver(rl) {
             return AccionSeleccionNivel::Volver;
         }
 
@@ -829,6 +834,7 @@ impl Menu {
     pub fn render_controles(
         &self,
         d: &mut RaylibDrawHandle,
+        control_conectado: bool,
     ) {
         let sw =
             d.get_screen_width();
@@ -862,6 +868,47 @@ impl Menu {
             48,
             Color::RED,
         );
+
+        let gamepad_1 =
+            "GAMEPAD: STICK IZQ MOVER | STICK DER GIRAR | LT APUNTAR | RT ATACAR";
+        let gamepad_2 =
+            "A INTERACTUAR | B VOLVER | X RECARGAR | CRUCETA CAMBIAR ARMA";
+
+        let estado_gamepad =
+            if control_conectado {
+                "CONTROL CONECTADO"
+            } else {
+                "CONTROL NO DETECTADO"
+            };
+
+        let ancho_estado =
+            d.measure_text(estado_gamepad, 16);
+
+        d.draw_text(
+            estado_gamepad,
+            sw / 2 - ancho_estado / 2,
+            92,
+            16,
+            if control_conectado {
+                Color::GREEN
+            } else {
+                Color::ORANGE
+            },
+        );
+
+        for (indice, texto) in [gamepad_1, gamepad_2]
+            .iter()
+            .enumerate()
+        {
+            let ancho = d.measure_text(texto, 15);
+            d.draw_text(
+                texto,
+                sw / 2 - ancho / 2,
+                112 + indice as i32 * 20,
+                15,
+                Color::SKYBLUE,
+            );
+        }
 
         let controles = [
             (
@@ -915,7 +962,7 @@ impl Menu {
         ];
 
         let inicio_y =
-            145;
+            160;
 
         for (
             indice,
@@ -930,7 +977,7 @@ impl Menu {
             let y =
                 inicio_y
                     + indice as i32
-                        * 34;
+                        * 30;
 
             d.draw_text(
                 tecla,

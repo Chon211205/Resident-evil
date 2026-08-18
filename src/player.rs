@@ -4,6 +4,7 @@ use crate::map::{
 };
 
 use raylib::prelude::*;
+use crate::gamepad;
 
 pub struct Player {
     pub x: f32,
@@ -82,6 +83,24 @@ impl Player {
 
         let mut movimiento_y =
             0.0;
+
+        let stick_x = gamepad::eje(
+            ventana,
+            GamepadAxis::GAMEPAD_AXIS_LEFT_X,
+        );
+
+        let stick_y = gamepad::eje(
+            ventana,
+            GamepadAxis::GAMEPAD_AXIS_LEFT_Y,
+        );
+
+        movimiento_x +=
+            derecha_x * stick_x
+                - frente_x * stick_y;
+
+        movimiento_y +=
+            derecha_y * stick_x
+                - frente_y * stick_y;
 
         if ventana.is_key_down(
             KeyboardKey::KEY_W,

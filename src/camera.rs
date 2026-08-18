@@ -1,4 +1,5 @@
 use raylib::prelude::*;
+use crate::gamepad;
 
 pub struct Camera {
     pub angle: f32,
@@ -28,6 +29,14 @@ pub fn update(
     self.angle +=
         mouse_delta.x
             * sensibilidad_x;
+
+    self.angle +=
+        gamepad::eje(
+            window,
+            GamepadAxis::GAMEPAD_AXIS_RIGHT_X,
+        ) * rotation_speed
+            * delta_time
+            * 1.8;
 
     self.vertical_offset +=
         (mouse_delta.y * sensibilidad_y)

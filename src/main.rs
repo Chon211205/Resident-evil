@@ -53,7 +53,10 @@ use map::{
     TAMANO_CELDA,
 };
 
-use map_renderer::render_minimap;
+use map_renderer::{
+    render_leyenda_minimapa,
+    render_minimap,
+};
 
 use menu::{
     AccionMenu,
@@ -4995,6 +4998,14 @@ fn main() {
             escala,
         );
 
+        render_leyenda_minimapa(
+            &mut dibujo,
+            &mapa,
+            offset_x,
+            offset_y,
+            escala,
+        );
+
         let vivos_zombies =
             zombies
                 .iter()
@@ -5056,18 +5067,46 @@ fn main() {
                 }
             };
 
+        // La informacion de la mision vive a la derecha del minimapa para no
+        // mezclarse con su leyenda.
+        let panel_mision_x =
+            offset_x + 150.0 * escala;
+        let panel_mision_y =
+            offset_y + 43.0 * escala;
+        let panel_mision_ancho =
+            (offset_x + ancho_render - panel_mision_x - 8.0 * escala)
+                .max(120.0 * escala);
+
+        dibujo.draw_rectangle(
+            panel_mision_x as i32,
+            panel_mision_y as i32,
+            panel_mision_ancho as i32,
+            (39.0 * escala) as i32,
+            Color::new(0, 0, 0, 175),
+        );
+        dibujo.draw_rectangle(
+            panel_mision_x as i32,
+            panel_mision_y as i32,
+            (3.0 * escala) as i32,
+            (39.0 * escala) as i32,
+            Color::new(128, 30, 34, 255),
+        );
+
+        let mut fuente_estado =
+            (13.0 * escala) as i32;
+        while fuente_estado > 9
+            && dibujo.measure_text(&texto_arcade, fuente_estado)
+                > (panel_mision_ancho - 14.0 * escala) as i32
+        {
+            fuente_estado -= 1;
+        }
+
         dibujo.draw_text(
             &texto_arcade,
-            (
-                offset_x
-                    + 15.0
-            ) as i32,
-            (
-                offset_y
-                    + 115.0
-            ) as i32,
-            18,
-            Color::WHITE,
+            (panel_mision_x + 8.0 * escala) as i32,
+            (panel_mision_y + 4.0 * escala) as i32,
+            fuente_estado,
+            Color::RAYWHITE,
         );
 
         if !objetivo_completado {
@@ -5099,31 +5138,28 @@ fn main() {
                     ),
                 };
 
+            let mut fuente_objetivo =
+                (12.0 * escala) as i32;
+            while fuente_objetivo > 8
+                && dibujo.measure_text(&texto_objetivo, fuente_objetivo)
+                    > (panel_mision_ancho - 14.0 * escala) as i32
+            {
+                fuente_objetivo -= 1;
+            }
+
             dibujo.draw_text(
                 &texto_objetivo,
-                (
-                    offset_x
-                        + 15.0
-                ) as i32,
-                (
-                    offset_y
-                        + 140.0
-                ) as i32,
-                18,
+                (panel_mision_x + 8.0 * escala) as i32,
+                (panel_mision_y + 22.0 * escala) as i32,
+                fuente_objetivo,
                 Color::GOLD,
             );
         } else {
             dibujo.draw_text(
                 "MODO ARCADE",
-                (
-                    offset_x
-                        + 15.0
-                ) as i32,
-                (
-                    offset_y
-                        + 140.0
-                ) as i32,
-                18,
+                (panel_mision_x + 8.0 * escala) as i32,
+                (panel_mision_y + 22.0 * escala) as i32,
+                (12.0 * escala) as i32,
                 Color::GOLD,
             );
         }

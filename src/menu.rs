@@ -412,7 +412,7 @@ impl Menu {
             ),
             (
                 "HELIPUERTO FINAL",
-                "Activa los sistemas y alcanza la evacuacion",
+                "Repara la radio y llama al helicoptero",
             ),
         ];
 

@@ -33,9 +33,9 @@ pub enum InteractionResult {
 
     AntivirusRecogido,
 
-    InterruptorActivado,
+    PiezaRadioRecogida,
 
-    EvacuacionEncontrada,
+    RadioEncontrada,
 
     CuracionRecogida(
         i32,
@@ -181,11 +181,11 @@ pub fn recoger_objetos_cercanos(
                 ' ',
             );
 
-            InteractionResult::InterruptorActivado
+            InteractionResult::PiezaRadioRecogida
         }
 
         'E' => {
-            InteractionResult::EvacuacionEncontrada
+            InteractionResult::RadioEncontrada
         }
 
         _ => {
@@ -568,8 +568,9 @@ pub fn procesar_muerte_zombie(
             .floor()
             as i32;
 
-    if zombie
-        .puede_dropear_llave
+    if mapa.nivel() != 4
+        && zombie
+            .puede_dropear_llave
     {
         mapa.cambiar_celda(
             fila,

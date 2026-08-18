@@ -111,9 +111,21 @@ impl Licker {
         player: &Player,
         mapa: &Map,
         delta_time: f32,
+        puede_trepar: bool,
     ) -> i32 {
         if !self.vivo {
             return 0;
+        }
+
+        if !puede_trepar {
+            self.estado =
+                EstadoLicker::Suelo;
+            self.lado_pared =
+                None;
+            self.altura =
+                0.0;
+            self.tiempo_cambio_estado =
+                0.0;
         }
 
         self.tiempo_animacion +=
@@ -131,6 +143,7 @@ impl Licker {
                     player,
                     mapa,
                     delta_time,
+                    puede_trepar,
                 )
             }
 
@@ -173,6 +186,7 @@ impl Licker {
         player: &Player,
         mapa: &Map,
         delta_time: f32,
+        puede_trepar: bool,
     ) -> i32 {
         const VELOCIDAD: f32 = 35.0;
         const DISTANCIA_ATAQUE: f32 = 26.0;
@@ -206,8 +220,9 @@ impl Licker {
 
         self.persiguiendo = true;
 
-        if self.tiempo_cambio_estado
-            >= 1.5
+        if puede_trepar
+            && self.tiempo_cambio_estado
+                >= 1.5
         {
             if let Some(lado) =
                 detectar_pared_cercana(

@@ -439,8 +439,8 @@ pub fn render_final_objective_sprites(
     mapa: &Map,
     player: &Player,
     camera: &Camera,
-    textura_interruptor: &Texture2D,
-    textura_evacuacion: &Texture2D,
+    textura_pieza_radio: &Texture2D,
+    textura_radio: &Texture2D,
     offset_x: f32,
     offset_y: f32,
     escala: f32,
@@ -449,8 +449,8 @@ pub fn render_final_objective_sprites(
         for columna in 0..mapa.ancho() {
             let (textura, tamano) =
                 match mapa.celda(fila as i32, columna as i32) {
-                    'I' => (textura_interruptor, 0.32),
-                    'E' => (textura_evacuacion, 0.42),
+                    'I' => (textura_pieza_radio, 0.32),
+                    'E' => (textura_radio, 0.42),
                     _ => continue,
                 };
 

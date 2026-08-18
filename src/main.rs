@@ -41,6 +41,7 @@ use inventory::Inventory;
 use licker::{
     EstadoLicker,
     Licker,
+    TipoLicker,
 };
 
 use licker_renderer::render_lickers;
@@ -117,6 +118,8 @@ const DANO_HACHA_LICKER: i32 = 75;
 const MULTIPLICADOR_HEADSHOT_LICKER: i32 = 2;
 const DANO_LANZALLAMAS: i32 = 15;
 const ALCANCE_LANZALLAMAS: f32 = 125.0;
+const META_ENEMIGOS_FINAL: i32 = 12;
+const META_PIEZAS_RADIO: i32 = 3;
 
 const DURACION_SONIDO_MUERTE: f32 = 0.8;
 
@@ -647,6 +650,45 @@ fn generar_horda(
     generados
 }
 
+fn generar_refuerzos_final(
+    zombies: &mut Vec<Zombie>,
+    mapa: &Map,
+    player: &Player,
+) -> usize {
+    const CANTIDAD_REFUERZOS: usize = 4;
+
+    let mut generados =
+        0;
+
+    for indice in 0..CANTIDAD_REFUERZOS {
+        let Some((x, y)) =
+            buscar_spawn_horda(
+                mapa,
+                player,
+                zombies,
+            )
+        else {
+            continue;
+        };
+
+        let mut zombie =
+            crear_zombie_horda(
+                2,
+                indice,
+                x,
+                y,
+            );
+
+        zombie.persiguiendo =
+            true;
+
+        zombies.push(zombie);
+        generados += 1;
+    }
+
+    generados
+}
+
 fn disparar_licker(
     lickers: &mut [Licker],
     player: &Player,
@@ -869,6 +911,23 @@ fn disparar_licker(
     }
 }
 
+fn lickers_de_cada_tipo_derrotados(
+    lickers: &[Licker],
+) -> bool {
+    [
+        TipoLicker::Normal,
+        TipoLicker::Medio,
+        TipoLicker::Fuerte,
+    ]
+    .iter()
+    .all(|tipo| {
+        lickers.iter().any(|licker| {
+            !licker.vivo
+                && licker.tipo == *tipo
+        })
+    })
+}
+
 fn buscar_nemesis(
     mapa: &mut Map,
 ) -> Option<Nemesis> {
@@ -1084,6 +1143,24 @@ fn soltar_objeto_licker(
     let tirada =
         rand::thread_rng()
             .gen_range(0..100);
+
+    if mapa.nivel() == 4 {
+        if tirada < 25 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'H',
+            );
+        } else if tirada < 50 {
+            mapa.cambiar_celda(
+                fila,
+                columna,
+                'Q',
+            );
+        }
+
+        return;
+    }
 
     if mapa.nivel() == 3 {
         if tirada < 40 {
@@ -1812,6 +1889,13 @@ fn main() {
         .load_texture(
             &thread,
             "assets/textures/antivirus.png",
+        )
+        .unwrap();
+
+    let radio_part_texture = ventana
+        .load_texture(
+            &thread,
+            "assets/textures/radiopart.png",
         )
         .unwrap();
 
@@ -2892,6 +2976,8 @@ fn main() {
                         &player,
                         &mapa,
                         delta_time,
+                        nivel_seleccionado
+                            != NivelSeleccionado::Final,
                     );
 
                 if dano > 0 {
@@ -3242,24 +3328,40 @@ fn main() {
                         "ANTIVIRUS CONSEGUIDO".to_string();
                 }
 
-                InteractionResult::InterruptorActivado => {
+                InteractionResult::PiezaRadioRecogida => {
                     interruptores_final =
-                        (interruptores_final + 1).min(3);
+                        (interruptores_final + 1)
+                            .min(META_PIEZAS_RADIO);
                     mensaje = format!(
-                        "INTERRUPTORES {}/3",
+                        "PIEZAS DE RADIO {}/{}",
                         interruptores_final,
+                        META_PIEZAS_RADIO,
                     );
                 }
 
-                InteractionResult::EvacuacionEncontrada => {
-                    if interruptores_final >= 3 {
+                InteractionResult::RadioEncontrada => {
+                    let enemigos_listos =
+                        enemigos_matados >= META_ENEMIGOS_FINAL;
+                    let lickers_listos =
+                        lickers_de_cada_tipo_derrotados(&lickers);
+                    let piezas_listas =
+                        interruptores_final >= META_PIEZAS_RADIO;
+
+                    if enemigos_listos
+                        && lickers_listos
+                        && piezas_listas
+                    {
                         evacuacion_completada = true;
                         mensaje =
-                            "EVACUACION ACTIVADA".to_string();
+                            "HELICOPTERO EN CAMINO".to_string();
                     } else {
                         mensaje = format!(
-                            "FALTAN {} INTERRUPTORES",
-                            3 - interruptores_final,
+                            "FALTA: BAJAS {}/{} | RADIO {}/{} | LICKERS {}",
+                            enemigos_matados.min(META_ENEMIGOS_FINAL),
+                            META_ENEMIGOS_FINAL,
+                            interruptores_final,
+                            META_PIEZAS_RADIO,
+                            if lickers_listos { "OK" } else { "3 TIPOS" },
                         );
                     }
                 }
@@ -3950,10 +4052,36 @@ fn main() {
             }
         }
 
+        if nivel_seleccionado
+            == NivelSeleccionado::Final
+            && !evacuacion_completada
+            && !zombies.iter().any(|zombie| zombie.vivo)
+            && !lickers.iter().any(|licker| licker.vivo)
+        {
+            let generados =
+                generar_refuerzos_final(
+                    &mut zombies,
+                    &mapa,
+                    &player,
+                );
+
+            if generados > 0 {
+                mensaje = format!(
+                    "REFUERZOS ENEMIGOS - {} NUEVOS",
+                    generados,
+                );
+            }
+        }
+
         let meta_alcanzada =
             match nivel_seleccionado {
                 NivelSeleccionado::Laboratorio => antivirus_recogido,
-                NivelSeleccionado::Final => evacuacion_completada,
+                NivelSeleccionado::Final => {
+                    evacuacion_completada
+                        && enemigos_matados >= META_ENEMIGOS_FINAL
+                        && lickers_de_cada_tipo_derrotados(&lickers)
+                        && interruptores_final >= META_PIEZAS_RADIO
+                }
                 NivelSeleccionado::Mansion => {
                     objetivo_completo(
                         bajas_normal,
@@ -4720,8 +4848,8 @@ fn main() {
             &mapa,
             &player,
             &camera,
-            &lab_key_texture,
-            &antivirus_texture,
+            &radio_part_texture,
+            &radio_part_texture,
             offset_x,
             offset_y,
             escala,
@@ -4837,7 +4965,7 @@ fn main() {
                         if nivel_seleccionado
                             == NivelSeleccionado::Final
                         {
-                            "EVACUACION"
+                            "RADIO Y RESCATE"
                         } else {
                             "ANTIVIRUS"
                         };
@@ -4874,8 +5002,16 @@ fn main() {
                         "OBJETIVO | ENCUENTRA EL ANTIVIRUS AL FINAL DEL LABORATORIO"
                             .to_string(),
                     NivelSeleccionado::Final => format!(
-                        "OBJETIVO | INTERRUPTORES {}/3 | LLEGA A EVACUACION",
+                        "OBJETIVO | BAJAS {}/{} | RADIO {}/{} | LICKERS: {} | LLAMA AL HELICOPTERO",
+                        enemigos_matados.min(META_ENEMIGOS_FINAL),
+                        META_ENEMIGOS_FINAL,
                         interruptores_final,
+                        META_PIEZAS_RADIO,
+                        if lickers_de_cada_tipo_derrotados(&lickers) {
+                            "OK"
+                        } else {
+                            "FALTAN TIPOS"
+                        },
                     ),
                     NivelSeleccionado::Mansion => format!(
                         "OBJETIVO | NORMAL {}/{} | MEDIO {}/{} | FUERTE {}/{}",
@@ -4974,7 +5110,7 @@ fn main() {
                         NivelSeleccionado::Laboratorio =>
                             "ANTIVIRUS CONSEGUIDO".to_string(),
                         NivelSeleccionado::Final =>
-                            "EVACUACION COMPLETADA".to_string(),
+                            "HELICOPTERO SOLICITADO".to_string(),
                         NivelSeleccionado::Mansion =>
                             "MISION DE LA MANSION COMPLETADA".to_string(),
                     }

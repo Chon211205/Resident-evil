@@ -285,13 +285,18 @@ pub fn render_3d(
     textura_suelo2: &TextureData,
 
     textura_techo: &TextureData,
+    panorama: Option<&TextureData>,
 ) {
-    render_techo(
-        framebuffer,
-        player,
-        camera,
-        textura_techo,
-    );
+    if let Some(panorama) = panorama {
+        render_panorama(framebuffer, camera, panorama);
+    } else {
+        render_techo(
+            framebuffer,
+            player,
+            camera,
+            textura_techo,
+        );
+    }
 
     render_suelo(
         framebuffer,
@@ -885,6 +890,10 @@ fn render_paredes(
                 + altura_pared
                     / 2.0;
 
+        if hit.tipo == 'G' {
+            continue;
+        }
+
         let textura =
             match hit.tipo {
                 'W' => {
@@ -1063,5 +1072,41 @@ fn dibujar_columna_pared(
                 y,
                 color,
             );
+    }
+}
+
+fn render_panorama(
+    framebuffer: &mut Framebuffer,
+    camera: &Camera,
+    panorama: &TextureData,
+) {
+    let horizonte =
+        (ALTO_VENTANA as f32 / 2.0
+            + camera.vertical_offset as f32)
+            .clamp(1.0, ALTO_VENTANA as f32);
+
+    for y in 0..horizonte as i32 {
+        let textura_y =
+            ((y as f32 / horizonte) * panorama.height as f32)
+                .clamp(0.0, panorama.height as f32 - 1.0)
+                as i32;
+
+        for x in 0..ANCHO_VENTANA {
+            let desplazamiento =
+                (x as f32 / ANCHO_VENTANA as f32 - 0.5) * FOV;
+            let angulo =
+                (camera.angle + desplazamiento)
+                    .rem_euclid(std::f32::consts::PI * 2.0);
+            let textura_x =
+                (angulo / (std::f32::consts::PI * 2.0)
+                    * panorama.width as f32) as i32
+                    % panorama.width;
+
+            framebuffer.point_color(
+                x,
+                y,
+                panorama.get_pixel(textura_x, textura_y),
+            );
+        }
     }
 }

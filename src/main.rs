@@ -1945,6 +1945,12 @@ fn main() {
         )
         .unwrap();
 
+    let mut citynight_image =
+        Image::load_image(
+            "assets/textures/citynight.png",
+        )
+        .unwrap();
+
     let textura_pared =
         TextureData::from_image(
             &mut wall_image,
@@ -2003,6 +2009,11 @@ fn main() {
     let textura_lab_techo =
         TextureData::from_image(
             &mut lab_roof_image,
+        );
+
+    let textura_citynight =
+        TextureData::from_image(
+            &mut citynight_image,
         );
 
     let mut textura_framebuffer =
@@ -4265,6 +4276,13 @@ fn main() {
             suelo2_actual,
 
             techo_actual,
+            if nivel_seleccionado
+                == NivelSeleccionado::Final
+            {
+                Some(&textura_citynight)
+            } else {
+                None
+            },
         );
 
         render_minimap(

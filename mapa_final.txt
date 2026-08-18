@@ -1,25 +1,25 @@
-###############################################
-###############################################
-##                                           ##
-##   P        H          ####          A     ##
-##                      ####                 ##
-##          ####                   ####      ##
-##    I     ####                   ####      ##
-##          ####       Y           ####      ##
-##                                           ##
-##             ####          ####            ##
-##             ####    Q     ####            ##
-##    A        ####          ####       H    ##
-##                                           ##
-##       ####                      ####      ##
-##       ####          N           ####      ##
-##       ####                      ####      ##
-##                                           ##
-##    I           H          Q          I    ##
-##                                           ##
-##          ####                  ####       ##
-##          ####                  ####       ##
-##                   E                       ##
-##                                           ##
-###############################################
-###############################################
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GG                                           GG
+GG   P        H          ####          A     GG
+GG                      ####                 GG
+GG          ####                   ####      GG
+GG    I     ####                   ####      GG
+GG          ####       Y           ####      GG
+GG                                           GG
+GG             ####          ####            GG
+GG             ####    Q     ####            GG
+GG    A        ####          ####       H    GG
+GG                                           GG
+GG       ####                      ####      GG
+GG       ####          N           ####      GG
+GG       ####                      ####      GG
+GG                                           GG
+GG    I           H          Q          I    GG
+GG                                           GG
+GG          ####                  ####       GG
+GG          ####                  ####       GG
+GG                   E                       GG
+GG                                           GG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG

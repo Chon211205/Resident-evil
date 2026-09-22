@@ -162,6 +162,50 @@ El proyecto incluye los siguientes elementos:
 
 ## Ejecución
 
+### Prueba de diorama 3D con ray tracing
+
+La prueba independiente construye una habitación 3D con cuatro paredes de madera, suelo y techo abierto. Una pared tiene un hueco con marco metálico y vidrio; también hay una puerta y cajas en el interior. Traza rayos por CPU: el vidrio refracta, el metal refleja y los rayos que no impactan muestrean el panorama nocturno.
+
+```bash
+cargo run --release --bin diorama
+```
+
+Arrastrar con el botón izquierdo rota la cámara. La rueda del mouse acerca y aleja; las flechas también rotan la vista. Para generar una imagen estática sin abrir ventana:
+
+```bash
+cargo run --release --bin diorama -- --snapshot
+```
+
+La imagen se guarda como `diorama-preview.png`. Es una prueba de renderizado a 320×180, no una conversión del juego completo: todavía no incorpora enemigos, combate ni interacción en la escena 3D.
+
+Para generar una vista frontal de la ventana:
+
+```bash
+cargo run --release --bin diorama -- --snapshot-window
+```
+
+La imagen se guarda en `diorama-window-preview.png`.
+
+Las paredes y la puerta de prueba usan `Wood035_2K-PNG`: color, normales OpenGL y rugosidad. Tienen distintos parámetros de brillo y albedo, pero comparten los mismos mapas; para contar como dos materiales distintos bajo una rúbrica que exige textura propia, necesitarán texturas diferentes. El suelo usa `Wood051_2K-PNG` con sus propios mapas; la textura se repite cada dos unidades del mundo para que las vetas se aprecien sin verse demasiado pequeñas.
+
+Para generar una vista del suelo desde arriba:
+
+```bash
+cargo run --release --bin diorama -- --snapshot-floor
+```
+
+La imagen se guarda en `diorama-floor-preview.png`.
+
+Para generar una vista cercana de la puerta:
+
+```bash
+cargo run --release --bin diorama -- --snapshot-door
+```
+
+Esta vista se guarda en `diorama-wood-preview.png`. El mapa de desplazamiento del paquete aún no se usa, porque requeriría alterar la geometría de los bloques.
+
+El renderizador filtra las texturas con niveles de detalle y suaviza la imagen al ampliarla. Esto reduce el granulado y el parpadeo de las texturas 2K cuando el diorama se dibuja a 320×180.
+
 Requisitos:
 
 - Rust y Cargo instalados.

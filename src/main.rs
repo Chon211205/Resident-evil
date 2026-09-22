@@ -10,6 +10,7 @@ mod licker;
 mod licker_renderer;
 mod map;
 mod map_renderer;
+mod material;
 mod menu;
 mod player;
 mod puzzle;

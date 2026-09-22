@@ -1,12 +1,58 @@
-   0.039450700s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint: stale: changed "C:\\Users\\leejo\\Desktop\\laberint\\src\\menu.rs"
-   0.039474300s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint:           (vs) "C:\\Users\\leejo\\Desktop\\laberint\\target\\debug\\.fingerprint\\pacman_polygon-aa5db4ea7d812fcb\\dep-bin-pacman_polygon"
-   0.039478900s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13431508815, nanos: 781269600 } < FileTime { seconds: 13431510560, nanos: 688447300 }
-   0.039612500s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint: fingerprint dirty for pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint)/Check { test: false }/TargetInner { name: "pacman_polygon", doc: true, ..: with_path("C:\\Users\\leejo\\Desktop\\laberint\\src\\main.rs", Edition2021) }
-   0.039630000s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "C:\\Users\\leejo\\Desktop\\laberint\\target\\debug\\.fingerprint\\pacman_polygon-aa5db4ea7d812fcb\\dep-bin-pacman_polygon", reference_mtime: FileTime { seconds: 13431508815, nanos: 781269600 }, stale: "C:\\Users\\leejo\\Desktop\\laberint\\src\\menu.rs", stale_mtime: FileTime { seconds: 13431510560, nanos: 688447300 } }))
-   0.048927200s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint: stale: changed "C:\\Users\\leejo\\Desktop\\laberint\\src\\camera.rs"
-   0.048942500s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint:           (vs) "C:\\Users\\leejo\\Desktop\\laberint\\target\\debug\\.fingerprint\\pacman_polygon-3023e46917b7cea6\\dep-test-bin-pacman_polygon"
-   0.048946100s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13431508815, nanos: 781269600 } < FileTime { seconds: 13431510048, nanos: 115429700 }
-   0.049030000s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint: fingerprint dirty for pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint)/Check { test: true }/TargetInner { name: "pacman_polygon", doc: true, ..: with_path("C:\\Users\\leejo\\Desktop\\laberint\\src\\main.rs", Edition2021) }
-   0.049039700s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint) target="pacman_polygon"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "C:\\Users\\leejo\\Desktop\\laberint\\target\\debug\\.fingerprint\\pacman_polygon-3023e46917b7cea6\\dep-test-bin-pacman_polygon", reference_mtime: FileTime { seconds: 13431508815, nanos: 781269600 }, stale: "C:\\Users\\leejo\\Desktop\\laberint\\src\\camera.rs", stale_mtime: FileTime { seconds: 13431510048, nanos: 115429700 } }))
-    Checking pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\laberint)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.29s
+   0.061353300s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\Resident-evil) target="diorama"}: cargo::core::compiler::fingerprint: fingerprint error for pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\Resident-evil)/Check { test: false }/TargetInner { name: "diorama", doc: true, ..: with_path("C:\\Users\\leejo\\Desktop\\Resident-evil\\src\\bin\\diorama.rs", Edition2021) }
+   0.061866300s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\Resident-evil) target="diorama"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\leejo\Desktop\Resident-evil\target\debug\.fingerprint\pacman_polygon-fdeb77afcb4cc964\bin-diorama`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.174851100s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\Resident-evil) target="diorama"}: cargo::core::compiler::fingerprint: fingerprint error for pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\Resident-evil)/Check { test: true }/TargetInner { name: "diorama", doc: true, ..: with_path("C:\\Users\\leejo\\Desktop\\Resident-evil\\src\\bin\\diorama.rs", Edition2021) }
+   0.174870300s  INFO prepare_target{force=false package_id=pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\Resident-evil) target="diorama"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\leejo\Desktop\Resident-evil\target\debug\.fingerprint\pacman_polygon-bf1379ec83dd7c5c\test-bin-diorama`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+    Checking pacman_polygon v0.1.0 (C:\Users\leejo\Desktop\Resident-evil)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.36s

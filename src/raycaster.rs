@@ -1,5 +1,6 @@
 use crate::camera::Camera;
 use crate::framebuffer::Framebuffer;
+use crate::material::Material;
 use crate::map::{
     Map,
     TAMANO_CELDA,
@@ -7,7 +8,7 @@ use crate::map::{
 use crate::player::Player;
 use crate::texture_data::TextureData;
 
-use raylib::prelude::*;
+use raylib::color::Color;
 
 pub const ANCHO_VENTANA: i32 = 800;
 pub const ALTO_VENTANA: i32 = 600;
@@ -23,6 +24,10 @@ pub struct RayHit {
     pub offset_textura: f32,
     pub golpe_vertical: bool,
     pub tipo: char,
+    pub impacto_x: f32,
+    pub impacto_y: f32,
+    pub normal_x: f32,
+    pub normal_y: f32,
 }
 
 pub fn lanzar_rayo(
@@ -265,6 +270,10 @@ pub fn lanzar_rayo(
         golpe_vertical,
 
         tipo,
+        impacto_x,
+        impacto_y,
+        normal_x: if golpe_vertical { -(dir_x.signum()) } else { 0.0 },
+        normal_y: if golpe_vertical { 0.0 } else { -(dir_y.signum()) },
     }
 }
 
@@ -325,6 +334,7 @@ pub fn render_3d(
 
         textura_subir,
         textura_bajar,
+        panorama,
     );
 }
 
@@ -819,6 +829,130 @@ fn render_suelo(
     }
 }
 
+struct Materiales<'a> {
+    pared: Material<'a>,
+    caja: Material<'a>,
+    ventana: Material<'a>,
+    puerta: Material<'a>,
+    subir: Material<'a>,
+    bajar: Material<'a>,
+}
+
+impl<'a> Materiales<'a> {
+    fn para(&self, tipo: char) -> &Material<'a> {
+        match tipo {
+            'J' => &self.caja,
+            'W' => &self.ventana,
+            'D' => &self.puerta,
+            'X' => &self.subir,
+            'B' => &self.bajar,
+            _ => &self.pared,
+        }
+    }
+}
+
+fn mezclar(a: Color, b: Color, peso_b: f32) -> Color {
+    let t = peso_b.clamp(0.0, 1.0);
+    Color::new(
+        (a.r as f32 * (1.0 - t) + b.r as f32 * t) as u8,
+        (a.g as f32 * (1.0 - t) + b.g as f32 * t) as u8,
+        (a.b as f32 * (1.0 - t) + b.b as f32 * t) as u8,
+        255,
+    )
+}
+
+fn sumar_brillo(color: Color, brillo: f32) -> Color {
+    let aumento = (brillo * 255.0).clamp(0.0, 255.0) as u8;
+    Color::new(
+        color.r.saturating_add(aumento),
+        color.g.saturating_add(aumento),
+        color.b.saturating_add(aumento),
+        255,
+    )
+}
+
+fn reflejar(dir: (f32, f32), normal: (f32, f32)) -> (f32, f32) {
+    let producto = dir.0 * normal.0 + dir.1 * normal.1;
+    (dir.0 - 2.0 * producto * normal.0, dir.1 - 2.0 * producto * normal.1)
+}
+
+/// Ley de Snell. `normal` apunta hacia el medio del que llega el rayo.
+fn refractar(dir: (f32, f32), normal: (f32, f32), indice_entrada: f32, indice_salida: f32) -> Option<(f32, f32)> {
+    let eta = indice_entrada / indice_salida;
+    let cos_i = -(dir.0 * normal.0 + dir.1 * normal.1);
+    let k = 1.0 - eta * eta * (1.0 - cos_i * cos_i);
+    if k < 0.0 {
+        return None;
+    }
+    let factor = eta * cos_i - k.sqrt();
+    Some((eta * dir.0 + factor * normal.0, eta * dir.1 + factor * normal.1))
+}
+
+/// Atraviesa la celda de vidrio: aire → vidrio → aire y traza el siguiente objeto.
+fn trazar_vidrio(mapa: &Map, hit: &RayHit, dir: (f32, f32), indice: f32) -> Option<(RayHit, (f32, f32))> {
+    let dentro = refractar(dir, (hit.normal_x, hit.normal_y), 1.0, indice)?;
+    let inicio_x = hit.impacto_x + dentro.0 * 0.01;
+    let inicio_y = hit.impacto_y + dentro.1 * 0.01;
+    let celda_x = (inicio_x / TAMANO_CELDA).floor();
+    let celda_y = (inicio_y / TAMANO_CELDA).floor();
+
+    let t_x = if dentro.0 > 0.00001 {
+        ((celda_x + 1.0) * TAMANO_CELDA - inicio_x) / dentro.0
+    } else if dentro.0 < -0.00001 {
+        (celda_x * TAMANO_CELDA - inicio_x) / dentro.0
+    } else { f32::INFINITY };
+    let t_y = if dentro.1 > 0.00001 {
+        ((celda_y + 1.0) * TAMANO_CELDA - inicio_y) / dentro.1
+    } else if dentro.1 < -0.00001 {
+        (celda_y * TAMANO_CELDA - inicio_y) / dentro.1
+    } else { f32::INFINITY };
+
+    let salida_vertical = t_x < t_y;
+    let recorrido = t_x.min(t_y);
+    if !recorrido.is_finite() || recorrido <= 0.0 {
+        return None;
+    }
+    let normal_salida = if salida_vertical {
+        (-dentro.0.signum(), 0.0)
+    } else {
+        (0.0, -dentro.1.signum())
+    };
+    let fuera = refractar(dentro, normal_salida, indice, 1.0)?;
+    let x = inicio_x + dentro.0 * recorrido + fuera.0 * 0.01;
+    let y = inicio_y + dentro.1 * recorrido + fuera.1 * 0.01;
+    Some((lanzar_rayo(mapa, x, y, fuera.1.atan2(fuera.0)), fuera))
+}
+
+fn color_rayo_secundario(hit: &RayHit, dir: (f32, f32), v: f32, materiales: &Materiales<'_>, panorama: Option<&TextureData>) -> Color {
+    if hit.tipo == 'G' {
+        if let Some(cielo) = panorama {
+            let angulo = dir.1.atan2(dir.0).rem_euclid(std::f32::consts::TAU);
+            return cielo.get_pixel(
+                (angulo / std::f32::consts::TAU * cielo.width as f32) as i32,
+                (v.clamp(0.0, 1.0) * cielo.height as f32) as i32,
+            );
+        }
+        return Color::new(12, 15, 22, 255);
+    }
+    let material = materiales.para(hit.tipo);
+    let base = material.sample(hit.offset_textura, v);
+    let sombra = (1.0 - hit.distancia / 900.0).clamp(0.28, 1.0);
+    Color::new(
+        (base.r as f32 * sombra) as u8,
+        (base.g as f32 * sombra) as u8,
+        (base.b as f32 * sombra) as u8,
+        255,
+    )
+}
+
+fn brillo_especular(dir: (f32, f32), normal: (f32, f32), intensidad: f32) -> f32 {
+    let luz = (0.6_f32, -0.8_f32);
+    let mitad = (luz.0 - dir.0, luz.1 - dir.1);
+    let longitud = (mitad.0 * mitad.0 + mitad.1 * mitad.1).sqrt().max(0.0001);
+    let coseno = ((normal.0 * mitad.0 + normal.1 * mitad.1) / longitud).max(0.0);
+    intensidad * coseno.powf(24.0) * 0.55
+}
+
 fn render_paredes(
     framebuffer: &mut Framebuffer,
     mapa: &Map,
@@ -832,7 +966,16 @@ fn render_paredes(
 
     textura_subir: &TextureData,
     textura_bajar: &TextureData,
+    panorama: Option<&TextureData>,
 ) {
+    let materiales = Materiales {
+        pared: Material::new(textura_pared, Color::new(235, 230, 220, 255), 0.08, 0.0, 0.02, 1.0),
+        caja: Material::new(textura_caja, Color::new(215, 225, 240, 255), 0.80, 0.0, 0.52, 1.0),
+        ventana: Material::new(textura_ventana, Color::new(185, 215, 245, 255), 0.75, 0.72, 0.12, 1.5),
+        puerta: Material::new(textura_puerta, Color::new(225, 205, 180, 255), 0.20, 0.0, 0.04, 1.0),
+        subir: Material::new(textura_subir, Color::new(220, 230, 235, 255), 0.35, 0.0, 0.08, 1.0),
+        bajar: Material::new(textura_bajar, Color::new(205, 215, 225, 255), 0.30, 0.0, 0.06, 1.0),
+    };
     for columna_pantalla
         in 0..ANCHO_VENTANA
     {
@@ -904,40 +1047,16 @@ fn render_paredes(
             continue;
         }
 
-        let textura =
-            match hit.tipo {
-                'J' => {
-                    textura_caja
-                }
-
-                'W' => {
-                    textura_ventana
-                }
-
-                'D' => {
-                    textura_puerta
-                }
-
-                'X' => {
-                    textura_subir
-                }
-
-                'B' => {
-                    textura_bajar
-                }
-
-                _ => {
-                    textura_pared
-                }
-            };
-
         dibujar_columna_pared(
             framebuffer,
             columna_pantalla,
             inicio,
             fin,
             &hit,
-            textura,
+            &materiales,
+            mapa,
+            (angulo_rayo.cos(), angulo_rayo.sin()),
+            panorama,
             distancia_corregida,
         );
     }
@@ -949,7 +1068,10 @@ fn dibujar_columna_pared(
     inicio: f32,
     fin: f32,
     hit: &RayHit,
-    textura: &TextureData,
+    materiales: &Materiales<'_>,
+    mapa: &Map,
+    direccion: (f32, f32),
+    panorama: Option<&TextureData>,
     distancia: f32,
 ) {
     let altura =
@@ -959,21 +1081,6 @@ fn dibujar_columna_pared(
     if altura <= 0.0 {
         return;
     }
-
-    let tex_x =
-        (
-            hit.offset_textura
-                * textura.width
-                    as f32
-        )
-            .floor()
-            .clamp(
-                0.0,
-                textura.width
-                    as f32
-                    - 1.0,
-            )
-            as i32;
 
     let inicio_dibujo =
         inicio
@@ -1013,6 +1120,28 @@ fn dibujar_columna_pared(
         sombra_distancia
             * sombra_lado;
 
+    let material = materiales.para(hit.tipo);
+    // Los rayos secundarios dependen de la columna, no de cada píxel vertical.
+    let transmitido = if material.transparency > 0.0 {
+        trazar_vidrio(mapa, hit, direccion, material.refractive_index)
+    } else {
+        None
+    };
+    let reflejado = if material.reflectivity > 0.10 {
+        let dir = reflejar(direccion, (hit.normal_x, hit.normal_y));
+        Some((
+            lanzar_rayo(
+                mapa,
+                hit.impacto_x + dir.0 * 0.01,
+                hit.impacto_y + dir.1 * 0.01,
+                dir.1.atan2(dir.0),
+            ),
+            dir,
+        ))
+    } else {
+        None
+    };
+
     for y in inicio_dibujo
         ..=fin_dibujo
     {
@@ -1023,26 +1152,20 @@ fn dibujar_columna_pared(
             )
                 / altura;
 
-        let tex_y =
-            (
-                porcentaje_y
-                    * textura.height
-                        as f32
-            )
-                .floor()
-                .clamp(
-                    0.0,
-                    textura.height
-                        as f32
-                        - 1.0,
-                )
-                as i32;
+        let mut color = material.sample(hit.offset_textura, porcentaje_y);
 
-        let mut color =
-            textura.get_pixel(
-                tex_x,
-                tex_y,
-            );
+        if let Some((secondary_hit, secondary_dir)) = &transmitido {
+            let fondo = color_rayo_secundario(secondary_hit, *secondary_dir, porcentaje_y, materiales, panorama);
+            color = mezclar(color, fondo, material.transparency);
+        }
+
+        if let Some((secondary_hit, secondary_dir)) = &reflejado {
+            let reflejo = color_rayo_secundario(secondary_hit, *secondary_dir, porcentaje_y, materiales, panorama);
+            color = mezclar(color, reflejo, material.reflectivity);
+        }
+
+        let brillo = brillo_especular(direccion, (hit.normal_x, hit.normal_y), material.specular);
+        color = sumar_brillo(color, brillo);
 
         color.r =
             (
@@ -1118,5 +1241,25 @@ fn render_panorama(
                 panorama.get_pixel(textura_x, textura_y),
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{reflejar, refractar};
+
+    #[test]
+    fn reflejo_invierte_componente_perpendicular() {
+        let salida = reflejar((0.6, 0.8), (-1.0, 0.0));
+        assert!((salida.0 + 0.6).abs() < 0.0001);
+        assert!((salida.1 - 0.8).abs() < 0.0001);
+    }
+
+    #[test]
+    fn refraccion_hacia_vidrio_se_acerca_a_la_normal() {
+        let entrada = (0.8, 0.6);
+        let salida = refractar(entrada, (-1.0, 0.0), 1.0, 1.5).unwrap();
+        assert!(salida.1.abs() < entrada.1.abs());
+        assert!((salida.0 * salida.0 + salida.1 * salida.1 - 1.0).abs() < 0.0001);
     }
 }

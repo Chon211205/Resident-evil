@@ -119,7 +119,8 @@ impl MansionRenderer {
             Kind::Floor=>(&self.floor,Some(&self.floor_rough),V::new(0.85,0.80,0.72),0.4,0.03),
             Kind::Ceiling=>(&self.ceiling,None,V::new(0.55,0.57,0.6),0.06,0.0),
         };
-        let lod=tex.lod(h.t,h.n,d); let base=tex.sample(h.u,h.v,lod).mul(albedo);
+        let lod=tex.lod(h.t,h.n,d);
+        let base=tex.sample(h.u,h.v,lod).mul(albedo);
         let r=rough.map_or(0.5,|t|t.sample(h.u,h.v,lod).x).clamp(0.05,1.0);
         let lamp=V::new((h.p.x/(TAMANO_CELDA*6.0)).round()*TAMANO_CELDA*6.0,CEILING*0.88,(h.p.z/(TAMANO_CELDA*6.0)).round()*TAMANO_CELDA*6.0)-h.p;
         let l=lamp.unit(); let strength=1.0/(1.0+0.006*lamp.dot(lamp));

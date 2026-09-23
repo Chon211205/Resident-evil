@@ -164,7 +164,10 @@ El proyecto incluye los siguientes elementos:
 
 ### Prueba de diorama 3D con ray tracing
 
-El juego principal también tiene una prueba integrada de trazado de rayos en el primer piso de la mansión (`mapa_nivel1.txt`). Se activa automáticamente al jugar ese escenario; utiliza el mapa vivo para que las puertas abiertas sigan abiertas y conserva movimiento, combate, enemigos, objetos y HUD. `F3` alterna entre el render 3D nuevo y el clásico; `F` enciende o apaga la linterna. El segundo piso, laboratorio y escenario final siguen con el render original. El entorno se dibuja a 400×300 y se amplía a 800×600; las ventanas son huecos transparentes y el metal refleja. Por ahora, los enemigos y objetos siguen siendo sprites 2D superpuestos, así que su oclusión con la nueva geometría puede necesitar ajustes.
+El juego principal también tiene una prueba integrada de trazado de rayos en el primer piso de la mansión (`mapa_nivel1.txt`). Se activa automáticamente al jugar ese escenario; utiliza el mapa vivo para que las puertas abiertas sigan abiertas y conserva movimiento, combate, enemigos, objetos y HUD. `F3` alterna entre el render 3D nuevo y el clásico; `F` enciende o apaga la linterna. El segundo piso, laboratorio y escenario final siguen con el render original. El entorno se dibuja a 400×300 y se amplía a 800×600; las ventanas son huecos transparentes y el metal refleja. Los enemigos y objetos que aún son sprites 2D se superponen al entorno y pueden necesitar ajustes de oclusión.
+
+En ese primer piso, los sprites de objetos y enemigos proyectan una sombra de contacto dibujada bajo su posición en el suelo. No son sombras trazadas por rayos y pueden superponerse ligeramente al borde de una pared cercana.
+
 
 La prueba independiente construye una habitación 3D con cuatro paredes de madera, suelo y techo abierto. Una pared tiene un hueco con marco metálico y vidrio; también hay una puerta y cajas en el interior. Traza rayos por CPU: el vidrio refracta, el metal refleja y los rayos que no impactan muestrean el panorama nocturno.
 

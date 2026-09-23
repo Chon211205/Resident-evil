@@ -58,6 +58,21 @@ impl Camera {
         Some((screen_x - projected_width * 0.5, screen_top, projected_width, projected_height))
     }
 
+    /// Posición de un punto del suelo, para efectos anclados al mapa.
+    pub fn project_ground(&self, dx: f32, dy: f32) -> Option<(f32, f32, f32)> {
+        const EYE: f32 = 12.5;
+        let (sin_yaw, cos_yaw) = self.angle.sin_cos();
+        let (sin_pitch, cos_pitch) = self.pitch_radians().sin_cos();
+        let forward_flat = dx * cos_yaw + dy * sin_yaw;
+        let horizontal = -dx * sin_yaw + dy * cos_yaw;
+        let depth = cos_pitch * forward_flat - sin_pitch * EYE;
+        if depth <= 0.1 { return None; }
+        let focal = Self::focal_length();
+        Some((400.0 + horizontal / depth * focal,
+              300.0 + (sin_pitch * forward_flat + cos_pitch * EYE) / depth * focal,
+              depth))
+    }
+
 pub fn update(
     &mut self,
     window: &RaylibHandle,
@@ -179,5 +194,14 @@ mod projection_tests {
         camera.vertical_offset = 100;
         let (_, y, _, height) = camera.project_billboard(50.0, 0.0, 12.5, 0.01, 1.0).unwrap();
         assert!((y + height * 0.5 - 400.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn ground_shadow_aligns_with_billboard_feet() {
+        let camera = Camera::new();
+        let (x, y, width, height) = camera.project_billboard(50.0, 8.0, 0.0, 20.0, 0.5).unwrap();
+        let (ground_x, ground_y, _) = camera.project_ground(50.0, 8.0).unwrap();
+        assert!((x + width * 0.5 - ground_x).abs() < 0.01);
+        assert!((y + height - ground_y).abs() < 0.01);
     }
 }

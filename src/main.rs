@@ -17,6 +17,7 @@ mod player;
 mod puzzle;
 mod raycaster;
 mod sprite_renderer;
+mod sprite_shadow;
 mod texture_data;
 mod tyrant;
 mod tyrant_renderer;
@@ -87,6 +88,7 @@ use sprite_renderer::{
     render_heal_sprites,
     render_key_sprite,
 };
+use sprite_shadow::render_sprite_shadows;
 
 use texture_data::TextureData;
 
@@ -4792,6 +4794,11 @@ fn main() {
             } else {
                 &key_texture
             };
+
+        render_sprite_shadows(
+            &mut dibujo, &mapa, &player, &camera, &zombies, &lickers,
+            tyrant.as_ref(), nemesis.as_ref(), offset_x, offset_y, escala,
+        );
 
         render_key_sprite(
             &mut dibujo,

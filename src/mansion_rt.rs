@@ -136,7 +136,7 @@ impl MansionRenderer {
         color
     }
     pub fn render(&self,buffer:&mut Framebuffer,map:&Map,player:&Player,camera:&Camera,flashlight:bool) {
-        let pitch=(camera.vertical_offset as f32/300.0).atan();
+        let pitch=camera.pitch_radians();
         let (sa,ca)=camera.angle.sin_cos(); let (sp,cp)=pitch.sin_cos();
         let forward=V::new(ca*cp,sp,sa*cp); let right=V::new(-sa,0.0,ca); let up=V::new(-ca*sp,cp,-sa*sp);
         let origin=V::new(player.x,CEILING*0.5,player.y);

@@ -307,6 +307,11 @@ fn render_objeto(
         altura_sprite
             * escala;
 
+    let (x, y, ancho_final, alto_final) = if camera.use_3d_projection {
+        let Some((px, py, pw, ph)) = camera.project_billboard(dx, dy, 0.0, altura_mundo, proporcion) else { return; };
+        (offset_x + px * escala, offset_y + py * escala, pw * escala, ph * escala)
+    } else { (x, y, ancho_final, alto_final) };
+
     let limite_izquierdo =
         offset_x;
 

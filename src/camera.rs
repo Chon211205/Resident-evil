@@ -4,14 +4,58 @@ use crate::gamepad;
 pub struct Camera {
     pub angle: f32,
     pub vertical_offset: i32,
+    pub use_3d_projection: bool,
 }
 
 impl Camera {
+    pub fn focal_length() -> f32 {
+        400.0 / (std::f32::consts::PI / 6.0).tan()
+    }
+
+    pub fn pitch_radians(&self) -> f32 {
+        (self.vertical_offset as f32 / Self::focal_length()).atan()
+    }
+
     pub fn new() -> Self {
         Self {
             angle: 0.0,
             vertical_offset: 0,
+            use_3d_projection: false,
         }
+    }
+
+    /// Rectángulo de un sprite vertical anclado a una posición fija del mundo.
+    /// Coordenadas relativas al framebuffer de 800×600.
+    pub fn project_billboard(
+        &self,
+        dx: f32,
+        dy: f32,
+        bottom: f32,
+        height: f32,
+        aspect: f32,
+    ) -> Option<(f32, f32, f32, f32)> {
+        const EYE: f32 = 12.5;
+        let focal = Self::focal_length();
+        let pitch = self.pitch_radians();
+        let (sin_yaw, cos_yaw) = self.angle.sin_cos();
+        let (sin_pitch, cos_pitch) = pitch.sin_cos();
+        let forward_flat = dx * cos_yaw + dy * sin_yaw;
+        let horizontal = -dx * sin_yaw + dy * cos_yaw;
+        let project = |world_y: f32| {
+            let relative_y = world_y - EYE;
+            let depth = cos_pitch * forward_flat + sin_pitch * relative_y;
+            if depth <= 0.1 { return None; }
+            let screen_y = 300.0 - (-sin_pitch * forward_flat + cos_pitch * relative_y) / depth * focal;
+            Some((depth, screen_y))
+        };
+        let (bottom_depth, screen_bottom) = project(bottom)?;
+        let (top_depth, screen_top) = project(bottom + height)?;
+        let mid_depth = (bottom_depth + top_depth) * 0.5;
+        let projected_height = screen_bottom - screen_top;
+        if projected_height <= 0.0 { return None; }
+        let projected_width = projected_height * aspect;
+        let screen_x = 400.0 + horizontal / mid_depth * focal;
+        Some((screen_x - projected_width * 0.5, screen_top, projected_width, projected_height))
     }
 
 pub fn update(
@@ -115,4 +159,25 @@ fn normalize_angle(
     }
 
     angle
+}
+
+#[cfg(test)]
+mod projection_tests {
+    use super::Camera;
+
+    #[test]
+    fn billboard_is_centered_on_world_position() {
+        let camera = Camera::new();
+        let (x, y, width, height) = camera.project_billboard(50.0, 0.0, 0.0, 25.0, 0.5).unwrap();
+        assert!((x + width * 0.5 - 400.0).abs() < 0.01);
+        assert!((y + height * 0.5 - 300.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn camera_pitch_uses_same_focal_length_as_sprite_projection() {
+        let mut camera = Camera::new();
+        camera.vertical_offset = 100;
+        let (_, y, _, height) = camera.project_billboard(50.0, 0.0, 12.5, 0.01, 1.0).unwrap();
+        assert!((y + height * 0.5 - 400.0).abs() < 0.1);
+    }
 }

@@ -190,6 +190,12 @@ pub fn render_tyrant(
         altura
             * escala_pantalla;
 
+    let (destino_x, destino_y, destino_ancho, destino_alto) = if camera.use_3d_projection {
+        let aspecto = textura.width() as f32 / textura.height().max(1) as f32;
+        let Some((px, py, pw, ph)) = camera.project_billboard(dx, dy, 0.0, TAMANO_CELDA * 1.35, aspecto) else { return; };
+        (offset_x + px * escala_pantalla, offset_y + py * escala_pantalla, pw * escala_pantalla, ph * escala_pantalla)
+    } else { (destino_x, destino_y, destino_ancho, destino_alto) };
+
     if destino_x
             + destino_ancho
         < offset_x

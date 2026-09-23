@@ -4517,10 +4517,10 @@ fn main() {
                 &textura_techo
             };
 
-        if mansion_rt_enabled
+        camera.use_3d_projection = mansion_rt_enabled
             && nivel_seleccionado == NivelSeleccionado::Mansion
-            && nivel_actual == 1
-        {
+            && nivel_actual == 1;
+        if camera.use_3d_projection {
             mansion_renderer.render(&mut framebuffer, &mapa, &player, &camera, mansion_flashlight);
         } else {
         render_3d(

@@ -292,6 +292,12 @@ fn render_licker(
         altura_sprite
             * escala_pantalla;
 
+    let (destino_x, destino_y, destino_ancho, destino_alto) = if camera.use_3d_projection {
+        let aspecto = textura.width() as f32 / textura.height().max(1) as f32;
+        let Some((px, py, pw, ph)) = camera.project_billboard(dx, dy, altura_mundo, TAMANO_CELDA * factor_tamano, aspecto) else { return; };
+        (offset_x + px * escala_pantalla, offset_y + py * escala_pantalla, pw * escala_pantalla, ph * escala_pantalla)
+    } else { (destino_x, destino_y, destino_ancho, destino_alto) };
+
     if destino_x
             + destino_ancho
         < offset_x

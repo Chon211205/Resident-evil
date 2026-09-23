@@ -157,6 +157,21 @@ impl Framebuffer {
             color.a;
     }
 
+    /// Escribe un píxel del render a media resolución en cuatro píxeles RGBA.
+    pub fn point_2x(&mut self, x: i32, y: i32, color: Color) {
+        if x < 0 || y < 0 || x * 2 + 1 >= self.width || y * 2 + 1 >= self.height {
+            return;
+        }
+        let stride = self.width as usize * 4;
+        let first = (y as usize * 2 * self.width as usize + x as usize * 2) * 4;
+        let rgba = [color.r, color.g, color.b, color.a];
+        let pixels = self.pixels_mut();
+        pixels[first..first + 4].copy_from_slice(&rgba);
+        pixels[first + 4..first + 8].copy_from_slice(&rgba);
+        pixels[first + stride..first + stride + 4].copy_from_slice(&rgba);
+        pixels[first + stride + 4..first + stride + 8].copy_from_slice(&rgba);
+    }
+
     pub fn point_with_size(
         &mut self,
         centro_x: i32,

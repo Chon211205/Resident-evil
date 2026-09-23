@@ -10,6 +10,7 @@ mod licker;
 mod licker_renderer;
 mod map;
 mod map_renderer;
+mod mansion_rt;
 mod material;
 mod menu;
 mod player;
@@ -58,6 +59,7 @@ use map_renderer::{
     render_leyenda_minimapa,
     render_minimap,
 };
+use mansion_rt::MansionRenderer;
 
 use menu::{
     AccionMenu,
@@ -2132,6 +2134,10 @@ fn main() {
         TextureData::from_image(
             &mut citynight_image,
         );
+
+    let mansion_renderer = MansionRenderer::new();
+    let mut mansion_rt_enabled = true;
+    let mut mansion_flashlight = true;
 
     let mut textura_framebuffer =
         ventana
@@ -4446,6 +4452,13 @@ fn main() {
                 .toggle_fullscreen();
         }
 
+        if ventana.is_key_pressed(KeyboardKey::KEY_F3) {
+            mansion_rt_enabled = !mansion_rt_enabled;
+        }
+        if ventana.is_key_pressed(KeyboardKey::KEY_F) {
+            mansion_flashlight = !mansion_flashlight;
+        }
+
         if ventana
             .is_key_pressed(
                 KeyboardKey::KEY_TAB,
@@ -4504,6 +4517,12 @@ fn main() {
                 &textura_techo
             };
 
+        if mansion_rt_enabled
+            && nivel_seleccionado == NivelSeleccionado::Mansion
+            && nivel_actual == 1
+        {
+            mansion_renderer.render(&mut framebuffer, &mapa, &player, &camera, mansion_flashlight);
+        } else {
         render_3d(
             &mut framebuffer,
             &mapa,
@@ -4530,6 +4549,7 @@ fn main() {
                 None
             },
         );
+        }
 
         render_minimap(
             &mut framebuffer,

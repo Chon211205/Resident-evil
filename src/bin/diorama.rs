@@ -48,7 +48,7 @@ impl std::ops::Mul<f32> for Vec3 {
 struct Ray { origin: Vec3, dir: Vec3 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Surface { Wall, Glass, Metal, Door, Floor }
+enum Surface { Wall, Glass, Metal, Door, Floor, Ceiling, Light }
 
 struct Block { min: Vec3, max: Vec3, surface: Surface }
 
@@ -134,6 +134,7 @@ struct Materials<'a> {
     metal: Material<'a>,
     door: Material<'a>,
     floor: Material<'a>,
+    ceiling: Material<'a>,
     sky: &'a FilteredTexture,
 }
 
@@ -145,6 +146,8 @@ impl Materials<'_> {
             Surface::Metal => &self.metal,
             Surface::Door => &self.door,
             Surface::Floor => &self.floor,
+            Surface::Ceiling => &self.ceiling,
+            Surface::Light => &self.ceiling,
         }
     }
 }
@@ -158,7 +161,7 @@ struct Hit {
     block_index: Option<usize>,
 }
 
-fn scene() -> Vec<Block> {
+fn scene(closed_roof: bool) -> Vec<Block> {
     let mut blocks = Vec::new();
     let mut add = |min: Vec3, max: Vec3, surface: Surface| {
         blocks.push(Block { min, max, surface });
@@ -188,7 +191,11 @@ fn scene() -> Vec<Block> {
     add(Vec3::new(7.9, 0.0, 7.52), Vec3::new(9.2, 2.35, 7.74), Surface::Door);
     add(Vec3::new(2.0, 0.0, 4.0), Vec3::new(2.9, 0.9, 4.9), Surface::Metal);
     add(Vec3::new(4.5, 0.0, 3.3), Vec3::new(5.5, 1.0, 4.3), Surface::Metal);
-    add(Vec3::new(6.5, 0.0, 4.7), Vec3::new(7.4, 0.9, 5.6), Surface::Metal);
+    add(Vec3::new(8.3, 0.0, 4.7), Vec3::new(9.2, 0.9, 5.6), Surface::Metal);
+    if closed_roof {
+        add(Vec3::new(0.0, ROOM_HEIGHT - 0.15, 0.0), Vec3::new(ROOM_WIDTH, ROOM_HEIGHT, ROOM_DEPTH), Surface::Ceiling);
+        add(Vec3::new(5.82, 2.42, 4.62), Vec3::new(6.18, 2.72, 4.98), Surface::Light);
+    }
     blocks
 }
 
@@ -289,24 +296,65 @@ fn mapped_normal(hit: Hit, normal_texture: &FilteredTexture, u: f32, v: f32, lod
     (tangent * tangent_space.x + bitangent * tangent_space.y + hit.normal * tangent_space.z).unit()
 }
 
-fn trace(ray: Ray, blocks: &[Block], materials: &Materials<'_>, depth: u8) -> Vec3 {
+#[derive(Clone, Copy)]
+struct Lighting {
+    indoor: bool,
+    flashlight: bool,
+    wood_shine: bool,
+    camera_forward: Vec3,
+}
+
+fn trace(ray: Ray, blocks: &[Block], materials: &Materials<'_>, depth: u8, lighting: Lighting) -> Vec3 {
     let Some(hit) = closest_hit(ray, blocks) else { return sky(ray.dir, materials.sky); };
+    if hit.surface == Surface::Light { return Vec3::new(2.4, 1.15, 0.42); }
     let mat = materials.get(hit.surface);
     let (u, v) = surface_uv(hit);
     let lod = mat.texture.lod_for_hit(hit, ray);
     let texel = mat.texture.sample(u, v, lod);
     let shading_normal = mat.normal_map.map_or(hit.normal, |map| mapped_normal(hit, map, u, v, lod));
     let roughness = mat.roughness_map.map_or(0.55, |map| map.sample(u, v, lod).x).clamp(0.04, 1.0);
-    let light = Vec3::new(0.45, 0.85, -0.30).unit();
-    let diffuse = shading_normal.dot(light).max(0.0);
-    let half = (light - ray.dir).unit();
-    let shininess = 8.0 + (1.0 - roughness) * 100.0;
-    let spec = shading_normal.dot(half).max(0.0).powf(shininess) * mat.specular * (1.0 - roughness);
-    let mut color = Vec3::new(
+    let daylight = Vec3::new(0.45, 0.85, -0.30).unit();
+    let lamp_vector = Vec3::new(6.0, 2.57, 4.8) - hit.point;
+    let lamp_distance = lamp_vector.length();
+    let lamp = lamp_vector.unit();
+    let lamp_strength = 1.0 / (1.0 + 0.12 * lamp_distance * lamp_distance);
+    let moon_vector = Vec3::new(5.0, 1.8, 0.5) - hit.point;
+    let moon_strength = 1.0 / (1.0 + 0.10 * moon_vector.dot(moon_vector));
+    let warm = shading_normal.dot(lamp).max(0.0) * lamp_strength;
+    let cool = shading_normal.dot(moon_vector.unit()).max(0.0) * moon_strength;
+    let flashlight = if lighting.indoor && lighting.flashlight && depth == 0 {
+        let beam = ((lighting.camera_forward.dot(ray.dir) - 0.93) / 0.07).clamp(0.0, 1.0).powf(1.7);
+        let facing = shading_normal.dot(ray.dir * -1.0).max(0.0);
+        beam * facing * 4.0 / (1.0 + 0.025 * hit.t * hit.t)
+    } else { 0.0 };
+    let ambient = if lighting.indoor { 0.07 } else { 0.40 };
+    let daylight_amount = shading_normal.dot(daylight).max(0.0)
+        * if lighting.indoor { 0.04 } else { 0.38 };
+    let illumination = if lighting.indoor {
+        Vec3::new(ambient + daylight_amount, ambient + daylight_amount, ambient + daylight_amount)
+            + Vec3::new(1.0, 0.57, 0.28) * (warm * 0.90)
+            + Vec3::new(0.22, 0.40, 0.78) * (cool * 0.40)
+            + Vec3::new(1.0, 0.93, 0.78) * flashlight
+    } else {
+        Vec3::new(ambient + daylight_amount + warm * 0.45, ambient + daylight_amount + warm * 0.45, ambient + daylight_amount + warm * 0.45)
+    };
+    let half = (lamp - ray.dir).unit();
+    let shininess = 5.0 + (1.0 - roughness) * 65.0;
+    let wood_specular = lighting.wood_shine || mat.roughness_map.is_none();
+    let spec = if wood_specular {
+        shading_normal.dot(half).max(0.0).powf(shininess)
+            * mat.specular * (1.0 - roughness) * lamp_strength * 1.4
+    } else { 0.0 };
+    let base_color = Vec3::new(
         texel.x * mat.albedo.x,
         texel.y * mat.albedo.y,
         texel.z * mat.albedo.z,
-    ) * (0.42 + 0.58 * diffuse) + Vec3::new(spec, spec, spec) * 0.6;
+    );
+    let mut color = Vec3::new(
+        base_color.x * illumination.x,
+        base_color.y * illumination.y,
+        base_color.z * illumination.z,
+    ) + Vec3::new(spec, spec * 0.75, spec * 0.50);
 
     if depth < MAX_DEPTH && mat.transparency > 0.0 {
         if let Some(inside) = refract(ray.dir, hit.normal, 1.0, mat.ior) {
@@ -316,7 +364,7 @@ fn trace(ray: Ray, blocks: &[Block], materials: &Materials<'_>, depth: u8) -> Ve
                 if let Some(exit) = intersect_exit(inside_ray, &blocks[index]) {
                     if let Some(outside) = refract(inside, exit.1 * -1.0, mat.ior, 1.0) {
                         let next = Ray { origin: exit.0 + outside * EPS, dir: outside };
-                        let transmitted = trace(next, blocks, materials, depth + 1);
+                        let transmitted = trace(next, blocks, materials, depth + 1, lighting);
                         color = color * (1.0 - mat.transparency) + transmitted * mat.transparency;
                     }
                 }
@@ -326,7 +374,7 @@ fn trace(ray: Ray, blocks: &[Block], materials: &Materials<'_>, depth: u8) -> Ve
     if depth < MAX_DEPTH && mat.reflectivity >= 0.08 {
         let reflected = reflect(ray.dir, shading_normal);
         let next = Ray { origin: hit.point + reflected * EPS, dir: reflected };
-        let reflected_color = trace(next, blocks, materials, depth + 1);
+        let reflected_color = trace(next, blocks, materials, depth + 1, lighting);
         color = color * (1.0 - mat.reflectivity) + reflected_color * mat.reflectivity;
     }
     color
@@ -367,19 +415,24 @@ fn to_color(c: Vec3) -> Color {
     )
 }
 
-fn render(buffer: &mut Framebuffer, blocks: &[Block], materials: &Materials<'_>, target: Vec3, yaw: f32, pitch: f32, distance: f32) {
+fn render(buffer: &mut Framebuffer, blocks: &[Block], materials: &Materials<'_>, target: Vec3, yaw: f32, pitch: f32, distance: f32, wood_shine: bool, indoor: bool, flashlight: bool) {
     let camera = target + Vec3::new(yaw.cos() * pitch.cos(), pitch.sin(), yaw.sin() * pitch.cos()) * distance;
     let forward = (target - camera).unit();
     let right = forward.cross(Vec3::new(0.0, 1.0, 0.0)).unit();
     let up = right.cross(forward).unit();
     let aspect = WIDTH as f32 / HEIGHT as f32;
     let tan_fov = (55.0_f32.to_radians() * 0.5).tan();
+    let lighting = Lighting { indoor, flashlight, wood_shine, camera_forward: forward };
     for y in 0..HEIGHT {
         let sy = (1.0 - 2.0 * (y as f32 + 0.5) / HEIGHT as f32) * tan_fov;
         for x in 0..WIDTH {
             let sx = (2.0 * (x as f32 + 0.5) / WIDTH as f32 - 1.0) * aspect * tan_fov;
             let dir = (forward + right * sx + up * sy).unit();
-            let color = trace(Ray { origin: camera, dir }, blocks, materials, 0);
+            let mut color = trace(Ray { origin: camera, dir }, blocks, materials, 0, lighting);
+            if indoor {
+                let radius = (sx / (aspect * tan_fov)).powi(2) + (sy / tan_fov).powi(2);
+                color = color * (0.92 - 0.30 * radius.min(1.0));
+            }
             buffer.point_color(x, y, to_color(color));
         }
     }
@@ -399,33 +452,44 @@ fn main() {
     let floor = load("assets/textures/wood051/Wood051_2K-PNG_Color.png");
     let floor_normal = load("assets/textures/wood051/Wood051_2K-PNG_NormalGL.png");
     let floor_roughness = load("assets/textures/wood051/Wood051_2K-PNG_Roughness.png");
+    let ceiling = load("assets/textures/roof.png");
     let city = load("assets/textures/citynight.png");
     let materials = Materials {
         wall: Material { texture: &wood, normal_map: Some(&wood_normal), roughness_map: Some(&wood_roughness), albedo: Vec3::new(0.86, 0.82, 0.76), specular: 0.16, transparency: 0.0, reflectivity: 0.02, ior: 1.0 },
         glass: Material { texture: &glass, normal_map: None, roughness_map: None, albedo: Vec3::new(0.65, 0.80, 1.0), specular: 0.80, transparency: 0.75, reflectivity: 0.10, ior: 1.5 },
         metal: Material { texture: &metal, normal_map: None, roughness_map: None, albedo: Vec3::new(0.80, 0.88, 1.0), specular: 0.95, transparency: 0.0, reflectivity: 0.60, ior: 1.0 },
         door: Material { texture: &wood, normal_map: Some(&wood_normal), roughness_map: Some(&wood_roughness), albedo: Vec3::new(1.0, 1.0, 1.0), specular: 0.45, transparency: 0.0, reflectivity: 0.04, ior: 1.0 },
-        floor: Material { texture: &floor, normal_map: Some(&floor_normal), roughness_map: Some(&floor_roughness), albedo: Vec3::new(0.96, 0.94, 0.90), specular: 0.32, transparency: 0.0, reflectivity: 0.04, ior: 1.0 },
+        floor: Material { texture: &floor, normal_map: Some(&floor_normal), roughness_map: Some(&floor_roughness), albedo: Vec3::new(0.96, 0.94, 0.90), specular: 0.65, transparency: 0.0, reflectivity: 0.04, ior: 1.0 },
+        ceiling: Material { texture: &ceiling, normal_map: None, roughness_map: None, albedo: Vec3::new(0.62, 0.64, 0.68), specular: 0.04, transparency: 0.0, reflectivity: 0.0, ior: 1.0 },
         sky: &city,
     };
-    let blocks = scene();
+    let open_blocks = scene(false);
+    let closed_blocks = scene(true);
     let mut buffer = Framebuffer::new(WIDTH, HEIGHT);
     let snapshot_door = std::env::args().any(|arg| arg == "--snapshot-door");
     let snapshot_window = std::env::args().any(|arg| arg == "--snapshot-window");
     let snapshot_floor = std::env::args().any(|arg| arg == "--snapshot-floor");
-    if snapshot_door || snapshot_window || snapshot_floor || std::env::args().any(|arg| arg == "--snapshot") {
+    let snapshot_floor_matte = std::env::args().any(|arg| arg == "--snapshot-floor-matte");
+    let snapshot_interior = std::env::args().any(|arg| arg == "--snapshot-interior");
+    let snapshot_interior_dark = std::env::args().any(|arg| arg == "--snapshot-interior-dark");
+    if snapshot_door || snapshot_window || snapshot_floor || snapshot_floor_matte || snapshot_interior || snapshot_interior_dark || std::env::args().any(|arg| arg == "--snapshot") {
         let start = std::time::Instant::now();
-        let (target, pitch, distance, filename) = if snapshot_door {
-            (Vec3::new(8.55, 1.15, 7.55), 0.04, 3.0, "diorama-wood-preview.png")
+        let (target, yaw, pitch, distance, filename) = if snapshot_interior || snapshot_interior_dark {
+            let filename = if snapshot_interior_dark { "diorama-interior-dark-preview.png" } else { "diorama-interior-preview.png" };
+            (Vec3::new(7.2, 1.4, 3.5), 1.57, 0.04, 2.4, filename)
+        } else if snapshot_door {
+            (Vec3::new(8.55, 1.15, 7.55), -1.57, 0.04, 3.0, "diorama-wood-preview.png")
         } else if snapshot_window {
-            (Vec3::new(5.0, 1.6, 0.12), 0.08, 4.0, "diorama-window-preview.png")
-        } else if snapshot_floor {
-            (Vec3::new(5.0, 0.2, 4.0), 1.10, 8.0, "diorama-floor-preview.png")
+            (Vec3::new(5.0, 1.6, 0.12), -1.57, 0.08, 4.0, "diorama-window-preview.png")
+        } else if snapshot_floor || snapshot_floor_matte {
+            let filename = if snapshot_floor_matte { "diorama-floor-matte-preview.png" } else { "diorama-floor-preview.png" };
+            (Vec3::new(5.0, 0.2, 4.0), -0.98, 1.10, 8.0, filename)
         } else {
-            (Vec3::new(5.0, 1.4, 4.0), 0.28, 12.0, "diorama-preview.png")
+            (Vec3::new(5.0, 1.4, 4.0), -0.98, 0.28, 12.0, "diorama-preview.png")
         };
-        let yaw = if snapshot_window || snapshot_door { -1.57 } else { -0.98 };
-        render(&mut buffer, &blocks, &materials, target, yaw, pitch, distance);
+        let indoor = snapshot_interior || snapshot_interior_dark;
+        let blocks = if indoor { &closed_blocks } else { &open_blocks };
+        render(&mut buffer, blocks, &materials, target, yaw, pitch, distance, !snapshot_floor_matte, indoor, !snapshot_interior_dark);
         buffer.image().export_image(filename);
         println!("Imagen guardada en {filename}; tiempo: {:?}", start.elapsed());
         return;
@@ -437,25 +501,45 @@ fn main() {
     let mut yaw = -0.98_f32;
     let mut pitch = 0.28_f32;
     let mut distance = 12.0_f32;
+    let mut wood_shine = true;
+    let mut indoor = false;
+    let mut flashlight = true;
+    let mut outside_view = (yaw, pitch, distance);
     while !window.window_should_close() {
         let dt = window.get_frame_time();
+        if window.is_key_pressed(KeyboardKey::KEY_R) { wood_shine = !wood_shine; }
+        if window.is_key_pressed(KeyboardKey::KEY_F) { flashlight = !flashlight; }
+        if window.is_key_pressed(KeyboardKey::KEY_C) {
+            if indoor {
+                (yaw, pitch, distance) = outside_view;
+                indoor = false;
+            } else {
+                outside_view = (yaw, pitch, distance);
+                (yaw, pitch, distance) = (1.57, 0.04, 2.4);
+                indoor = true;
+            }
+        }
         if window.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
             let delta = window.get_mouse_delta();
             yaw -= delta.x * 0.008;
-            pitch = (pitch + delta.y * 0.008).clamp(0.12, 1.35);
+            pitch = (pitch + delta.y * 0.008).clamp(if indoor { -0.35 } else { 0.12 }, if indoor { 0.65 } else { 1.35 });
         }
         if window.is_key_down(KeyboardKey::KEY_LEFT) { yaw -= dt; }
         if window.is_key_down(KeyboardKey::KEY_RIGHT) { yaw += dt; }
-        if window.is_key_down(KeyboardKey::KEY_UP) { pitch = (pitch + dt).clamp(0.12, 1.35); }
-        if window.is_key_down(KeyboardKey::KEY_DOWN) { pitch = (pitch - dt).clamp(0.12, 1.35); }
-        distance = (distance - window.get_mouse_wheel_move() * 1.5).clamp(8.0, 50.0);
-        render(&mut buffer, &blocks, &materials, Vec3::new(5.0, 1.4, 4.0), yaw, pitch, distance);
+        if window.is_key_down(KeyboardKey::KEY_UP) { pitch = (pitch + dt).clamp(if indoor { -0.35 } else { 0.12 }, if indoor { 0.65 } else { 1.35 }); }
+        if window.is_key_down(KeyboardKey::KEY_DOWN) { pitch = (pitch - dt).clamp(if indoor { -0.35 } else { 0.12 }, if indoor { 0.65 } else { 1.35 }); }
+        distance = (distance - window.get_mouse_wheel_move() * 1.5).clamp(if indoor { 1.3 } else { 8.0 }, if indoor { 2.4 } else { 50.0 });
+        let target = if indoor { Vec3::new(7.2, 1.4, 3.5) } else { Vec3::new(5.0, 1.4, 4.0) };
+        let blocks = if indoor { &closed_blocks } else { &open_blocks };
+        render(&mut buffer, blocks, &materials, target, yaw, pitch, distance, wood_shine, indoor, flashlight);
         texture.update_texture(buffer.pixels()).unwrap();
         let mut draw = window.begin_drawing(&thread);
         draw.clear_background(Color::BLACK);
         draw.draw_texture_ex(&texture, Vector2::new(0.0, 0.0), 0.0, 3.0, Color::WHITE);
-        draw.draw_rectangle(0, 0, WIDTH * 3, 27, Color::new(0, 0, 0, 190));
-        draw.draw_text("Arrastrar: rotar   Rueda: zoom   Flechas: rotar", 10, 7, 16, Color::WHITE);
+        draw.draw_rectangle(0, 0, WIDTH * 3, 63, Color::new(0, 0, 0, 190));
+        draw.draw_text("Arrastrar: rotar   Rueda: zoom   C: entrar/salir", 10, 7, 16, Color::WHITE);
+        draw.draw_text("F: linterna   R: brillo madera", 10, 27, 16, Color::WHITE);
+        draw.draw_text(if indoor { if flashlight { "Interior: linterna encendida" } else { "Interior: linterna apagada" } } else { "Vista exterior" }, 10, 46, 15, Color::WHITE);
         draw.draw_fps(WIDTH * 3 - 90, 7);
     }
 }
@@ -482,7 +566,7 @@ mod tests {
 
     #[test]
     fn escena_incluye_vidrio_metal_puerta_y_pared() {
-        let blocks = scene();
+        let blocks = scene(false);
         for surface in [Surface::Wall, Surface::Glass, Surface::Metal, Surface::Door] {
             assert!(blocks.iter().any(|block| block.surface == surface));
         }
@@ -490,12 +574,19 @@ mod tests {
 
     #[test]
     fn ventana_tiene_vidrio_y_antepecho_solido() {
-        let blocks = scene();
+        let blocks = scene(false);
         let direction = Vec3::new(0.0, 0.0, 1.0);
         let through_window = closest_hit(Ray { origin: Vec3::new(4.0, 1.6, -2.0), dir: direction }, &blocks).unwrap();
         assert!(through_window.surface == Surface::Glass);
         let through_sill = closest_hit(Ray { origin: Vec3::new(4.0, 0.5, -2.0), dir: direction }, &blocks).unwrap();
         assert!(through_sill.surface == Surface::Wall);
+    }
+
+    #[test]
+    fn techo_solo_cierra_el_modo_interior() {
+        let upward = Ray { origin: Vec3::new(5.0, 1.5, 4.0), dir: Vec3::new(0.0, 1.0, 0.0) };
+        assert!(closest_hit(upward, &scene(false)).is_none());
+        assert!(closest_hit(upward, &scene(true)).is_some_and(|hit| hit.surface == Surface::Ceiling));
     }
 
     #[test]

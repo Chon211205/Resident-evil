@@ -164,13 +164,15 @@ El proyecto incluye los siguientes elementos:
 
 ### Prueba de diorama 3D con ray tracing
 
+El juego principal también tiene una prueba integrada de trazado de rayos en el primer piso de la mansión (`mapa_nivel1.txt`). Se activa automáticamente al jugar ese escenario; utiliza el mapa vivo para que las puertas abiertas sigan abiertas y conserva movimiento, combate, enemigos, objetos y HUD. `F3` alterna entre el render 3D nuevo y el clásico; `F` enciende o apaga la linterna. El segundo piso, laboratorio y escenario final siguen con el render original. El entorno se dibuja a 400×300 y se amplía a 800×600; las ventanas son huecos transparentes y el metal refleja. Por ahora, los enemigos y objetos siguen siendo sprites 2D superpuestos, así que su oclusión con la nueva geometría puede necesitar ajustes.
+
 La prueba independiente construye una habitación 3D con cuatro paredes de madera, suelo y techo abierto. Una pared tiene un hueco con marco metálico y vidrio; también hay una puerta y cajas en el interior. Traza rayos por CPU: el vidrio refracta, el metal refleja y los rayos que no impactan muestrean el panorama nocturno.
 
 ```bash
 cargo run --release --bin diorama
 ```
 
-Arrastrar con el botón izquierdo rota la cámara. La rueda del mouse acerca y aleja; las flechas también rotan la vista. Para generar una imagen estática sin abrir ventana:
+Arrastrar con el botón izquierdo rota la cámara. La rueda del mouse acerca y aleja; las flechas también rotan la vista. `C` alterna entre la cámara exterior y el interior con techo cerrado. Dentro, `F` enciende o apaga la linterna. `R` alterna el brillo de la madera para comparar el efecto de su rugosidad con un acabado mate. Para generar una imagen estática sin abrir ventana:
 
 ```bash
 cargo run --release --bin diorama -- --snapshot
@@ -186,6 +188,15 @@ cargo run --release --bin diorama -- --snapshot-window
 
 La imagen se guarda en `diorama-window-preview.png`.
 
+El interior combina oscuridad ambiental, una lámpara cálida, luz fría cerca de la ventana y una linterna. Para comparar la iluminación desde la misma cámara:
+
+```bash
+cargo run --release --bin diorama -- --snapshot-interior
+cargo run --release --bin diorama -- --snapshot-interior-dark
+```
+
+Estas vistas se guardan en `diorama-interior-preview.png` y `diorama-interior-dark-preview.png`.
+
 Las paredes y la puerta de prueba usan `Wood035_2K-PNG`: color, normales OpenGL y rugosidad. Tienen distintos parámetros de brillo y albedo, pero comparten los mismos mapas; para contar como dos materiales distintos bajo una rúbrica que exige textura propia, necesitarán texturas diferentes. El suelo usa `Wood051_2K-PNG` con sus propios mapas; la textura se repite cada dos unidades del mundo para que las vetas se aprecien sin verse demasiado pequeñas.
 
 Para generar una vista del suelo desde arriba:
@@ -195,6 +206,8 @@ cargo run --release --bin diorama -- --snapshot-floor
 ```
 
 La imagen se guarda en `diorama-floor-preview.png`.
+
+La misma vista con la madera mate se genera con `cargo run --release --bin diorama -- --snapshot-floor-matte` y se guarda en `diorama-floor-matte-preview.png`.
 
 Para generar una vista cercana de la puerta:
 
